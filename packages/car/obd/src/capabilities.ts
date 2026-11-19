@@ -1,4 +1,4 @@
-export interface Capabilities {
+export type Capabilities = {
   readonly ble: boolean
   readonly serial: boolean
   readonly secureContext: boolean
@@ -6,7 +6,7 @@ export interface Capabilities {
   readonly reasons: string[]
 }
 
-interface Env {
+type Env = {
   readonly navigator?: { readonly bluetooth?: unknown; readonly serial?: unknown; readonly userAgent?: string }
   readonly isSecureContext?: boolean
   readonly Telegram?: { readonly WebApp?: { readonly initData?: string } }

@@ -9,21 +9,24 @@
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run"
+    "lint": "vp lint",
+    "fmt": "vp fmt --check",
+    "test": "vp test run"
   },
   "dependencies": {
     "@bot/agent-runner": "workspace:*",
     "@bot/agent-sessions": "workspace:*",
-    "@bot/infra-speech": "workspace:*",
     "@bot/bot-allowlist": "workspace:*",
-    "@bot/car-server": "workspace:*",
     "@bot/bot-commands": "workspace:*",
     "@bot/bot-core-commands": "workspace:*",
+    "@bot/bot-dispatcher": "workspace:*",
     "@bot/bot-invites": "workspace:*",
     "@bot/bot-memory": "workspace:*",
-    "@bot/bot-dispatcher": "workspace:*",
     "@bot/bot-scheduler": "workspace:*",
+    "@bot/car-server": "workspace:*",
+    "@bot/car-store": "workspace:*",
     "@bot/core-contracts": "workspace:*",
+    "@bot/infra-speech": "workspace:*",
     "@bot/plugins-car": "workspace:*",
     "@bot/plugins-memory": "workspace:*",
     "@bot/plugins-registry": "workspace:*",
@@ -32,13 +35,13 @@
     "@bot/telegram-schema": "workspace:*",
     "@bot/telegram-streaming": "workspace:*",
     "@cloudflare/sandbox": "catalog:",
-    "effect": "catalog:",
-    "@bot/car-store": "workspace:*"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@effect/vitest": "catalog:",
     "typescript": "catalog:",
+    "vite-plus": "catalog:",
     "vitest": "catalog:"
   }
 }

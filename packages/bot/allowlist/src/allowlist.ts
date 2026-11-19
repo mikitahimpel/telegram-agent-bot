@@ -3,7 +3,7 @@ import { Allowlist, type AllowlistEntry } from "@bot/core-contracts/allowlist"
 import { StorageError } from "@bot/core-contracts/errors"
 import { TgId } from "@bot/core-contracts/ids"
 
-export interface KvLike {
+export type KvLike = {
   readonly get: (key: string) => Promise<string | null>
   readonly put: (key: string, value: string) => Promise<void>
   readonly delete: (key: string) => Promise<void>
@@ -16,7 +16,7 @@ export interface KvLike {
 
 const PREFIX = "allow:"
 
-interface StoredEntry {
+type StoredEntry = {
   readonly addedAt: number
   readonly addedBy: number
   readonly name?: string

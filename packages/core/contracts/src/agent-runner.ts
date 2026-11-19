@@ -10,7 +10,7 @@ export type Attachment = {
   readonly bytes: Uint8Array
 }
 
-export interface RunInput {
+export type RunInput = {
   readonly tgId: TgId
   readonly sessionKey: SessionKey
   readonly resume: ClaudeSessionId | undefined

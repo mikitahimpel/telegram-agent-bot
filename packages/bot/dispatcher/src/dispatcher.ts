@@ -2,7 +2,7 @@ import { Cause, Clock, Duration, Effect, Ref, Stream } from "effect"
 import { errorMessage, formatClock, isNewTopicText, newTopicKeyboard } from "@bot/bot-commands/messages"
 import type { Registry } from "@bot/bot-commands/registry"
 import { Allowlist } from "@bot/core-contracts/allowlist"
-import { AgentRunner, type Attachment } from "@bot/core-contracts/agent-runner"
+import { AgentRunner } from "@bot/core-contracts/agent-runner"
 import { AgentEvent } from "@bot/core-contracts/agent-event"
 import type { CommandContext } from "@bot/core-contracts/commands"
 import { ContainerDown, type BotError } from "@bot/core-contracts/errors"
@@ -48,7 +48,7 @@ export type DocumentHook<R> = (args: {
   readonly lang: Lang
 }) => Effect.Effect<boolean, BotError, R>
 
-export interface DispatcherOptions<R> {
+export type DispatcherOptions<R> = {
   readonly registry: Registry<R>
   readonly present: PresentRun
   readonly onDocument?: DocumentHook<R>
@@ -85,7 +85,7 @@ const isBotError = (u: unknown): u is BotError =>
 const targetOf = (chatId: ChatId, threadId: ThreadId | undefined): SendTarget =>
   threadId === undefined ? { chatId } : { chatId, threadId }
 
-interface Origin {
+type Origin = {
   readonly tgId: TgId
   readonly chatId: ChatId
   readonly threadId: ThreadId | undefined

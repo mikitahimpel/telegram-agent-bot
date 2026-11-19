@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { AppKey, createAppContext, parseRouteHash } from "../src/app-context.ts"
 import TimeChart from "../src/components/insights/TimeChart.vue"
 import { buildOverviewFixture, buildTripFixture } from "../src/fixtures/insights.ts"

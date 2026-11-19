@@ -27,7 +27,7 @@ export const validateKey = (tgId: TgId, key: string): Effect.Effect<string, Inva
     : Effect.succeed(key)
 }
 
-export interface Trip {
+export type Trip = {
   readonly key: string
   readonly sizeBytes: number
   readonly uploaded: string
@@ -46,7 +46,7 @@ const storage = <A>(operation: string, f: () => Promise<A>) =>
 
 const MAX_PAGES = 20
 
-export interface TripFilter {
+export type TripFilter = {
   readonly from?: Date | undefined
   readonly to?: Date | undefined
   readonly limit?: number | undefined
@@ -92,7 +92,7 @@ export const readTripBytes = (tgId: TgId, key: string) =>
     return new Uint8Array(yield* storage("car.read", () => o.arrayBuffer()))
   })
 
-export interface Aggregate {
+export type Aggregate = {
   readonly count: number
   readonly totalBytes: number
   readonly firstUploaded: string | undefined

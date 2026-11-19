@@ -21,6 +21,7 @@ export const rpcUserPrefs = (env: Env): Layer.Layer<UserPrefs> =>
   )
 
 export type LangSql = {
+  // oxlint-disable-next-line typescript/no-explicit-any
   readonly exec: (query: string, ...bindings: Array<any>) => { readonly toArray: () => Array<any> }
 }
 

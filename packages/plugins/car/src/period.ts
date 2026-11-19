@@ -1,4 +1,4 @@
-export interface Period {
+export type Period = {
   readonly from: Date
   readonly to: Date
   readonly label: string

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { distanceStep, haversineKm } from "../src/metrics.ts"
 
 describe("distanceStep", () => {

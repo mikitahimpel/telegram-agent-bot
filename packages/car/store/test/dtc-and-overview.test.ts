@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { buildTrip, cruise, DAY, gen, ingestAll, newEngine, T0 } from "./helpers.ts"
 
 describe("dtc history", () => {

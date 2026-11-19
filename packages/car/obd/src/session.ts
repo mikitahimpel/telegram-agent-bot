@@ -212,11 +212,10 @@ export const connect = (
       const reconnectOnce = Effect.gen(function*() {
         yield* Scope.close(link.scope, Exit.void)
         const next = yield* openLink(link.transport.reopen)
-        const ready = yield* Effect.gen(function*() {
+        yield* Effect.gen(function*() {
           yield* initAdapter(next.elm)
           if (options.waitForEcu !== true) yield* connectEcu(next.elm)
         }).pipe(Effect.onError(() => Scope.close(next.scope, Exit.void)))
-        void ready
         link = next
       })
 

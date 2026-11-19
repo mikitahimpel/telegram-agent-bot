@@ -12,7 +12,10 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 - effect 4.1.4 (stable v4: `Context.Service`, `Schema`, `Data.TaggedError`, `Data.TaggedEnum`, `effect/http`)
 - alchemy 2.0.0-beta.87, @cloudflare/sandbox 1.0.3, @anthropic-ai/claude-code 2.1.328
 - Telegram Bot API 10.4 (2026-11-09)
-- pnpm workspaces, `catalog:` versions in `pnpm-workspace.yaml`, vitest + @effect/vitest
+- pnpm workspaces, `catalog:` versions in `pnpm-workspace.yaml`
+- Toolchain: Vite+ (`vite-plus` 1.7.0, `vp` CLI). One root `vite.config.ts` holds the Oxlint (`lint`) and Oxfmt (`fmt`) config; `vp test` (bundled Vitest 5 + @effect/vitest) per package, `vp build` for apps/car-web, `vp check` = format + lint + type-aware check. `vp run -r <script>` runs a script across the workspace. `tsc -p .` / `vue-tsc` stay as the `typecheck` scripts (Vue SFCs and the alchemy files).
+- Lint rules: Oxlint correctness set, `typescript/consistent-type-definitions: type`, `typescript/no-explicit-any` (off for `test/`; src exceptions carry `oxlint-disable-next-line`). Format: no semicolons, double quotes, 2 spaces, width 120, no trailing commas. Imports of vitest go through `vite-plus/test`.
+- CI (`.github/workflows/deploy.yml`): `voidzero-dev/setup-vp`, then `vp check`, `vp run typecheck`, `vp run test`, `vp run build`, then deploy.
 
 ## Layout — `packages/<context>/<feature>`, one package per feature
 
@@ -49,5 +52,5 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 - Config (effect 4.1.4 constructors are capitalised): `Config.Redacted("TELEGRAM_BOT_TOKEN")`, `Config.String`, `Config.Int`, `Config.withDefault`. Never log secrets.
 - i18n: every user-facing string goes through a per-package catalog made with `defineMessages` from `@bot/core-contracts/lang` (ru + en). Lang = user's `/lang` choice (Sessions.getLang) else `langFromTelegram(from.language_code)`.
 - Telegram output is HTML parse_mode; escape all dynamic text.
-- Each package: `package.json`, `tsconfig.json` (`extends ../../../tsconfig.base.json`), `src/`, `test/` with vitest tests using mock Layers. `pnpm --filter <name> typecheck` and `test` must pass.
+- Each package: `package.json`, `tsconfig.json` (`extends ../../../tsconfig.base.json`), `src/`, `test/` with vitest tests using mock Layers. `vp run --filter <name> typecheck` and `test` must pass; `vp check` must be clean.
 - The Claude OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`) is only passed as env to the `claude` CLI inside the sandbox. Never call Anthropic API with it.

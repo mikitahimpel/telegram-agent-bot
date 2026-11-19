@@ -14,6 +14,7 @@ import { screenWebhook } from "./webhook.ts"
 export { DirectoryBackupGateway } from "@cloudflare/sandbox"
 export { UserAgent } from "./user-agent.ts"
 
+// oxlint-disable-next-line typescript/no-explicit-any
 const mcpRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
 
 const mcpRuntime = (env: Env) => {
@@ -25,6 +26,7 @@ const mcpRuntime = (env: Env) => {
   return rt
 }
 
+// oxlint-disable-next-line typescript/no-explicit-any
 const carApiRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
 
 const carApiRuntime = (env: Env) => {
@@ -38,6 +40,7 @@ const carApiRuntime = (env: Env) => {
   return rt
 }
 
+// oxlint-disable-next-line typescript/no-explicit-any
 const inviteRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
 
 const inviteRuntime = (env: Env) => {

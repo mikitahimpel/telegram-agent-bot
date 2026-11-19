@@ -3,7 +3,7 @@ import type { BotError } from "./errors.ts"
 import type { ChatId, Role, SessionKey, TgId, ThreadId } from "./ids.ts"
 import type { Lang, Localized } from "./lang.ts"
 
-export interface CommandContext {
+export type CommandContext = {
   readonly tgId: TgId
   readonly chatId: ChatId
   readonly threadId: ThreadId | undefined
@@ -14,7 +14,7 @@ export interface CommandContext {
   readonly messageId: number
 }
 
-export interface CommandDef<R = never> {
+export type CommandDef<R = never> = {
   readonly name: string
   readonly role: Role
   readonly description: Localized
@@ -24,7 +24,7 @@ export interface CommandDef<R = never> {
   readonly handler: (ctx: CommandContext) => Effect.Effect<void, BotError, R>
 }
 
-export interface CallbackDef<R = never> {
+export type CallbackDef<R = never> = {
   readonly prefix: string
   readonly role: Role
   readonly handler: (

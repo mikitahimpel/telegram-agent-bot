@@ -3,7 +3,7 @@ import type { ContainerDown, StorageError } from "./errors.ts"
 import type { TgId } from "./ids.ts"
 import type { UsageSummary } from "./sessions.ts"
 
-export interface AgentInfo {
+export type AgentInfo = {
   readonly tgId: TgId
   readonly sessions: number
   readonly running: number

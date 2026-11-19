@@ -42,7 +42,7 @@ watch(ctx.localMode, (on) => on && void backend.enableAuto())
 
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault()
-  ctx.installPrompt.value = { prompt: async () => void (await (e as Event & { prompt(): Promise<void> }).prompt()) }
+  ctx.installPrompt.value = { prompt: async () =>  (await (e as Event & { prompt(): Promise<void> }).prompt()) }
 })
 window.addEventListener("online", () => (backend.online.value = true))
 window.addEventListener("offline", () => (backend.online.value = false))

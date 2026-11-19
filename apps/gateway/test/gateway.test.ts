@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { daysLeft, parseIssuedAt, reminderStage, TOKEN_LIFETIME_DAYS } from "../src/token-expiry.ts"
 import { configRecord } from "../src/config.ts"
 import { screenWebhook, secretMatches } from "../src/webhook.ts"

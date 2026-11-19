@@ -21,7 +21,7 @@ export type PresentOptions = {
 export type CompletedEvent = Extract<AgentEvent, { readonly _tag: "Completed" }>
 export type FileProducedEvent = Extract<AgentEvent, { readonly _tag: "FileProduced" }>
 
-export interface PresentResult {
+export type PresentResult = {
   readonly completed: CompletedEvent | undefined
   readonly files: ReadonlyArray<FileProducedEvent>
 }

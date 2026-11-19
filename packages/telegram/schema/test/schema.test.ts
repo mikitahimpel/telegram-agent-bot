@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { parseCommand } from "../src/command.ts"
 import { decodeUpdate } from "../src/schema.ts"
 

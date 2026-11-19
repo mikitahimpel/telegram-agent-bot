@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { ConfigProvider, Effect, Exit } from "effect"
 import { Sessions } from "@bot/core-contracts/sessions"
 import { ClaudeSessionId, SessionKey, ThreadId } from "@bot/core-contracts/ids"

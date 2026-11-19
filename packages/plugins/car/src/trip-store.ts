@@ -60,7 +60,7 @@ export const readManifest = (tgId: TgId | number, tripId: TripId) =>
     }
   })
 
-export interface StoredChunk {
+export type StoredChunk = {
   readonly seq: number
   readonly size: number
   readonly sha256: string | undefined
@@ -155,12 +155,12 @@ export const summarize = (status: TripStatus): typeof TripSummary.Type | undefin
   }
 }
 
-export interface TripOverview {
+export type TripOverview = {
   readonly tripId: TripId
   readonly status: TripStatus
 }
 
-export interface OverviewFilter {
+export type OverviewFilter = {
   readonly from?: Date | undefined
   readonly to?: Date | undefined
   readonly limit?: number | undefined
@@ -187,7 +187,7 @@ export const listOverview = (tgId: TgId | number, filter: OverviewFilter = {}) =
     })
   })
 
-export interface ReadSamples {
+export type ReadSamples = {
   readonly samples: ReadonlyArray<Sample>
   readonly badChunks: ReadonlyArray<number>
 }
@@ -213,7 +213,7 @@ export const readSamples = (tgId: TgId | number, tripId: TripId, seqs: ReadonlyA
     } satisfies ReadSamples
   })
 
-interface CachedMetrics {
+type CachedMetrics = {
   readonly chunkCount: number
   readonly metrics: TripMetrics
 }

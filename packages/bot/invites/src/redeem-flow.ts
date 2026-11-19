@@ -30,7 +30,7 @@ const failureText = (reason: InviteInvalidReason, lang: Lang): string | undefine
   }
 }
 
-export interface RedeemInput {
+export type RedeemInput = {
   readonly from: User
   readonly code: string
   readonly adminLang: Lang

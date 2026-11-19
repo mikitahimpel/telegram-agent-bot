@@ -3,7 +3,7 @@ import { makeT } from "../i18n/index.ts"
 import { describeStatus, type StatusView } from "./describe-status.ts"
 import type { ConnectionVm, RecorderVm, SyncGlobalVm, TripVm } from "./types.ts"
 
-export interface HomeInput {
+export type HomeInput = {
   conn: ConnectionVm
   rec: RecorderVm
   sync: SyncGlobalVm

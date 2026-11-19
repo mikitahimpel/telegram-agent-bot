@@ -1,7 +1,7 @@
 import type { CarBackend } from "./backend.ts"
 import { completePair, credentialStore, deviceNameFromUA, parsePairHash } from "./pairing.ts"
 
-export interface PairingEnv {
+export type PairingEnv = {
   hash: string
   ua: string
   apiBase: string

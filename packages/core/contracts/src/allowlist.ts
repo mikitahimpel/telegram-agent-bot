@@ -2,7 +2,7 @@ import { Context, type Effect } from "effect"
 import type { StorageError } from "./errors.ts"
 import type { Role, TgId } from "./ids.ts"
 
-export interface AllowlistEntry {
+export type AllowlistEntry = {
   readonly tgId: TgId
   readonly addedAt: number
   readonly addedBy: TgId
@@ -11,14 +11,14 @@ export interface AllowlistEntry {
   readonly invitedVia?: string
 }
 
-export interface AllowlistProfile {
+export type AllowlistProfile = {
   readonly name?: string
   readonly username?: string
 }
 
-export interface AllowMeta extends AllowlistProfile {
+export type AllowMeta = {
   readonly invitedVia?: string
-}
+} & AllowlistProfile
 
 export class Allowlist extends Context.Service<
   Allowlist,

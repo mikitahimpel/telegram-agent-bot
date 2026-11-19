@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { ConfigProvider, Effect, Layer, Stream } from "effect"
 import { makeRegistry } from "@bot/bot-commands/registry"
 import { layer as sessionsLayer, type SqlStorageLike } from "@bot/agent-sessions/sessions"
@@ -44,7 +44,7 @@ const upd = (extra: Record<string, unknown>, id = 10): Update =>
     }
   }) as Update
 
-const setup = (opts: { transcript?: string | "fail"; sizes?: Record<string, number>; onDocument?: boolean } = {}) => {
+const setup = (opts: { transcript?: string; sizes?: Record<string, number>; onDocument?: boolean } = {}) => {
   const sent: Array<string> = []
   const runs: Array<RunInput> = []
   const presented: Array<AgentEvent> = []

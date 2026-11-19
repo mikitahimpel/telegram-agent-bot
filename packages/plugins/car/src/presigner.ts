@@ -1,7 +1,7 @@
 import { Clock, Config, Context, Effect, Layer, Redacted } from "effect"
 import { presignUrl } from "./sigv4.ts"
 
-export interface PresignerConfig {
+export type PresignerConfig = {
   readonly accountId: string
   readonly accessKeyId: string
   readonly secretAccessKey: string

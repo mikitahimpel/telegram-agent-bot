@@ -72,7 +72,7 @@ const rateLimit = (key: string, limit: number, lang: Lang) =>
     else if (++w.count > limit) return yield* Effect.fail(apiFail("rate_limited", messages[lang].rateLimited))
   })
 
-interface Principal {
+type Principal = {
   readonly tgId: TgId
   readonly firstName: string
   readonly lang: Lang

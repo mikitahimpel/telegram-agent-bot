@@ -1,4 +1,4 @@
-export interface Sample {
+export type Sample = {
   readonly ts: number
   readonly lat?: number | undefined
   readonly lon?: number | undefined

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { computeTrip } from "../src/insight.ts"
 import { buildSeries } from "../src/series.ts"
 import { cruise, gen, T0 } from "./helpers.ts"

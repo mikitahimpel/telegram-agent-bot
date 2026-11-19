@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vite-plus/test"
 import { formatMessage } from "../src/i18n/format.ts"
 import { en } from "../src/i18n/en.ts"
 import { ru } from "../src/i18n/ru.ts"
@@ -19,8 +19,8 @@ const NOW = 1_800_000_000_000
 
 describe("i18n", () => {
   it("ru and en have identical keys and the same placeholders", () => {
-    expect(Object.keys(ru).sort()).toEqual(Object.keys(en).sort())
-    const ph = (s: string) => [...s.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort().join(",")
+    expect(Object.keys(ru).sort((a, b) => a.localeCompare(b))).toEqual(Object.keys(en).sort((a, b) => a.localeCompare(b)))
+    const ph = (s: string) => [...s.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort((a, b) => (a ?? "").localeCompare(b ?? "")).join(",")
     for (const k of Object.keys(en) as (keyof typeof en)[]) expect(ph(ru[k]), k).toBe(ph(en[k]))
   })
   it("plurals", () => {

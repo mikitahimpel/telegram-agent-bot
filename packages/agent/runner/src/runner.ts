@@ -8,7 +8,7 @@ import { splitLines } from "@bot/agent-stream-json/split-lines"
 import { toAgentEvents } from "@bot/agent-stream-json/stream-json"
 import type { ContainerLike, DirectoryBackupLike, DirectoryBackupRecord, ExecProcessLike, R2Like } from "./container-like.ts"
 
-export interface RunnerDeps {
+export type RunnerDeps = {
   readonly container: ContainerLike
   readonly backup: DirectoryBackupLike
   readonly bucket: R2Like
@@ -21,7 +21,6 @@ const WORKSPACE = "/workspace"
 const OUT_DIR = "/workspace/out"
 export const IN_DIR = "/workspace/in"
 const PATH_ENV = "/usr/local/bin:/usr/bin:/bin"
-const SIGTERM = 15
 
 const BASE_TOOLS = ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch"]
 const MCP_SERVER = "bot"
@@ -77,7 +76,7 @@ export const authEnv = (auth: ClaudeAuth): Record<string, string> =>
     ? { ANTHROPIC_API_KEY: Redacted.value(auth.apiKey) }
     : { CLAUDE_CODE_OAUTH_TOKEN: Redacted.value(auth.token) }
 
-export interface RunnerConfig {
+export type RunnerConfig = {
   readonly auth: ClaudeAuth
   readonly model: Option.Option<string>
   readonly instanceType: InstanceType
@@ -146,7 +145,7 @@ const BackupIndex = Schema.Struct({
   claude: Schema.optional(Schema.Unknown),
   workspace: Schema.optional(Schema.Unknown)
 })
-interface Index {
+type Index = {
   claude?: DirectoryBackupRecord
   workspace?: DirectoryBackupRecord
 }

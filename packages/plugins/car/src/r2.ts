@@ -1,24 +1,24 @@
 import { Context } from "effect"
 
-export interface R2ObjectLike {
+export type R2ObjectLike = {
   readonly key: string
   readonly size: number
   readonly uploaded: Date
   readonly customMetadata?: Record<string, string> | undefined
 }
 
-export interface R2ObjectBodyLike extends R2ObjectLike {
+export type R2ObjectBodyLike = {
   readonly arrayBuffer: () => Promise<ArrayBuffer>
-}
+} & R2ObjectLike
 
-export interface R2ListResultLike {
+export type R2ListResultLike = {
   readonly objects: ReadonlyArray<R2ObjectLike>
   readonly truncated: boolean
   readonly cursor?: string | undefined
   readonly delimitedPrefixes?: ReadonlyArray<string> | undefined
 }
 
-export interface R2Like {
+export type R2Like = {
   readonly get: (key: string) => Promise<R2ObjectBodyLike | null>
   readonly put: (
     key: string,

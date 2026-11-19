@@ -1,13 +1,15 @@
 {
   "name": "@bot/car-web",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "dev": "vp dev",
+    "build": "vue-tsc --noEmit && vp build",
     "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run",
+    "lint": "vp lint",
+    "fmt": "vp fmt --check",
+    "test": "vp test run",
     "e2e": "playwright test"
   },
   "dependencies": {
@@ -26,8 +28,8 @@
     "@vue/test-utils": "2.6.0",
     "jsdom": "31.0.1",
     "typescript": "catalog:",
-    "vite": "8.3.8",
-    "vitest": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
     "vue-tsc": "3.3.14"
   }
 }

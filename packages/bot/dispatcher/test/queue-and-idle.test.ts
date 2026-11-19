@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import type { SessionKey } from "@bot/core-contracts/ids"
 import { isIdleExpired } from "../src/conversation.ts"
 import { makePromptQueue, mergePrompts } from "../src/prompt-queue.ts"

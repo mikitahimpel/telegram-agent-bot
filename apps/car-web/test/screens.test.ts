@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import App from "../src/App.vue"
 import { AppKey, createAppContext, type Route } from "../src/app-context.ts"
 import { fixtureTrips, readyConn } from "../src/fixtures/index.ts"

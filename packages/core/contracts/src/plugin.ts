@@ -5,18 +5,19 @@ import type { TgId } from "./ids.ts"
 import type { Localized } from "./lang.ts"
 import type { JobHandler } from "./scheduler.ts"
 
-export interface ToolContext {
+export type ToolContext = {
   readonly tgId: TgId
 }
 
-export interface AgentTool<R = never> {
+export type AgentTool<R = never> = {
   readonly name: string
   readonly description: string
+  // oxlint-disable-next-line typescript/no-explicit-any
   readonly input: Schema.Codec<any, any, never, never>
   readonly handler: (input: unknown, ctx: ToolContext) => Effect.Effect<unknown, StorageError, R>
 }
 
-export interface BotPlugin<R = never, LayerE = never, LayerR = never> {
+export type BotPlugin<R = never, LayerE = never, LayerR = never> = {
   readonly id: string
   readonly title: Localized
   readonly commands: ReadonlyArray<CommandDef<R>>
@@ -29,7 +30,7 @@ export interface BotPlugin<R = never, LayerE = never, LayerR = never> {
   readonly enabledByDefault: boolean
 }
 
-export interface PluginFlags {
+export type PluginFlags = {
   readonly isEnabled: (pluginId: string, tgId: TgId) => Effect.Effect<boolean, StorageError>
   readonly setEnabled: (pluginId: string, tgId: TgId, enabled: boolean) => Effect.Effect<void, StorageError>
 }

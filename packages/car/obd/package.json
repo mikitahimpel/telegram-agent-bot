@@ -14,13 +14,22 @@
     "./dtc": "./src/dtc.ts",
     "./battery": "./src/battery.ts"
   },
-  "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
-  "dependencies": { "@bot/car-format": "workspace:*", "effect": "catalog:" },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "lint": "vp lint",
+    "fmt": "vp fmt --check",
+    "test": "vp test run"
+  },
+  "dependencies": {
+    "@bot/car-format": "workspace:*",
+    "effect": "catalog:"
+  },
   "devDependencies": {
     "@effect/vitest": "catalog:",
     "@types/w3c-web-serial": "1.0.9",
     "@types/web-bluetooth": "0.0.22",
     "typescript": "catalog:",
+    "vite-plus": "catalog:",
     "vitest": "catalog:"
   }
 }

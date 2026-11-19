@@ -11,11 +11,11 @@ export type ReadingEvent =
   | { readonly _tag: "GapStarted"; readonly at: number; readonly reason: string }
   | { readonly _tag: "GapEnded"; readonly at: number }
 
-export interface ReadingSource {
+export type ReadingSource = {
   readonly readings: () => Stream.Stream<ReadingEvent, unknown>
 }
 
-export interface ReadingInfo {
+export type ReadingInfo = {
   readonly adapterName?: string | undefined
   readonly elmVersion?: string | undefined
   readonly obdProtocol?: string | undefined
@@ -47,7 +47,7 @@ export type RecorderState = Data.TaggedEnum<{
 }>
 export const RecorderState = Data.taggedEnum<RecorderState>()
 
-export interface StartOptions {
+export type StartOptions = {
   readonly source: ReadingSource
   readonly info: ReadingInfo
   readonly geo?: boolean
@@ -56,7 +56,7 @@ export interface StartOptions {
   readonly clockOffsetMs?: number
 }
 
-export interface InterruptedTrip {
+export type InterruptedTrip = {
   readonly tripId: string
   readonly startedAt: number
   readonly lastSampleAt: number
@@ -64,7 +64,7 @@ export interface InterruptedTrip {
   readonly chunks: number
 }
 
-export interface RecorderShape {
+export type RecorderShape = {
   readonly state: SubscriptionRef.SubscriptionRef<RecorderState>
   readonly start: (options: StartOptions) => Effect.Effect<string, RecorderFailure | StorageFailure>
   readonly stop: Effect.Effect<void, RecorderFailure | StorageFailure>
@@ -94,7 +94,7 @@ const KNOWN_REASONS: ReadonlyArray<Gap["reason"]> = [
 ]
 const toReason = (r: string): Gap["reason"] => (KNOWN_REASONS as ReadonlyArray<string>).includes(r) ? (r as Gap["reason"]) : "unknown"
 
-interface Session {
+type Session = {
   readonly tripId: string
   readonly startedAt: number
   buffer: Array<Sample>

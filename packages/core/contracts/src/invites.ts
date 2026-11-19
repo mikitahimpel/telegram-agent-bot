@@ -2,7 +2,7 @@ import { Context, Data, type Effect } from "effect"
 import type { StorageError } from "./errors.ts"
 import type { TgId } from "./ids.ts"
 
-export interface Invite {
+export type Invite = {
   readonly code: string
   readonly createdBy: TgId
   readonly note: string | undefined
@@ -14,7 +14,7 @@ export interface Invite {
   readonly revoked: boolean
 }
 
-export interface CreateInviteInput {
+export type CreateInviteInput = {
   readonly createdBy: TgId
   readonly uses: number
   readonly ttlMs: number
@@ -22,12 +22,12 @@ export interface CreateInviteInput {
   readonly note: string | undefined
 }
 
-export interface Redeemer {
+export type Redeemer = {
   readonly name?: string
   readonly username?: string
 }
 
-export interface InviteRedeemed {
+export type InviteRedeemed = {
   readonly code: string
   readonly createdBy: TgId
   readonly note: string | undefined
@@ -35,7 +35,7 @@ export interface InviteRedeemed {
   readonly redeemedAt: number
 }
 
-export interface RedemptionRecord {
+export type RedemptionRecord = {
   readonly code: string
   readonly tgId: TgId
   readonly name: string | undefined

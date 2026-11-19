@@ -4,11 +4,10 @@ import { Clock, Effect, Layer, ManagedRuntime } from "effect"
 import { layer as runnerLayer, type RunnerDeps } from "@bot/agent-runner/runner"
 import { layer as sessionsLayer } from "@bot/agent-sessions/sessions"
 import { layer as allowlistLayer } from "@bot/bot-allowlist/allowlist"
-import { layer as adminNotifierLayer, AdminNotifier } from "@bot/bot-dispatcher/admin-notifier"
+import { layer as adminNotifierLayer } from "@bot/bot-dispatcher/admin-notifier"
 import { McpAccess } from "@bot/bot-dispatcher/mcp-access"
 import { layer as runControlLayer } from "@bot/bot-dispatcher/run-control"
 import { AgentRunner } from "@bot/core-contracts/agent-runner"
-import { Allowlist } from "@bot/core-contracts/allowlist"
 import type { AgentInfo } from "@bot/core-contracts/agent-directory"
 import { TgId, ChatId } from "@bot/core-contracts/ids"
 import { RunControl } from "@bot/core-contracts/run-control"
@@ -35,19 +34,18 @@ import { userMemoryStore } from "./memory-store.ts"
 import { userStore } from "./scheduler-store.ts"
 import { localUserPrefs, readStoredLang } from "./user-prefs.ts"
 import { pluginEnvironment } from "./layers.ts"
-import { pluginRegistry, type PluginR } from "./plugins.ts"
-import type { CoreR } from "@bot/bot-core-commands/core-commands"
+import { pluginRegistry } from "./plugins.ts"
 import { helpRegistryLayer } from "./help-registry.ts"
 import { daysLeft, healthMessages, parseIssuedAt, reminderStage } from "./token-expiry.ts"
 
 export const RUNNER_IMAGE = "Runner"
 const MCP_TOKEN_TTL_SECONDS = 2 * 60 * 60
 
-export interface AgentInfoDto extends Omit<AgentInfo, "tgId"> {
+export type AgentInfoDto = {
   readonly tgId: number
-}
+} & Omit<AgentInfo, "tgId">
 
-export interface InviteDto {
+export type InviteDto = {
   readonly code: string
   readonly createdBy: number
   readonly note: string | null
@@ -59,7 +57,7 @@ export interface InviteDto {
   readonly revoked: boolean
 }
 
-export interface RedemptionDto {
+export type RedemptionDto = {
   readonly code: string
   readonly tgId: number
   readonly name: string | null
@@ -68,7 +66,7 @@ export interface RedemptionDto {
   readonly at: number
 }
 
-export interface RedeemedDto {
+export type RedeemedDto = {
   readonly code: string
   readonly createdBy: number
   readonly note: string | null
@@ -76,7 +74,7 @@ export interface RedeemedDto {
   readonly redeemedAt: number
 }
 
-export interface RedeemResult {
+export type RedeemResult = {
   readonly value: RedeemedDto | null
   readonly reason: InviteInvalidReason | null
 }

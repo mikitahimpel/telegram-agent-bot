@@ -2,7 +2,7 @@ import type { Sample } from "@bot/car-format/sample"
 
 export type ObdKey = Exclude<keyof Sample, "ts" | "lat" | "lon" | "gpsAccuracyM" | "gpsSpeedKmh">
 
-export interface PidDef {
+export type PidDef = {
   readonly pid: string
   readonly key: ObdKey
   readonly label: string

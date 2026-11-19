@@ -1,6 +1,5 @@
 import { Clock, Effect, Layer, Schema } from "effect"
 import type { CallbackDef, CommandDef } from "@bot/core-contracts/commands"
-import { StorageError } from "@bot/core-contracts/errors"
 import { ChatId, type TgId } from "@bot/core-contracts/ids"
 import { defaultLang, type Lang } from "@bot/core-contracts/lang"
 import type { AgentTool, BotPlugin } from "@bot/core-contracts/plugin"
@@ -58,8 +57,6 @@ const decodePayload = Schema.decodeUnknownOption(Schema.fromJsonString(Payload))
 const encodePayload = (p: Payload) => JSON.stringify(p)
 
 const newId = () => `rem_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`
-
-const fail = (operation: string, message: string) => new StorageError({ operation, cause: new Error(message) })
 
 const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
   ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }

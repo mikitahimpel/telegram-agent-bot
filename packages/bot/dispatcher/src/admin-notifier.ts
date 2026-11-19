@@ -9,7 +9,7 @@ export class AdminNotifier extends Context.Service<
   { readonly notify: (message: string) => Effect.Effect<void> }
 >()("@bot/AdminNotifier") {}
 
-export interface NotifierOptions {
+export type NotifierOptions = {
   readonly dedupeMs?: number
   readonly maxPerMinute?: number
 }

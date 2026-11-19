@@ -18,7 +18,7 @@ const MIN_TS = 946_684_800_000
 
 export class EmptyImport extends Data.TaggedError("EmptyImport")<{}> {}
 
-export interface ImportResult {
+export type ImportResult = {
   readonly tripId: string
   readonly points: number
   readonly startedAt: number
@@ -91,7 +91,7 @@ export const storeImport = (tgId: TgId | number, text: string, fileName: string)
     } satisfies ImportResult
   })
 
-export interface DocumentLike {
+export type DocumentLike = {
   readonly file_id: string
   readonly file_name?: string | undefined
   readonly mime_type?: string | undefined
@@ -101,7 +101,7 @@ export interface DocumentLike {
 export const isCsvDocument = (doc: DocumentLike): boolean =>
   (doc.file_name ?? "").toLowerCase().endsWith(".csv") || doc.mime_type === "text/csv"
 
-export interface ImportContext {
+export type ImportContext = {
   readonly tgId: TgId
   readonly chatId: ChatId
   readonly threadId: ThreadId | undefined

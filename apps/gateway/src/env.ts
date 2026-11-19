@@ -1,6 +1,6 @@
 import type { UserAgent } from "./user-agent.ts"
 
-export interface Env {
+export type Env = {
   readonly USER_AGENT: DurableObjectNamespace<UserAgent>
   readonly KV: KVNamespace
   readonly BACKUPS: R2Bucket

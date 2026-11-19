@@ -8,7 +8,7 @@ export const PAIR_TTL_SECONDS = 30 * 60
 export const LAST_SEEN_INTERVAL_MS = 10 * 60 * 1000
 export const MAX_DEVICES = 10
 
-export interface DeviceRecord {
+export type DeviceRecord = {
   readonly tgId: number
   readonly deviceId: string
   readonly name: string
@@ -18,14 +18,14 @@ export interface DeviceRecord {
   readonly lastSeenAt: number | null
 }
 
-interface PairRecord {
+type PairRecord = {
   readonly tgId: number
   readonly firstName: string
   readonly lang: Lang
   readonly expiresAt: number
 }
 
-interface IndexEntry {
+type IndexEntry = {
   readonly deviceId: string
   readonly hash: string
 }
@@ -79,7 +79,7 @@ export const startPair = (who: { readonly tgId: number; readonly firstName: stri
     return { code, expiresAt }
   })
 
-export interface PairedDevice {
+export type PairedDevice = {
   readonly token: string
   readonly record: DeviceRecord
 }

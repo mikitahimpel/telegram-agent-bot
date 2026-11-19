@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { escapeHtml, expandableQuote, markdownToTelegramHtml as md, splitHtml, table } from "../src/format.ts"
 
 const visible = (h: string) =>

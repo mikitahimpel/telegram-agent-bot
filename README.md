@@ -26,27 +26,30 @@ Gateway also serves /mcp (plugin tools for the agent), /health, and a 6-hourly c
    `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers, Containers, R2, KV, Secrets Store and account API token
    write (R2 presigned URLs mint a bucket-scoped token). Docker must be available (the container image is built
    and pushed during deploy).
-5. **State store.** Once, locally: `pp run --env-file .env -- pnpm exec alchemy state bootstrap`. CI cannot create
+5. **State store.** Once, locally: `pp run --env-file .env -- vp exec alchemy state bootstrap`. CI cannot create
    it itself.
-6. `pnpm install`.
+6. Install Vite+ (`vp`, see https://viteplus.dev/guide/), then `vp install`.
 
 ## Develop
 
 ```
-pnpm typecheck        # all packages, then alchemy.run.ts
-pnpm test
-pp run --env-file .env -- pnpm infra:dev     # local workerd with live reload
+vp run typecheck      # all packages, then alchemy.run.ts
+vp check              # format + lint + type-aware check (vp check --fix to apply fixes)
+vp run test           # all packages (vp test run inside one package)
+vp run build          # apps/car-web
+vp run e2e            # Playwright e2e for apps/car-web
+pp run --env-file .env -- vp run infra:dev     # local workerd with live reload
 ```
 
 ## Deploy
 
 ```
-pp run --env-file .env -- pnpm exec alchemy plan   --stage dev
-pp run --env-file .env -- pnpm exec alchemy deploy --stage dev --yes
-pp run --env-file .env -- pnpm exec alchemy destroy --stage pr-42 --yes
+pp run --env-file .env -- vp exec alchemy plan   --stage dev
+pp run --env-file .env -- vp exec alchemy deploy --stage dev --yes
+pp run --env-file .env -- vp exec alchemy destroy --stage pr-42 --yes
 ```
 
-After deploy: `SMOKE_BASE_URL=<worker url> pp run --env-file .env -- pnpm smoke`.
+After deploy: `SMOKE_BASE_URL=<worker url> pp run --env-file .env -- vp run smoke`.
 Allow other users from the admin chat with `/allow <tgId>`.
 
 ### Stages

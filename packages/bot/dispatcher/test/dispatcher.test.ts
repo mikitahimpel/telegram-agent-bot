@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { ConfigProvider, Deferred, Effect, Fiber, Layer, Stream } from "effect"
 import { makeRegistry } from "@bot/bot-commands/registry"
 import { layer as sessionsLayer, type SqlStorageLike } from "@bot/agent-sessions/sessions"

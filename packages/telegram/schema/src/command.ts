@@ -1,6 +1,6 @@
 import type { Message } from "./schema.ts"
 
-export interface ParsedCommand {
+export type ParsedCommand = {
   readonly name: string
   readonly args: string
 }

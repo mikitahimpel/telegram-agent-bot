@@ -7,7 +7,7 @@ import type { BotPlugin, PluginFlags as PluginFlagsShape } from "@bot/core-contr
 import { Telegram } from "@bot/core-contracts/telegram"
 import type { InlineKeyboard, SendTarget } from "@bot/core-contracts/telegram"
 
-export interface KvLike {
+export type KvLike = {
   readonly get: (key: string) => Promise<string | null>
   readonly put: (key: string, value: string) => Promise<void>
   readonly delete: (key: string) => Promise<void>
@@ -15,6 +15,7 @@ export interface KvLike {
 
 export class PluginFlags extends Context.Service<PluginFlags, PluginFlagsShape>()("@bot/PluginFlags") {}
 
+// oxlint-disable-next-line typescript/no-explicit-any
 type AnyPlugin = Pick<BotPlugin<any, any, any>, "id" | "title" | "enabledByDefault">
 
 const FlagRecord = Schema.Record(Schema.String, Schema.Boolean)

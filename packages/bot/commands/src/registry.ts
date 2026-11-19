@@ -3,17 +3,17 @@ import type { ChatId, Role } from "@bot/core-contracts/ids"
 import type { Lang } from "@bot/core-contracts/lang"
 import type { BotCommandEntry, CommandScope } from "@bot/core-contracts/telegram"
 
-export interface HelpSource {
+export type HelpSource = {
   readonly visibleFor: (role: Role) => ReadonlyArray<Pick<CommandDef, "name" | "role" | "description" | "usage">>
 }
 
-export interface MenuPayload {
+export type MenuPayload = {
   readonly scope: CommandScope
   readonly languageCode: string | undefined
   readonly commands: ReadonlyArray<BotCommandEntry>
 }
 
-export interface Registry<R = never> extends HelpSource {
+export type Registry<R = never> = {
   readonly find: (name: string, role: Role) => CommandDef<R> | undefined
   readonly findCallback: (
     data: string,
@@ -21,7 +21,7 @@ export interface Registry<R = never> extends HelpSource {
   ) => { readonly def: CallbackDef<R>; readonly payload: string } | undefined
   readonly visibleFor: (role: Role) => ReadonlyArray<CommandDef<R>>
   readonly menus: (adminChatId: ChatId) => ReadonlyArray<MenuPayload>
-}
+} & HelpSource
 
 const MENU_LANGS: ReadonlyArray<{ readonly lang: Lang; readonly languageCode: string | undefined }> = [
   { lang: "en", languageCode: undefined },

@@ -14,12 +14,12 @@ import type {
   TripSyncVm
 } from "./types.ts"
 
-export interface StatusAction {
+export type StatusAction = {
   id: ActionId
   label: string
 }
 
-export interface StatusView {
+export type StatusView = {
   tone: Tone
   icon: string
   title: string

@@ -5,7 +5,7 @@ import type { ChatId, ThreadId } from "@bot/core-contracts/ids"
 import { Telegram } from "@bot/core-contracts/telegram"
 import { makeTelegram } from "./client.ts"
 
-export interface MockHttpCall {
+export type MockHttpCall = {
   readonly url: string
   readonly method: string
   readonly apiMethod: string
@@ -13,7 +13,7 @@ export interface MockHttpCall {
   readonly form: FormData | undefined
 }
 
-export interface MockHttpReply {
+export type MockHttpReply = {
   readonly status?: number
   readonly body: unknown
 }
@@ -50,12 +50,12 @@ export const layerTest = (handler: (call: MockHttpCall) => MockHttpReply) => {
   return { layer, calls }
 }
 
-export interface RecordedCall {
+export type RecordedCall = {
   readonly method: string
   readonly args: ReadonlyArray<unknown>
 }
 
-export interface RecordingOptions {
+export type RecordingOptions = {
   readonly fail?: (call: RecordedCall) => TelegramError | undefined
 }
 

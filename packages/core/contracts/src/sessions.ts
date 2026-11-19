@@ -3,7 +3,7 @@ import type { DailyLimitReached, StorageError } from "./errors.ts"
 import type { ClaudeSessionId, SessionKey, ThreadId } from "./ids.ts"
 import type { Lang } from "./lang.ts"
 
-export interface SessionRecord {
+export type SessionRecord = {
   readonly key: SessionKey
   readonly threadId: ThreadId | undefined
   readonly title: string
@@ -13,7 +13,7 @@ export interface SessionRecord {
   readonly runs: number
 }
 
-export interface RunUsage {
+export type RunUsage = {
   readonly sessionKey: SessionKey
   readonly costUsd: number
   readonly inputTokens: number
@@ -22,7 +22,7 @@ export interface RunUsage {
   readonly isError: boolean
 }
 
-export interface UsageSummary {
+export type UsageSummary = {
   readonly runsToday: number
   readonly dailyLimit: number
   readonly runsTotal: number

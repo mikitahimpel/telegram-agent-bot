@@ -210,7 +210,7 @@ const parseResetFromText = (text: string): number | undefined => {
   return m?.[1] === undefined ? undefined : toEpochMillis(Number(m[1]))
 }
 
-interface State {
+type State = {
   readonly assistantError: string | undefined
   readonly rejectedResetsAt: number | undefined
   readonly rejected: boolean

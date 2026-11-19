@@ -10,7 +10,7 @@ export type ObdErrorCode =
   | "CommandRejected"
   | "Disconnected"
 
-export interface ConnError {
+export type ConnError = {
   code: ObdErrorCode
   step?: string
   reason?: string
@@ -77,7 +77,7 @@ export type TripSyncVm =
 
 export type ChunkState = "confirmed" | "sent" | "waiting" | "failed" | "conflict" | "corrupt" | "lost"
 
-export interface ChunkVm {
+export type ChunkVm = {
   seq: number
   state: ChunkState
   rows: number
@@ -87,13 +87,13 @@ export interface ChunkVm {
   nextRetryAt?: number
 }
 
-export interface GapVm {
+export type GapVm = {
   from: number
   to: number
   reason: "adapter_disconnected" | "ecu_no_response" | "app_backgrounded" | "app_restarted" | "unknown"
 }
 
-export interface TripVm {
+export type TripVm = {
   tripId: string
   startedAt: number
   endedAt: number | null
@@ -105,13 +105,13 @@ export interface TripVm {
   localCopy: boolean
 }
 
-export interface StorageHealthVm {
+export type StorageHealthVm = {
   usedBytes: number
   quotaBytes: number
   persisted: boolean
 }
 
-export interface Reading {
+export type Reading = {
   speedKmh: number | null
   rpm: number | null
   coolantC: number | null
@@ -121,13 +121,13 @@ export interface Reading {
 
 export type SensorKey = keyof Reading
 
-export interface DiagEvent {
+export type DiagEvent = {
   at: number
   kind: "obd" | "elm" | "sync" | "app" | "error"
   text: string
 }
 
-export interface Capabilities {
+export type Capabilities = {
   ble: boolean
   serial: boolean
   secureContext: boolean
@@ -158,7 +158,7 @@ export type Tone = "ok" | "info" | "progress" | "warn" | "error"
 export type Platform = "android" | "ios" | "desktop" | "other"
 export type FuelRateSource = "pid_5e" | "maf_estimate" | "none"
 
-export interface PairedDevice {
+export type PairedDevice = {
   id: string
   name: string
   lastSeenAt: number | null

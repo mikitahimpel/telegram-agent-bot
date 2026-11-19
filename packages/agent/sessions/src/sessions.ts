@@ -5,10 +5,12 @@ import { Lang } from "@bot/core-contracts/lang"
 import { Schema } from "effect"
 import { Sessions, type SessionRecord, type UsageSummary } from "@bot/core-contracts/sessions"
 
-export interface SqlStorageLike {
+export type SqlStorageLike = {
   readonly exec: (
     query: string,
+    // oxlint-disable-next-line typescript/no-explicit-any
     ...bindings: Array<any>
+  // oxlint-disable-next-line typescript/no-explicit-any
   ) => { readonly toArray: () => Array<any> }
 }
 

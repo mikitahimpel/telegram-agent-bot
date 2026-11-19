@@ -33,7 +33,7 @@ const nodeSql = (): SqlLike => {
   }
 }
 
-interface Sent {
+type Sent = {
   readonly chatId: number
   readonly html: string
   readonly keyboard: InlineKeyboard | undefined

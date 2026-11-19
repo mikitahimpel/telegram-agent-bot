@@ -448,7 +448,7 @@ export const splitHtml = (html: string, limit = 4096): string[] => {
   return chunks
 }
 
-export interface TableHtml {
+export type TableHtml = {
   readonly rich: string
   readonly pre: string
 }

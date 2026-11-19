@@ -2,12 +2,12 @@ import type { ContainerExecOptionsLike, ContainerLike, DirectoryBackupLike, Dire
 
 const enc = new TextEncoder()
 
-export interface ExecCall {
+export type ExecCall = {
   readonly cmd: string[]
   readonly opts: ContainerExecOptionsLike | undefined
 }
 
-export interface FakeOptions {
+export type FakeOptions = {
   readonly claudeLines: ReadonlyArray<string>
   readonly hang?: boolean
   readonly claudeExitCode?: number

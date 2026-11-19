@@ -18,7 +18,7 @@ export const inGap = (gaps: ReadonlyArray<Gap>, a: number, b: number) => gaps.so
 
 export const isNum = (v: number | undefined): v is number => v !== undefined && Number.isFinite(v)
 
-export interface DistanceStep {
+export type DistanceStep = {
   readonly dt: number
   readonly obdKm: number | undefined
   readonly gpsKm: number | undefined

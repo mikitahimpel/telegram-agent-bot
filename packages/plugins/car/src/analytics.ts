@@ -6,7 +6,7 @@ export { haversineKm, MAX_STEP_SECONDS } from "@bot/car-format/metrics"
 
 export type FuelSource = "pid_5e" | "maf_estimate" | "none"
 
-export interface TripMetrics {
+export type TripMetrics = {
   readonly version: 1
   readonly points: number
   readonly startTs: number | undefined
@@ -26,7 +26,7 @@ export interface TripMetrics {
   readonly coolantSamples: number
 }
 
-interface Step {
+type Step = {
   readonly dt: number
   readonly obdKm: number | undefined
   readonly gpsKm: number | undefined
@@ -95,7 +95,7 @@ export const analyzeTrip = (
   }
 }
 
-export interface TotalMetrics {
+export type TotalMetrics = {
   readonly trips: number
   readonly points: number
   readonly durationSeconds: number

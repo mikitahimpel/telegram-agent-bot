@@ -1,4 +1,4 @@
-import { it } from "vitest"
+import { it } from "vite-plus/test"
 import type { ContainerLike, ExecProcessLike } from "../src/container-like.ts"
 
 it("Container satisfies ContainerLike", () => {

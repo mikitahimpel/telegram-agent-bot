@@ -1,4 +1,4 @@
-import { Clock, Context, Data, Duration, Effect, Layer, Queue, Random, Ref, Stream, SubscriptionRef } from "effect"
+import { Clock, Context, Data, Duration, Effect, Layer, Queue, Random, Stream, SubscriptionRef } from "effect"
 import type { TripStatus, TripSummary } from "@bot/car-format/api"
 
 type TripSummaryT = typeof TripSummary.Type
@@ -146,7 +146,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
     const inflight = new Set<string>()
     const verifying = new Set<string>()
     const rounds = new Map<string, number>()
-    const manifestFails = new Map<string, number>()
     let cloudTrips: ReadonlyArray<TripSummaryT> = []
     let halt: SyncStatus | undefined
     let paused = false

@@ -3,7 +3,7 @@ import type { TelegramError } from "./errors.ts"
 import type { ChatId, ThreadId } from "./ids.ts"
 import type { Localized } from "./lang.ts"
 
-export interface InlineButton {
+export type InlineButton = {
   readonly text: string
   readonly callbackData?: string
   readonly url?: string
@@ -13,7 +13,7 @@ export interface InlineButton {
 
 export type InlineKeyboard = ReadonlyArray<ReadonlyArray<InlineButton>>
 
-export interface SendTarget {
+export type SendTarget = {
   readonly chatId: ChatId
   readonly threadId?: ThreadId
 }
@@ -22,14 +22,14 @@ export type ReplyKeyboard = {
   readonly rows: ReadonlyArray<ReadonlyArray<string>>
 }
 
-export interface SendOptions {
+export type SendOptions = {
   readonly keyboard?: InlineKeyboard
   readonly replyKeyboard?: ReplyKeyboard
   readonly replyToMessageId?: number
   readonly disablePreview?: boolean
 }
 
-export interface SentMessage {
+export type SentMessage = {
   readonly messageId: number
 }
 
@@ -40,7 +40,7 @@ export type TelegramFileInfo = {
 
 export const MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
 
-export interface BotCommandEntry {
+export type BotCommandEntry = {
   readonly command: string
   readonly description: string
 }

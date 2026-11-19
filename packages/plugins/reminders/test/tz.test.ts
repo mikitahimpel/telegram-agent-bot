@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { formatIsoLocal, isValidTimeZone, nextRecurrence, parseAt, toInstant, toLocal, tomorrowAt, type Recurrence } from "../src/tz.ts"
 
 const local = (year: number, month: number, day: number, hour: number, minute = 0) => ({ year, month, day, hour, minute })

@@ -15,7 +15,7 @@ import { HelpRegistry } from "../src/help-registry.ts"
 export const adminId = TgId.make(1)
 export const aliceId = TgId.make(2)
 
-export interface Sent {
+export type Sent = {
   readonly kind: "send" | "edit"
   readonly threadId: number | undefined
   readonly html: string

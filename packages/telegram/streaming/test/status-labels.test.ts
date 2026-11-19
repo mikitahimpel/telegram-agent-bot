@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { humanStatus, statusKindOf } from "../src/status-labels.ts"
 
 describe("human status labels", () => {

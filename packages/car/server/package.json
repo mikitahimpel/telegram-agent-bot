@@ -8,21 +8,24 @@
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run"
+    "lint": "vp lint",
+    "fmt": "vp fmt --check",
+    "test": "vp test run"
   },
   "dependencies": {
     "@bot/car-format": "workspace:*",
+    "@bot/car-store": "workspace:*",
     "@bot/core-contracts": "workspace:*",
     "@bot/plugins-car": "workspace:*",
     "@bot/plugins-registry": "workspace:*",
-    "effect": "catalog:",
-    "@bot/car-store": "workspace:*"
+    "effect": "catalog:"
   },
   "devDependencies": {
-    "@effect/vitest": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
     "@bot/bot-allowlist": "workspace:*",
-    "@types/node": "catalog:"
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   }
 }

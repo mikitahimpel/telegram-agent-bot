@@ -9,17 +9,20 @@
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run"
+    "lint": "vp lint",
+    "fmt": "vp fmt --check",
+    "test": "vp test run"
   },
   "dependencies": {
-    "effect": "catalog:",
     "@bot/core-contracts": "workspace:*",
-    "@bot/telegram-format": "workspace:*"
+    "@bot/telegram-format": "workspace:*",
+    "effect": "catalog:"
   },
   "devDependencies": {
+    "@bot/telegram-client": "workspace:*",
     "@effect/vitest": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@bot/telegram-client": "workspace:*"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   }
 }

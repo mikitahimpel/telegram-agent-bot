@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { Effect, Redacted } from "effect"
 import { ALLOWED_UPDATES, callTelegram, scopeBody } from "../src/telegram-webhook.ts"
 

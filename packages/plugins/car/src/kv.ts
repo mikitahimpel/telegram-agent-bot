@@ -1,6 +1,6 @@
 import { Context } from "effect"
 
-export interface CarKvLike {
+export type CarKvLike = {
   readonly get: (key: string) => Promise<string | null>
   readonly put: (key: string, value: string, options?: { readonly expirationTtl?: number }) => Promise<void>
   readonly delete: (key: string) => Promise<void>

@@ -21,7 +21,9 @@
     "./user-prefs": "./src/user-prefs.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "lint": "vp lint",
+    "fmt": "vp fmt --check"
   },
   "dependencies": {
     "effect": "catalog:"

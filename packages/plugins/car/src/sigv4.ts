@@ -13,7 +13,7 @@ const sha256Hex = async (data: string): Promise<string> => hex(await crypto.subt
 const encode = (s: string): string =>
   encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 
-export interface PresignInput {
+export type PresignInput = {
   readonly method: "GET" | "PUT"
   readonly host: string
   readonly path: string

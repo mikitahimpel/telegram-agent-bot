@@ -16,7 +16,7 @@ export default defineConfig({
       "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
   },
   webServer: {
-    command: `pnpm run build && pnpm exec vite preview --port ${PORT} --strictPort`,
+    command: `vp run build && vp preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/car/`,
     timeout: 180_000,
     reuseExistingServer: false,

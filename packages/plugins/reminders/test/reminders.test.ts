@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite"
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Layer } from "effect"
 import { TestClock } from "effect/testing"
-import { layerLocal, UserScheduler } from "@bot/bot-scheduler/user-scheduler"
+import { layerLocal } from "@bot/bot-scheduler/user-scheduler"
 import { makeStore } from "@bot/bot-scheduler/scheduler"
 import type { CommandContext } from "@bot/core-contracts/commands"
 import { ChatId, SessionKey, TgId } from "@bot/core-contracts/ids"
@@ -11,7 +11,7 @@ import { UserPrefs } from "@bot/core-contracts/user-prefs"
 import type { Lang } from "@bot/core-contracts/lang"
 import type { InlineKeyboard } from "@bot/core-contracts/telegram"
 import { FIRED_KIND, REMINDER_KIND, remindersPlugin, type RemindersR } from "../src/reminders.ts"
-import { layerKv, makeMemoryKv, ReminderSettings } from "../src/settings.ts"
+import { layerKv, makeMemoryKv } from "../src/settings.ts"
 
 const tg = TgId.make(5)
 

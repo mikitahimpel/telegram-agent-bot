@@ -4,6 +4,7 @@ import type { TgId } from "@bot/core-contracts/ids"
 import { Scheduler, type JobHandler, type ScheduledJob } from "@bot/core-contracts/scheduler"
 
 export type SqlLike = {
+  // oxlint-disable-next-line typescript/no-explicit-any
   readonly exec: (query: string, ...bindings: Array<any>) => { readonly toArray: () => Array<any> }
 }
 

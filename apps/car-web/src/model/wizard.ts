@@ -6,7 +6,7 @@ import type { Capabilities, ConnectionVm, TransportKind } from "./types.ts"
 export type StepId = "browser" | "bluetooth" | "choose" | "adapter" | "car" | "sensors"
 export type StepStatus = "pending" | "active" | "done" | "failed"
 
-export interface WizardStep {
+export type WizardStep = {
   id: StepId
   label: string
   status: StepStatus

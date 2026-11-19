@@ -2,6 +2,7 @@ import { Clock, Effect } from "effect"
 import { StorageError } from "@bot/core-contracts/errors"
 
 export type MemorySql = {
+  // oxlint-disable-next-line typescript/no-explicit-any
   readonly exec: (query: string, ...bindings: Array<any>) => { readonly toArray: () => Array<any> }
 }
 

@@ -1,14 +1,14 @@
 import { Effect } from "effect"
 import { classifyStorageError, type StorageFailure } from "./errors.ts"
 
-export interface DeviceCredentials {
+export type DeviceCredentials = {
   readonly deviceToken: string
   readonly deviceId: string
   readonly tgId: number
   readonly firstName?: string
 }
 
-export interface CredentialsOptions {
+export type CredentialsOptions = {
   readonly dbName?: string
   readonly factory?: IDBFactory
 }

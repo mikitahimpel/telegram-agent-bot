@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import type { Lang } from "../src/i18n/format.ts"
 import { describeStatus, type StatusInput, type StatusView } from "../src/model/describe-status.ts"
 import type { ConnectionVm, ObdErrorCode, PairError, RecorderVm, SyncErrorCode, SyncGlobalVm, TripSyncVm } from "../src/model/types.ts"

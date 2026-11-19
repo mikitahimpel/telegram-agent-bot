@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { guardQuery } from "../src/guard.ts"
 import { buildTrip, cruise, gen, ingestAll, newEngine, T0 } from "./helpers.ts"
 

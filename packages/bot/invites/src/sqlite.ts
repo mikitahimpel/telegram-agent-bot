@@ -9,7 +9,8 @@ import {
   type RedemptionRecord
 } from "@bot/core-contracts/invites"
 
-export interface SqlLike {
+export type SqlLike = {
+  // oxlint-disable-next-line typescript/no-explicit-any
   readonly exec: (query: string, ...bindings: Array<any>) => { readonly toArray: () => Array<any> }
 }
 

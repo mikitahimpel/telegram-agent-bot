@@ -16,6 +16,7 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
 const rpcResult = (id: Id, result: unknown) => ({ jsonrpc: "2.0", id, result })
 const rpcError = (id: Id, code: number, message: string) => ({ jsonrpc: "2.0", id, error: { code, message } })
 
+// oxlint-disable-next-line typescript/no-explicit-any
 const inputSchemaOf = (tool: AgentTool<any>): Record<string, unknown> => {
   const doc = Schema.toJsonSchemaDocument(tool.input)
   const schema: Record<string, unknown> = { type: "object", ...(doc.schema as Record<string, unknown>) }

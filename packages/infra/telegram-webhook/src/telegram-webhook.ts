@@ -4,20 +4,20 @@ import { Data, Effect, Layer, Redacted } from "effect"
 
 export const ALLOWED_UPDATES = ["message", "edited_message", "callback_query", "stopped_message_generation"] as const
 
-export interface WebhookMenu {
+export type WebhookMenu = {
   readonly scope: { readonly type: "default" } | { readonly type: "chat"; readonly chatId: number }
   readonly languageCode: string | undefined
   readonly commands: ReadonlyArray<{ readonly command: string; readonly description: string }>
 }
 
-export interface TelegramWebhookProps {
+export type TelegramWebhookProps = {
   readonly botToken: Redacted.Redacted<string>
   readonly secretToken: Redacted.Redacted<string>
   readonly url: string | undefined
   readonly menus: ReadonlyArray<WebhookMenu>
 }
 
-export interface TelegramWebhookAttributes {
+export type TelegramWebhookAttributes = {
   readonly url: string
 }
 

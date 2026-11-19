@@ -2,11 +2,16 @@
   "name": "telegram-agent-bot",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "typecheck": "pnpm -r typecheck && tsc -p .",
-    "test": "pnpm -r test",
-    "smoke": "tsx scripts/smoke.ts",
+    "check": "vp check",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
+    "fmt:check": "vp fmt --check",
+    "typecheck": "vp run -r typecheck && tsc -p .",
+    "test": "vp run -r test",
+    "build": "vp run -r build",
+    "e2e": "vp run --filter @bot/car-web e2e",
+    "smoke": "node scripts/smoke.ts",
     "infra:deploy": "alchemy deploy --yes",
     "infra:plan": "alchemy plan",
     "infra:destroy": "alchemy destroy --yes",
@@ -22,7 +27,9 @@
     "@types/node": "catalog:",
     "alchemy": "catalog:",
     "effect": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:"
-  }
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@10.30.3"
 }

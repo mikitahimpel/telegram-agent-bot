@@ -3,7 +3,7 @@ import { encodeCsv } from "@bot/car-format/csv"
 import { ExportFailure, type StorageFailure } from "./errors.ts"
 import { TripStore } from "./store.ts"
 
-export interface ExportedTrip {
+export type ExportedTrip = {
   readonly fileName: string
   readonly csv: Blob
   readonly manifestJson: Blob

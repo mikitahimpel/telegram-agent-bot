@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 import { CATALOG, catalogCodes } from "../src/catalog.ts"
 import { GROUPS } from "../src/groups.ts"
 import { explainDtc, isCatalogued } from "../src/lookup.ts"

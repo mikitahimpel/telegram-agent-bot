@@ -62,7 +62,7 @@ describe("sigv4", () => {
     Effect.gen(function*() {
       const res = (yield* run(tool("car_app_link").handler({}, tg1))) as { url: string; expiresInMinutes: number }
       expect(res.url.startsWith("https://bot.test/car/#pair=")).toBe(true)
-      expect(res.expiresInMinutes).toBe(10)
+      expect(res.expiresInMinutes).toBe(30)
       const code = res.url.split("#pair=")[1] ?? ""
       const first = yield* run(completePair(code, "Chrome · Pixel"))
       expect(first?.record.tgId).toBe(1)
@@ -218,7 +218,7 @@ describe("trips, report, app, devices", () => {
       const btn = sent[0]!.options.keyboard[0][0]
       expect(btn.url).toMatch(/^https:\/\/bot\.test\/car\/#pair=[0-9a-f]{32}$/)
       expect(btn.webAppUrl).toBeUndefined()
-      expect(sent[0]!.html).toContain("10 minutes")
+      expect(sent[0]!.html).toContain("30 minutes")
       const { completePair } = yield* Effect.promise(() => import("../src/devices.ts"))
       const code = btn.url.split("#pair=")[1]
       const paired = yield* run(completePair(code, "Pixel 8"))

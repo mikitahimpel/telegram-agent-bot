@@ -348,7 +348,7 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
   {
     name: "car_app_link",
     description:
-      "Create a one-time link (valid 10 minutes) that opens the car recorder app in Chrome on the user's Android phone and connects that phone to this account. Use it whenever the user wants to record a trip, connect a phone or upload car data.",
+      "Create a one-time link (valid 30 minutes) that opens the car recorder app in Chrome on the user's Android phone and connects that phone to this account. Use it whenever the user wants to record a trip, connect a phone or upload car data.",
     input: AppLinkInput,
     handler: (_raw, ctx) =>
       Effect.gen(function*() {
@@ -381,7 +381,7 @@ const systemPrompt = `Car data plugin. The user records trips with the car app (
 - car_list_trips {from?, to?, limit?}: trips newest first (tripId, complete flag, chunk counts, points) plus raw uploads.
 - car_get_trip {tripId}: manifest, computed metrics and presigned GET URLs for the manifest and every chunk CSV (curl them in the sandbox, concatenate chunks in seq order). {key} for a raw uploaded file.
 - car_query {from?, to?, metric?}: real aggregates (distance, duration, avg/max speed, idle time, fuel, L/100km, coolant). metrics: ${METRIC_NAMES.join(", ")}.
-- car_app_link {}: one-time 10-minute link that opens the recorder app in Chrome and connects the phone. Use it when the user wants to record a trip or get data into the bot. Users can also send a CSV file to the chat as a document.
+- car_app_link {}: one-time 30-minute link that opens the recorder app in Chrome and connects the phone. Use it when the user wants to record a trip or get data into the bot. Users can also send a CSV file to the chat as a document.
 - car_upload_link {ext?}: raw presigned PUT URL for HTTP clients (curl); never give it to a person as a way to upload from a phone.
 Data layout: R2 car/<tgId>/trips/<tripId>/manifest.json + chunks/000000.csv ...; imported files in car/<tgId>/imports/. Only the user's own prefix is reachable.
 CSV columns (header row, missing value = empty cell, never zero): ts (epoch ms), lat, lon, gps_accuracy_m, gps_speed_kmh, speed_kmh (OBD 0D), rpm, coolant_c, intake_c, load_pct, throttle_pct, maf_gps, map_kpa, fuel_rate_lph, fuel_level_pct, voltage_v.

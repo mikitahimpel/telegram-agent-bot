@@ -67,6 +67,6 @@ The app is a Chrome PWA only (`/car/`, installable, service worker caches the ap
 - Opened inside Telegram's in-app browser / any WebView / iOS → one screen: "Recording works only in Chrome"
   + "Open in Chrome" (Android `intent://…;package=com.android.chrome;end`, keeps `#pair`) + copy-link fallback.
   The pairing code is NOT consumed there.
-- Pairing: bot `/car app` → one-time link `…/car/#pair=<code>` (10 min) → Chrome calls pair/complete → Device token in IndexedDB.
+- Pairing: bot `/car app` → one-time link `…/car/#pair=<code>` (30 min) → Chrome calls pair/complete → Device token in IndexedDB.
 - Unpaired Chrome → "Open the bot → /car app". Revoked device → "This phone was disconnected — pair again"; local data kept.
 - No Telegram Mini App SDK, no initData auth.

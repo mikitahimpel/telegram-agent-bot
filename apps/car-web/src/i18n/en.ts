@@ -325,7 +325,7 @@ export const en = {
   "sync.revoked.text": "Pair it again: open the bot, tap the /car app, then \"Open in Chrome\". Recordings on this phone are kept and will upload after pairing.",
 
   "pair.unpaired.title": "Connect this phone to your account",
-  "pair.unpaired.text": "Send /car app to the bot in Telegram, then open the link it sends in Chrome. The link works once and for 10 minutes, and pairs this phone.",
+  "pair.unpaired.text": "Send /car app to the bot in Telegram, then open the link it sends in Chrome. The link works once and for 30 minutes, and pairs this phone.",
   "pair.openBot": "Open the bot",
   "pair.recordLocal": "Record without connecting",
   "pair.demo": "Try the demo (simulator)",
@@ -341,9 +341,9 @@ export const en = {
   "pair.done.title": "Phone connected",
   "pair.done.text": "This phone is linked to your account. You can record trips here.",
   "pair.invalid.title": "The link expired or was already used",
-  "pair.invalid.text": "A pairing link works once and for 10 minutes. Go back to the bot, send /car app and open the new link in Chrome.",
+  "pair.invalid.text": "A pairing link works once and for 30 minutes. Go back to the bot, send /car app and open the new link in Chrome.",
   "pair.network.title": "Could not reach the server",
-  "pair.network.text": "Check your internet connection and open the link again. The link is kept for 10 minutes.",
+  "pair.network.text": "Check your internet connection and open the link again. The link is kept for 30 minutes.",
   "pair.unknown.title": "Pairing failed",
   "pair.unknown.text": "Something went wrong. Get a new link from the bot and try again.",
 

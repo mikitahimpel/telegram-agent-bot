@@ -4,7 +4,7 @@ import { StorageError } from "@bot/core-contracts/errors"
 import type { Lang } from "@bot/core-contracts/lang"
 import { CarKv, type CarKvLike } from "./kv.ts"
 
-export const PAIR_TTL_SECONDS = 10 * 60
+export const PAIR_TTL_SECONDS = 30 * 60
 export const LAST_SEEN_INTERVAL_MS = 10 * 60 * 1000
 export const MAX_DEVICES = 10
 

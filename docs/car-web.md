@@ -61,3 +61,15 @@ Upload
 Server / bot side
 - After `finish` the bot posts a summary in the chat: complete ✅ (duration, distance, points) or ⚠️ incomplete (which parts are missing, button to open the app).
 - Trips with gaps are analysed per segment, never interpolated across gaps.
+
+## Runtime modes (IMPORTANT — Web Bluetooth is not available in Android WebView)
+Telegram Mini Apps on Android run in Android System WebView, which has no `navigator.bluetooth`
+and no `navigator.serial`. Therefore:
+- **Mini App (inside Telegram)**: status, trips, chunk grid, retry/export of what the server has,
+  device list. Primary button "Open recorder in Chrome" → POST /car/api/pair/start →
+  `Telegram.WebApp.openLink(url)`. If `navigator.bluetooth` IS available (future WebView), allow recording in place.
+- **Chrome PWA** (`/car/` opened in Chrome, installable: web manifest + service worker caching the
+  app shell for offline start): pairs via `#pair=<code>`, keeps a Device token in IndexedDB, records and uploads.
+  Unpaired Chrome → screen "Open the bot → /car app to connect this phone".
+- Corner cases: pairing link expired/used; token revoked (`unauthorized` → "This phone was disconnected from your account — pair again");
+  opened in Chrome on desktop/iOS (no BLE → explain, Serial possible on desktop); several paired devices.

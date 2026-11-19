@@ -3,10 +3,27 @@ import { TripManifest } from "./manifest.ts"
 
 /**
  * HTTP API between the Mini App and the gateway Worker. Base path: `/car/api`.
- * Auth: header `Authorization: tma <Telegram.WebApp.initData>` (validated server-side
- * with the bot token, max age 24h). The user must be allowed and the car plugin enabled.
+ * Recording needs Web Bluetooth, which Android WebView (= Telegram Mini Apps) does NOT support.
+ * So the app runs in two modes:
+ *   - inside Telegram (Mini App): status/trips viewer + "Open in Chrome" button;
+ *   - in Chrome (installed PWA): connects to the adapter, records and uploads.
+ *
+ * Auth (either):
+ *   `Authorization: tma <Telegram.WebApp.initData>` — Mini App; validated with the bot token, max age 24h.
+ *   `Authorization: Device <deviceToken>` — Chrome PWA; long-lived, revocable (`/car devices`).
+ * The user must be allowed and the car plugin enabled.
+ *
+ * Pairing Chrome with the account:
+ *   1. Mini App (tma auth) → POST /car/api/pair/start → PairStart { code, url, expiresAt } (one-time, 10 min)
+ *      (the bot's `/car app` can also send that link). The Mini App calls
+ *      `Telegram.WebApp.openLink(url)` → opens `https://<host>/car/#pair=<code>` in Chrome.
+ *   2. Chrome PWA → POST /car/api/pair/complete { code, deviceName } (no auth) → PairComplete { deviceToken, tgId, firstName }
+ *      Stored in IndexedDB. Code is single-use; reuse/expired → `pair_code_invalid`.
+ *   Bot notifies the user: "New device connected: <deviceName>" with a revoke button.
  *
  *   GET  /car/api/me                                  → Me
+ *   GET  /car/api/devices                             → DeviceList
+ *   DELETE /car/api/devices/:deviceId                 → { ok: true }
  *   PUT  /car/api/trips/:tripId/manifest              body TripManifest (JSON)      → ManifestReceipt
  *   PUT  /car/api/trips/:tripId/chunks/:seq           body CSV, header `X-Content-SHA256` → ChunkReceipt
  *   GET  /car/api/trips/:tripId/status                → TripStatus
@@ -19,7 +36,8 @@ import { TripManifest } from "./manifest.ts"
  */
 
 export const ApiErrorCode = Schema.Literals([
-  "unauthorized", // initData missing/invalid/expired → re-open the Mini App from the bot
+  "unauthorized", // initData expired / device token revoked → re-open from the bot / pair again
+  "pair_code_invalid", // pairing code expired or already used → get a new link from the bot
   "forbidden", // not on allowlist
   "plugin_disabled", // admin has not enabled the car plugin for this account
   "bad_request",
@@ -82,3 +100,24 @@ export const TripSummary = Schema.Struct({
 })
 export const TripList = Schema.Struct({ trips: Schema.Array(TripSummary) })
 export type TripList = typeof TripList.Type
+
+export const PairStart = Schema.Struct({ code: Schema.String, url: Schema.String, expiresAt: Schema.Number })
+export type PairStart = typeof PairStart.Type
+
+export const PairCompleteRequest = Schema.Struct({ code: Schema.String, deviceName: Schema.String })
+export const PairComplete = Schema.Struct({
+  deviceToken: Schema.String,
+  deviceId: Schema.String,
+  tgId: Schema.Int,
+  firstName: Schema.String
+})
+export type PairComplete = typeof PairComplete.Type
+
+export const DeviceInfo = Schema.Struct({
+  deviceId: Schema.String,
+  name: Schema.String,
+  createdAt: Schema.Number,
+  lastSeenAt: Schema.NullOr(Schema.Number)
+})
+export const DeviceList = Schema.Struct({ devices: Schema.Array(DeviceInfo) })
+export type DeviceList = typeof DeviceList.Type

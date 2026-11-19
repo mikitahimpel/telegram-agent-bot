@@ -3,6 +3,7 @@ import type { CallbackDef, CommandDef } from "./commands.ts"
 import type { StorageError } from "./errors.ts"
 import type { TgId } from "./ids.ts"
 import type { Localized } from "./lang.ts"
+import type { JobHandler } from "./scheduler.ts"
 
 export interface ToolContext {
   readonly tgId: TgId
@@ -21,6 +22,7 @@ export interface BotPlugin<R = never, LayerE = never, LayerR = never> {
   readonly commands: ReadonlyArray<CommandDef<R>>
   readonly callbacks: ReadonlyArray<CallbackDef<R>>
   readonly tools: ReadonlyArray<AgentTool<R>>
+  readonly jobs?: ReadonlyArray<JobHandler<R>>
   readonly layer: Layer.Layer<R, LayerE, LayerR>
   readonly systemPrompt?: string
   readonly enabledByDefault: boolean

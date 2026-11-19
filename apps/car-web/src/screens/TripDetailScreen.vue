@@ -33,6 +33,8 @@ const doDelete = async () => {
     <h2 class="trip-title">{{ fmtDateTime(lang, trip.startedAt) }}</h2>
     <StatusCard :view="view" :trip-id="trip.tripId" big />
 
+    <p class="muted" data-testid="trip-distance">{{ trip.distanceKm !== null ? t("trips.distance", { km: fmtNumber(lang, trip.distanceKm, 1) }) : t("trips.unknownDistance") }}</p>
+
     <div class="counters" data-testid="counters">
       <div class="counter">
         <b>{{ fmtNumber(lang, counters.recorded) }}</b>

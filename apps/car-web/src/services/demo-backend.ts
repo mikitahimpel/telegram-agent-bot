@@ -72,7 +72,7 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
   const tick = () => {
     const r = rec.value
     if (r._tag !== "Recording") return
-    rec.value = { ...r, points: r.points + 1, lastSampleAt: Date.now(), chunks: Math.floor((r.points + 1) / 100) }
+    rec.value = { ...r, points: r.points + 1, distanceKm: r.distanceKm + 0.015, lastSampleAt: Date.now(), chunks: Math.floor((r.points + 1) / 100) }
     reading.value = {
       speedKmh: Math.round(40 + Math.random() * 40),
       rpm: Math.round(1800 + Math.random() * 900),
@@ -143,7 +143,7 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     },
     async startRecording() {
       const startedAt = Date.now()
-      rec.value = { _tag: "Recording", tripId: `demo-${startedAt}`, startedAt, points: 0, chunks: 0, lastSampleAt: startedAt, gapOpen: false }
+      rec.value = { _tag: "Recording", tripId: `demo-${startedAt}`, startedAt, points: 0, chunks: 0, distanceKm: 0, lastSampleAt: startedAt, gapOpen: false }
       wakeLock.value = true
       if (!o.static) timer = setInterval(tick, 1000)
     },
@@ -158,7 +158,7 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
       const i = interrupted.value
       interrupted.value = null
       if (!i) return
-      rec.value = { _tag: "Recording", tripId: i.tripId, startedAt: i.interruptedAt - 60_000, points: i.points, chunks: Math.floor(i.points / 100), lastSampleAt: Date.now(), gapOpen: true }
+      rec.value = { _tag: "Recording", tripId: i.tripId, startedAt: i.interruptedAt - 60_000, points: i.points, chunks: Math.floor(i.points / 100), distanceKm: 0, lastSampleAt: Date.now(), gapOpen: true }
     },
     async finishInterrupted() {
       interrupted.value = null

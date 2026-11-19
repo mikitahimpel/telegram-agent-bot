@@ -5,7 +5,7 @@ import StatusCard from "../components/StatusCard.vue"
 import { describeStatus } from "../model/describe-status.ts"
 import { isTelegramWebview } from "../services/env.ts"
 
-const { backend, lang, t, perform } = useApp()
+const { backend, lang, t } = useApp()
 const copied = ref(false)
 const href = typeof window === "undefined" ? "" : window.location.href
 const view = computed(
@@ -30,7 +30,6 @@ const copy = async () => {
   <div class="screen solo" data-testid="open-in-chrome">
     <StatusCard v-if="view" :view="view" big />
     <template v-if="canIntent">
-      <button class="btn btn-primary btn-big" type="button" data-testid="open-chrome" @click="perform('openInChrome')">{{ t("action.openInChrome") }}</button>
       <section class="card">
         <h3>{{ t("chrome.fallback") }}</h3>
         <pre class="steps">{{ t("chrome.steps") }}</pre>

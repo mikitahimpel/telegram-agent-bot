@@ -42,6 +42,8 @@ export interface TripRecord {
   readonly localDeleted: boolean
   /** Timestamp of the last flushed sample (chunk or pending). */
   readonly lastSampleAt?: number
+  /** Distance integrated while recording (km); absent for trips recorded before it was tracked. */
+  readonly distanceKm?: number
   readonly createdAt: number
 }
 

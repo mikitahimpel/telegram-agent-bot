@@ -20,7 +20,8 @@ export const formatMessage = (lang: Lang, template: string, params: Params = {})
 
 export const detectLang = (code: string | undefined | null): Lang => (code && code.toLowerCase().startsWith("ru") ? "ru" : "en")
 
-export const fmtNumber = (lang: Lang, n: number): string => new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "en-US").format(n)
+export const fmtNumber = (lang: Lang, n: number, fractionDigits?: number): string =>
+  new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "en-US", fractionDigits === undefined ? {} : { maximumFractionDigits: fractionDigits }).format(n)
 
 export const fmtClock = (ms: number): string => {
   const s = Math.max(0, Math.floor(ms / 1000))

@@ -31,6 +31,37 @@ describe("session (simulator)", () => {
         })
       )))
 
+  it.effect("onState reports every connection state in order", () =>
+    Effect.scoped(
+      driven(
+        Effect.gen(function*() {
+          const seen: Array<string> = []
+          const steps: Array<number> = []
+          yield* connect("simulator", {
+            scenario: "normal",
+            onState: (s) => {
+              seen.push(s._tag)
+              if (s._tag === "InitializingAdapter") steps.push(s.step)
+            }
+          })
+          const dedup = seen.filter((t, i) => seen[i - 1] !== t)
+          expect(dedup).toEqual(["RequestingDevice", "Connecting", "InitializingAdapter", "WaitingForEcu", "Ready"])
+          expect(steps.length).toBeGreaterThan(1)
+          expect(steps).toEqual([...steps].sort((a, b) => a - b))
+        })
+      )))
+
+  it.effect("onState reports Failed", () =>
+    Effect.scoped(
+      driven(
+        Effect.gen(function*() {
+          const seen: Array<string> = []
+          yield* connect("simulator", { scenario: "ignition_off", onState: (s) => seen.push(s._tag) }).pipe(Effect.flip)
+          expect(seen.at(-1)).toBe("Failed")
+          expect(seen).toContain("WaitingForEcu")
+        })
+      )))
+
   it.effect("ignition_off fails with EcuNotResponding", () =>
     Effect.scoped(
       driven(

@@ -19,10 +19,10 @@ const connections: ConnectionVm[] = [
 ]
 const recorders: RecorderVm[] = [
   { _tag: "Idle" },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 1_395_000, points: 1380, chunks: 4, lastSampleAt: NOW, gapOpen: false },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 1_395_000, points: 1380, chunks: 4, lastSampleAt: NOW, gapOpen: true },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 5000, points: 5, chunks: 0, lastSampleAt: NOW, gapOpen: false, storageError: "quota" },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 5000, points: 5, chunks: 0, lastSampleAt: NOW, gapOpen: false, sourceEnded: true },
+  { _tag: "Recording", tripId: "t", startedAt: NOW - 1_395_000, points: 1380, chunks: 4, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: false },
+  { _tag: "Recording", tripId: "t", startedAt: NOW - 1_395_000, points: 1380, chunks: 4, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: true },
+  { _tag: "Recording", tripId: "t", startedAt: NOW - 5000, points: 5, chunks: 0, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: false, storageError: "quota" },
+  { _tag: "Recording", tripId: "t", startedAt: NOW - 5000, points: 5, chunks: 0, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: false, sourceEnded: true },
   { _tag: "Finishing" }, { _tag: "Error", message: "QuotaExceededError" }
 ]
 const syncs: SyncGlobalVm[] = [
@@ -40,7 +40,7 @@ const trips: TripSyncVm[] = [
   { _tag: "Incomplete", missing: [], corrupt: [], conflict: [1], localCopy: true },
   { _tag: "Incomplete", missing: [1, 2], corrupt: [], conflict: [], localCopy: false }
 ]
-const pairs: Array<"unpaired" | "progress" | "done" | PairError> = ["unpaired", "progress", "done", "invalid", "network", "blocked", "unknown"]
+const pairs: Array<"unpaired" | "localOnly" | "progress" | "done" | PairError> = ["unpaired", "localOnly", "progress", "done", "invalid", "network", "blocked", "unknown"]
 
 const all: StatusInput[] = [
   ...connections.map((state): StatusInput => ({ kind: "connection", state })),

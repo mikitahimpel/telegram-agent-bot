@@ -50,6 +50,8 @@ export interface ObdSession {
 }
 
 export interface ConnectOptions {
+  /** Called synchronously with every connection state, including the ones emitted during connect. */
+  readonly onState?: (s: ConnectionState) => void
   readonly scenario?: SimulatorScenario
   readonly unsupported?: ReadonlyArray<string>
   readonly baudRate?: number
@@ -72,7 +74,11 @@ export const connect = (
   Effect.gen(function*() {
     const sessionScope = yield* Effect.scope
     const state = yield* SubscriptionRef.make<ConnectionState>(ConnectionState.Idle())
-    const setState = (s: ConnectionState) => SubscriptionRef.set(state, s)
+    const setState = (s: ConnectionState) =>
+      Effect.suspend(() => {
+        options.onState?.(s)
+        return SubscriptionRef.set(state, s)
+      })
 
     interface Link {
       readonly scope: Scope.Closeable

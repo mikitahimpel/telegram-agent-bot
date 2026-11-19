@@ -1,5 +1,6 @@
 import { Clock, Context, Data, Effect, Fiber, Layer, Random, Semaphore, Stream, SubscriptionRef } from "effect"
 import { makeTripId, type Gap, type TripManifest } from "@bot/car-format/manifest"
+import { distanceStep } from "@bot/car-format/metrics"
 import type { Sample } from "@bot/car-format/sample"
 import { RecorderFailure, StorageFailure, type StorageFailureReason } from "./errors.ts"
 import { AppLifecycle, GeoSource, WakeLock, type GeoFix } from "./platform.ts"
@@ -36,6 +37,8 @@ export type RecorderState = Data.TaggedEnum<{
     readonly points: number
     /** Chunks sealed locally. */
     readonly chunks: number
+    /** Distance driven so far (OBD speed, GPS fallback), skipping gaps and steps > 10 s. */
+    readonly distanceKm: number
     readonly lastSampleAt: number | undefined
     /** A gap (adapter lost, app in background) is currently open. */
     readonly gapOpen: boolean
@@ -114,6 +117,9 @@ interface Session {
   sourceEnded: boolean
   points: number
   chunks: number
+  distanceKm: number
+  /** Previous sample for integration; cleared whenever a gap starts or ends. */
+  prev: Sample | undefined
   lastSampleAt: number | undefined
   fibers: Array<Fiber.Fiber<unknown, unknown>>
 }
@@ -138,6 +144,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
           startedAt: s.startedAt,
           points: s.points,
           chunks: s.chunks,
+          distanceKm: s.distanceKm,
           lastSampleAt: s.lastSampleAt,
           gapOpen: s.sourceGap !== undefined || s.bgGap !== undefined,
           sourceEnded: s.sourceEnded,
@@ -156,6 +163,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       Effect.gen(function*() {
         const g = s.sourceGap
         if (g === undefined) return
+        s.prev = undefined
         s.sourceGap = undefined
         yield* addGap(s, { from: g.from, to: Math.max(to, g.from), reason: g.reason })
         yield* publish(s)
@@ -164,6 +172,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       Effect.gen(function*() {
         const g = s.bgGap
         if (g === undefined) return
+        s.prev = undefined
         s.bgGap = undefined
         yield* addGap(s, { from: g.from, to: Math.max(to, g.from), reason: "app_backgrounded" })
         yield* publish(s)
@@ -185,6 +194,10 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
             s.storageError = flushed.reason
             yield* publish(s)
             return
+          }
+          if (batch.length > 0) {
+            const km = s.distanceKm
+            yield* store.updateTrip(s.tripId, (t) => ({ ...t, distanceKm: km })).pipe(Effect.catch(() => Effect.void))
           }
           s.pendingRows += batch.length
           s.storageError = undefined
@@ -218,6 +231,11 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
               gpsSpeedKmh: sample.gpsSpeedKmh ?? fix.speedKmh
             }
           }
+          if (s.prev !== undefined) {
+            const d = distanceStep(s.prev, sample)
+            if (d !== undefined) s.distanceKm += d.obdKm ?? d.gpsKm ?? 0
+          }
+          s.prev = sample
           s.buffer.push(sample)
           s.points += 1
           s.lastSampleAt = sample.ts
@@ -225,6 +243,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
           else yield* publish(s)
         } else if (event._tag === "GapStarted") {
           if (s.sourceGap === undefined) s.sourceGap = { from: event.at, reason: toReason(event.reason) }
+          s.prev = undefined
           yield* publish(s)
         } else {
           yield* closeSourceGap(s, event.at)
@@ -279,6 +298,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
                 const now = yield* Clock.currentTimeMillis
                 if (v === "hidden") {
                   if (s.bgGap === undefined) s.bgGap = { from: now }
+                  s.prev = undefined
                   yield* publish(s)
                 } else {
                   yield* closeBgGap(s, now)
@@ -338,7 +358,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       yield* SubscriptionRef.set(state, RecorderState.Idle())
     })
 
-    const newSession = (tripId: string, startedAt: number, now: number, points: number, chunks: number, lastSampleAt: number | undefined): Session => ({
+    const newSession = (tripId: string, startedAt: number, now: number, points: number, chunks: number, lastSampleAt: number | undefined, distanceKm = 0): Session => ({
       tripId,
       startedAt,
       buffer: [],
@@ -353,6 +373,8 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       sourceEnded: false,
       points,
       chunks,
+      distanceKm,
+      prev: undefined,
       lastSampleAt,
       fibers: []
     })
@@ -434,7 +456,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         yield* store.sealPending(tripId)
         yield* store.updateManifest(tripId, (m) => ({ ...m, gaps: [...m.gaps, { from: lastSampleAt, to: now, reason: "app_restarted" as const }] }))
         const fresh = yield* store.getTrip(tripId)
-        yield* launch(newSession(tripId, t.manifest.startedAt, now, points, fresh?.manifest.chunks.length ?? 0, lastSampleAt), source, options?.geo ?? false)
+        yield* launch(newSession(tripId, t.manifest.startedAt, now, points, fresh?.manifest.chunks.length ?? 0, lastSampleAt, t.distanceKm ?? 0), source, options?.geo ?? false)
       })
 
     const finishInterrupted = (tripId: string) =>

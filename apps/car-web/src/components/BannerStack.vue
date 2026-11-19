@@ -10,6 +10,7 @@ const banners = computed<{ key: string; view: StatusView }[]>(() => {
   const out: { key: string; view: StatusView }[] = []
   const add = (key: string, view: StatusView | null) => view && out.push({ key, view })
   const s = backend.sync.value
+  if (backend.pairing.value !== "paired") add("local", describeStatus({ kind: "pair", state: "localOnly" }, lang.value, now.value))
   if (backend.pairing.value === "paired") {
     if (!backend.online.value || s._tag === "Offline") add("offline", describeStatus({ kind: "sync", state: { _tag: "Offline" } }, lang.value, now.value))
     if (s._tag === "NeedsReauth" || s._tag === "Blocked") add("sync", describeStatus({ kind: "sync", state: s }, lang.value, now.value))

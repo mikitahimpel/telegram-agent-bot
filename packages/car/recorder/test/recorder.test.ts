@@ -34,6 +34,40 @@ describe("Recorder", () => {
       }).pipe(Effect.provide(env.layer()))
     }))
 
+  it.effect("integrates distance: OBD speed, GPS fallback, skips long steps and gaps", () =>
+    Effect.gen(function*() {
+      const env = yield* makeEnv
+      yield* Effect.gen(function*() {
+        const rec = yield* Recorder
+        const store = yield* TripStore
+        const src = yield* makeSource
+        const id = yield* rec.start({ source: src.source, info })
+        yield* settle()
+        const km = () => SubscriptionRef.get(rec.state).pipe(Effect.map((s) => (s._tag === "Recording" ? s.distanceKm : -1)))
+        yield* src.emit(sample(0, { speedKmh: 36 }))
+        yield* src.emit(sample(5000, { speedKmh: 36 })) // 36 km/h * 5 s = 0.05 km
+        yield* settle()
+        expect(yield* km()).toBeCloseTo(0.05, 6)
+        yield* src.emit(sample(30_000, { speedKmh: 36 })) // 25 s jump: skipped
+        yield* settle()
+        expect(yield* km()).toBeCloseTo(0.05, 6)
+        yield* src.emit({ _tag: "GapStarted", at: 31_000, reason: "adapter_disconnected" })
+        yield* src.emit({ _tag: "GapEnded", at: 32_000 })
+        yield* src.emit(sample(33_000, { speedKmh: 36 })) // first sample after a gap: no previous
+        yield* settle()
+        expect(yield* km()).toBeCloseTo(0.05, 6)
+        // no OBD speed: GPS haversine, 0.01 deg lat is about 1.112 km in 10 s
+        const noSpeed = (ts: number, lat: number) => sample(ts, { speedKmh: undefined, lat, lon: 21, gpsAccuracyM: 5 })
+        yield* src.emit(noSpeed(40_000, 52))
+        yield* src.emit(noSpeed(50_000, 52.001))
+        yield* settle()
+        expect(yield* km()).toBeCloseTo(0.05 + 0.1112, 3)
+        yield* advance(5000)
+        yield* rec.stop
+        expect((yield* store.getTrip(id))!.distanceKm).toBeCloseTo(0.05 + 0.1112, 3)
+      }).pipe(Effect.provide(env.layer()))
+    }))
+
   it.effect("seals a chunk every 30 s", () =>
     Effect.gen(function*() {
       const env = yield* makeEnv

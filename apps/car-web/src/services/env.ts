@@ -16,6 +16,12 @@ export const isTelegramWebview = (ua: string, w: { TelegramWebviewProxy?: unknow
 export const initialLang = (navLang: string | undefined, saved: string | null | undefined): Lang =>
   saved === "ru" || saved === "en" ? saved : detectLang(navLang)
 
+/** Bot deep link from VITE_BOT_USERNAME (with or without a leading @); null when unset. */
+export const botUrl = (username: string | undefined | null): string | null => {
+  const u = (username ?? "").trim().replace(/^@/, "")
+  return /^[A-Za-z0-9_]{3,}$/.test(u) ? `https://t.me/${u}` : null
+}
+
 export const localCapabilities = (): Capabilities => detectCapabilities()
 
 /**

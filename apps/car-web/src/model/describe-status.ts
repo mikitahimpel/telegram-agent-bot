@@ -41,7 +41,7 @@ export type StatusInput =
   | { kind: "env"; caps: Pick<Capabilities, "ble" | "serial" | "secureContext">; platform: Platform; telegramWebview: boolean }
   | { kind: "storage"; level: "low" | "notPersistent"; usedPct?: number }
   | { kind: "clock"; offsetMs: number }
-  | { kind: "pair"; state: "unpaired" | "progress" | "done" | PairError }
+  | { kind: "pair"; state: "unpaired" | "localOnly" | "progress" | "done" | PairError }
 
 export const fmtDuration = (t: TFn, ms: number): string => {
   const s = Math.max(0, Math.round(ms / 1000))
@@ -279,6 +279,8 @@ const pairView = (t: TFn, state: Extract<StatusInput, { kind: "pair" }>["state"]
   switch (state) {
     case "unpaired":
       return { tone: "info", icon: "📲", title: t("pair.unpaired.title"), text: t("pair.unpaired.text") }
+    case "localOnly":
+      return { tone: "warn", icon: "📱", title: t("pair.local.title"), text: t("pair.local.text"), action: act(t, "howToPair") }
     case "progress":
       return { tone: "progress", icon: "🔗", title: t("pair.progress.title"), text: t("pair.progress.text") }
     case "done":

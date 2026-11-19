@@ -176,8 +176,11 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       scope = sc
       log("obd", `connect ${kind}${scenario ? ` (${scenario})` : ""}`)
       base.conn.value = { _tag: "RequestingDevice" }
+      const onState = (s: ConnectionState) => {
+        if (gen === generation && s._tag !== "Idle") base.conn.value = mapConnectionState(s)
+      }
       const result = await Effect.runPromise(
-        obdConnect(kind, scenario ? { scenario } : {}).pipe(
+        obdConnect(kind, { ...(scenario ? { scenario } : {}), onState }).pipe(
           Effect.provideService(Scope.Scope, sc),
           Effect.map((s) => ({ ok: true as const, session: s })),
           Effect.catch((error: ObdError) => Effect.succeed({ ok: false as const, error }))

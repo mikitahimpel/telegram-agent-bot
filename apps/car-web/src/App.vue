@@ -16,7 +16,7 @@ import TripsScreen from "./screens/TripsScreen.vue"
 import { isTelegramWebview } from "./services/env.ts"
 
 const props = defineProps<{ retryPairing?: () => void }>()
-const { backend, route, go, back, canGoBack, t, lang } = useApp()
+const { backend, route, go, back, canGoBack, t, lang, localMode } = useApp()
 
 const unsupported = computed(
   () =>
@@ -25,7 +25,7 @@ const unsupported = computed(
       lang.value
     ) !== null
 )
-const gate = computed<"unsupported" | "pair" | "app">(() => (unsupported.value ? "unsupported" : backend.pairing.value === "paired" ? "app" : "pair"))
+const gate = computed<"unsupported" | "pair" | "app">(() => (unsupported.value ? "unsupported" : backend.pairing.value === "paired" || localMode.value ? "app" : "pair"))
 const recording = computed(() => backend.rec.value._tag === "Recording")
 const titleKey = computed(() => {
   const n = route.value.name

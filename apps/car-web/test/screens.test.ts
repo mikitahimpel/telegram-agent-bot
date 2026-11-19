@@ -22,7 +22,7 @@ const make = (o: DemoOptions = {}, lang: Lang = "en") => {
   return { backend, ctx, global: { provide: { [AppKey as symbol]: ctx } } }
 }
 const noCaps = { ble: false, serial: false, secureContext: true, inTelegram: false, reasons: [] }
-const recording = { _tag: "Recording", tripId: "t", startedAt: Date.now() - 1_395_000, points: 1380, chunks: 4, lastSampleAt: Date.now(), gapOpen: false } as const
+const recording = { _tag: "Recording", tripId: "t", startedAt: Date.now() - 1_395_000, points: 1380, chunks: 4, distanceKm: 12.3, lastSampleAt: Date.now(), gapOpen: false } as const
 
 describe("screens render with fixtures", () => {
   for (const lang of ["en", "ru"] as Lang[]) {
@@ -83,9 +83,9 @@ describe("screens render with fixtures", () => {
       })
       it("unsupported browser screen offers Open in Chrome on Android only", () => {
         const a = make({ caps: noCaps, platform: "android" }, lang)
-        expect(mount(OpenInChromeScreen, { global: a.global }).find('[data-testid="open-chrome"]').exists()).toBe(true)
+        expect(mount(OpenInChromeScreen, { global: a.global }).find('[data-testid="status-action"]').exists()).toBe(true)
         const i = make({ caps: noCaps, platform: "ios" }, lang)
-        expect(mount(OpenInChromeScreen, { global: i.global }).find('[data-testid="open-chrome"]').exists()).toBe(false)
+        expect(mount(OpenInChromeScreen, { global: i.global }).find('[data-testid="status-action"]').exists()).toBe(false)
       })
     })
   }
@@ -102,6 +102,19 @@ describe("App gating and banners", () => {
     const w = mount(App, { global })
     expect(w.find('[data-testid="open-in-chrome"]').exists()).toBe(true)
     expect(w.find('[data-testid="pair-screen"]').exists()).toBe(false)
+  })
+  it("WebView: open-in-Chrome button appears once", () => {
+    const { global } = make({ caps: noCaps, platform: "android", pairing: "unpaired" })
+    const w = mount(App, { global })
+    expect(w.findAll("button").filter((b) => b.text() === "Open in Chrome" || b.text() === "Открыть в Chrome")).toHaveLength(1)
+  })
+  it("unpaired: record locally reveals the app with a persistent banner", async () => {
+    const { global } = make({ pairing: "unpaired" })
+    const w = mount(App, { global })
+    expect(w.find('[data-testid="pair-screen"]').text()).toContain("/car app")
+    await w.find('[data-testid="record-local"]').trigger("click")
+    expect(w.find('[data-testid="pair-screen"]').exists()).toBe(false)
+    expect(w.find('[data-testid="banners"]').exists()).toBe(true)
   })
   it("Chrome unpaired: pair screen", () => {
     const { global } = make({ pairing: "unpaired" })

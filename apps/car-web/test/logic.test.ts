@@ -6,11 +6,12 @@ import { describeHome } from "../src/model/home.ts"
 import { groupTrips, canDeleteLocal } from "../src/model/trips.ts"
 import { wizardSteps } from "../src/model/wizard.ts"
 import { fixtureTrips, readyConn } from "../src/fixtures/index.ts"
-import { buildChromeIntentUrl } from "../src/services/env.ts"
+import { botUrl, buildChromeIntentUrl } from "../src/services/env.ts"
 import { completePair, deviceNameFromUA, parsePairHash } from "../src/services/pairing.ts"
 import { runPairing } from "../src/services/pairing-flow.ts"
 import { createDemoBackend } from "../src/services/demo-backend.ts"
-import { mapObdError } from "../src/services/map-obd.ts"
+import { ConnectionState } from "@bot/car-obd/state"
+import { mapConnectionState, mapObdError } from "../src/services/map-obd.ts"
 import { mapChunkState, mapSyncError, mapTrip, mapRecorderState } from "../src/services/map-recorder.ts"
 
 const caps = { ble: true, serial: false, secureContext: true }
@@ -30,6 +31,24 @@ describe("i18n", () => {
     expect(formatMessage("ru", f, { n: 21 })).toBe("21 часть")
     expect(formatMessage("en", "{n#part|parts}", { n: 1 })).toBe("1 part")
     expect(formatMessage("en", "{n#part|parts}", { n: 2 })).toBe("2 parts")
+  })
+})
+
+describe("wizard live progress", () => {
+  it("advances as connection states arrive", () => {
+    const states = [
+      ConnectionState.RequestingDevice(),
+      ConnectionState.Connecting({ deviceName: "OBDII" }),
+      ConnectionState.InitializingAdapter({ step: 2, total: 5, label: "ATE0" }),
+      ConnectionState.WaitingForEcu(),
+      ConnectionState.Ready({
+        info: { adapterName: "OBDII", elmVersion: "v", obdProtocol: "p", supportedPids: ["0C"], fuelRateSource: "none", transport: "simulator" }
+      })
+    ]
+    const active = states.map((s) => wizardSteps(mapConnectionState(s), caps, "ble", "en").findIndex((w) => w.status === "active"))
+    expect(active).toEqual([2, 3, 3, 4, -1])
+    const init = wizardSteps(mapConnectionState(states[2]!), caps, "ble", "en")
+    expect(init[3]!.note).toBe("2/5 ATE0")
   })
 })
 
@@ -71,6 +90,15 @@ describe("home + trips", () => {
     const ts = fixtureTrips(NOW)
     expect(canDeleteLocal(ts[1]!)).toBe(true)
     expect(canDeleteLocal(ts[0]!)).toBe(false)
+  })
+})
+
+describe("bot link", () => {
+  it("builds the t.me url from the env username", () => {
+    expect(botUrl("my_bot")).toBe("https://t.me/my_bot")
+    expect(botUrl("@my_bot")).toBe("https://t.me/my_bot")
+    expect(botUrl(undefined)).toBeNull()
+    expect(botUrl("")).toBeNull()
   })
 })
 
@@ -135,7 +163,7 @@ describe("recorder mapping", () => {
   it("builds Incomplete lists from chunk states", () => {
     const v = mapTrip(
       {
-        tripId: "t", startedAt: 1, endedAt: 2, points: 10, cloud: undefined,
+        tripId: "t", startedAt: 1, endedAt: 2, points: 10, distanceKm: undefined, cloud: undefined,
         sync: { _tag: "Incomplete", missing: 1, corrupt: 0, conflict: 0, localCopy: false } as never,
         chunks: [{ seq: 0, rows: 5, state: "confirmed", attempts: 1, nextRetryAt: undefined, lastError: undefined }, { seq: 1, rows: 5, state: "lost", attempts: 1, nextRetryAt: undefined, lastError: undefined }]
       },

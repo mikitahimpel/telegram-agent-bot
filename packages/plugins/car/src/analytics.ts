@@ -1,10 +1,8 @@
 import type { Gap } from "@bot/car-format/manifest"
+import { distanceStep, isNum as num } from "@bot/car-format/metrics"
 import type { Sample } from "@bot/car-format/sample"
 
-/** Samples further apart than this are never integrated across (adapter stall, app backgrounded). */
-export const MAX_STEP_SECONDS = 10
-const MAX_GPS_ACCURACY_M = 50
-const MAX_PLAUSIBLE_KMH = 300
+export { haversineKm, MAX_STEP_SECONDS } from "@bot/car-format/metrics"
 
 export type FuelSource = "pid_5e" | "maf_estimate" | "none"
 
@@ -31,17 +29,6 @@ export interface TripMetrics {
   readonly coolantSamples: number
 }
 
-const rad = (d: number) => (d * Math.PI) / 180
-
-export const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const dLat = rad(lat2 - lat1)
-  const dLon = rad(lon2 - lon1)
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2
-  return 2 * 6371.0088 * Math.asin(Math.min(1, Math.sqrt(a)))
-}
-
-const inGap = (gaps: ReadonlyArray<Gap>, a: number, b: number) => gaps.some((g) => g.from < b && g.to > a)
-
 interface Step {
   readonly dt: number
   readonly obdKm: number | undefined
@@ -49,8 +36,6 @@ interface Step {
   readonly fuelL: number | undefined
   readonly idle: boolean
 }
-
-const num = (v: number | undefined): v is number => v !== undefined && Number.isFinite(v)
 
 /** Per-trip metrics. Never interpolates across gaps or time jumps > 10 s. */
 export const analyzeTrip = (
@@ -63,18 +48,9 @@ export const analyzeTrip = (
   for (let i = 1; i < samples.length; i++) {
     const a = samples[i - 1] as Sample
     const b = samples[i] as Sample
-    const dt = (b.ts - a.ts) / 1000
-    if (dt <= 0 || dt > MAX_STEP_SECONDS || inGap(gaps, a.ts, b.ts)) continue
-    const obdKm = num(a.speedKmh) && num(b.speedKmh) ? (((a.speedKmh + b.speedKmh) / 2) * dt) / 3600 : undefined
-    let gpsKm: number | undefined
-    if (num(a.lat) && num(a.lon) && num(b.lat) && num(b.lon)) {
-      const accOk = (s: Sample) => !num(s.gpsAccuracyM) || s.gpsAccuracyM <= MAX_GPS_ACCURACY_M
-      if (accOk(a) && accOk(b)) {
-        const km = haversineKm(a.lat, a.lon, b.lat, b.lon)
-        if (km * 1000 >= 2 && (km / dt) * 3600 <= MAX_PLAUSIBLE_KMH) gpsKm = km
-        else if (km * 1000 < 2) gpsKm = 0
-      }
-    }
+    const d = distanceStep(a, b, gaps)
+    if (d === undefined) continue
+    const { dt, obdKm, gpsKm } = d
     const fuelL = num(a.fuelRateLph) && num(b.fuelRateLph) ? (((a.fuelRateLph + b.fuelRateLph) / 2) * dt) / 3600 : undefined
     const idle = num(a.rpm) && a.rpm > 0 && num(a.speedKmh) && a.speedKmh === 0
     steps.push({ dt, obdKm, gpsKm, fuelL, idle })

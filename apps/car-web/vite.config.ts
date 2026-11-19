@@ -5,6 +5,6 @@ export default defineConfig({
   base: "/car/",
   plugins: [vue()],
   define: { __APP_VERSION__: JSON.stringify("0.1.0") },
-  build: { outDir: "dist", target: "es2022", sourcemap: true },
+  build: { outDir: "dist", target: "es2022", sourcemap: false },
   test: { environment: "jsdom", include: ["test/**/*.test.ts"] }
 })

@@ -66,6 +66,8 @@ export interface TripSyncInfo {
   readonly startedAt: number
   readonly endedAt: number | undefined
   readonly points: number | undefined
+  /** Locally integrated distance; undefined for cloud-only or pre-tracking trips. */
+  readonly distanceKm: number | undefined
   readonly sync: TripSync
   readonly chunks: ReadonlyArray<ChunkView>
   /** Server-side counters when known (from GET /trips). */
@@ -203,6 +205,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         startedAt: m.startedAt,
         endedAt: m.endedAt,
         points: m.chunks.reduce((n, c) => n + c.rows, 0),
+        distanceKm: trip.distanceKm,
         sync,
         chunks: views,
         cloud: undefined
@@ -214,6 +217,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       startedAt: t.startedAt,
       endedAt: t.endedAt ?? undefined,
       points: undefined,
+      distanceKm: undefined,
       sync: TripSync.CloudOnly(),
       chunks: [],
       cloud: { received: t.received, chunkCount: t.chunkCount, complete: t.complete }

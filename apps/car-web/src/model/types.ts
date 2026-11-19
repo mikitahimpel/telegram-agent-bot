@@ -43,6 +43,7 @@ export type RecorderVm =
       startedAt: number
       points: number
       chunks: number
+      distanceKm: number
       lastSampleAt: number
       gapOpen: boolean
       sourceEnded?: boolean

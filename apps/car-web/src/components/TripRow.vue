@@ -18,7 +18,7 @@ const duration = computed(() => (props.trip.endedAt ? fmtClock(props.trip.endedA
       <span class="badge" :class="`tone-${view.tone}`">{{ view.icon }} {{ view.title.split(":")[0] }}</span>
     </div>
     <div class="muted">
-      <template v-if="duration">{{ duration }} · </template>{{ trip.distanceKm !== null ? t("trips.distance", { km: fmtNumber(lang, trip.distanceKm) }) : t("trips.unknownDistance") }} ·
+      <template v-if="duration">{{ duration }} · </template>{{ trip.distanceKm !== null ? t("trips.distance", { km: fmtNumber(lang, trip.distanceKm, 1) }) : t("trips.unknownDistance") }} ·
       {{ t("trips.points", { n: trip.points }) }}
     </div>
     <div class="trip-summary">{{ view.summary ?? view.text }}</div>

@@ -35,11 +35,11 @@ export const messages = defineMessages({
     btnRevoke: "Revoke",
     btnKill: "Kill",
     btnCancel: "Cancel",
-    usageOne: (id: number, today: string, total: number, cost: string, tin: number, tout: number, last: string) =>
-      `<b>Agent ${id}</b>\nToday: ${today}\nRuns total: ${total}\nCost: $${cost}\nTokens: ${tin} in / ${tout} out\nLast run: ${last}`,
+    usageOne: (id: number, who: string, today: string, total: number, cost: string, tin: number, tout: number, last: string) =>
+      `<b>Agent ${id}</b> ${e(who)}\nToday: ${today}\nRuns total: ${total}\nCost: $${cost}\nTokens: ${tin} in / ${tout} out\nLast run: ${last}`,
     never: "never",
-    tableAgents: "id | sessions | running | today | runs | cost",
-    tableUsage: "id | today | runs | cost | in/out tokens"
+    tableAgents: "id | user | sessions | running | today | runs | cost",
+    tableUsage: "id | user | today | runs | cost | in/out tokens"
   },
   ru: {
     start: "Привет! Я агент Claude в Telegram. Просто напишите мне сообщение или используйте /new, чтобы начать отдельную сессию в своём топике.",
@@ -73,11 +73,11 @@ export const messages = defineMessages({
     btnRevoke: "Отозвать",
     btnKill: "Убить",
     btnCancel: "Отмена",
-    usageOne: (id: number, today: string, total: number, cost: string, tin: number, tout: number, last: string) =>
-      `<b>Агент ${id}</b>\nСегодня: ${today}\nВсего запусков: ${total}\nСтоимость: $${cost}\nТокены: ${tin} вх. / ${tout} исх.\nПоследний запуск: ${last}`,
+    usageOne: (id: number, who: string, today: string, total: number, cost: string, tin: number, tout: number, last: string) =>
+      `<b>Агент ${id}</b> ${e(who)}\nСегодня: ${today}\nВсего запусков: ${total}\nСтоимость: $${cost}\nТокены: ${tin} вх. / ${tout} исх.\nПоследний запуск: ${last}`,
     never: "никогда",
-    tableAgents: "id | сессии | активно | сегодня | запуски | стоимость",
-    tableUsage: "id | сегодня | запуски | стоимость | токены вх/исх"
+    tableAgents: "id | аккаунт | сессии | активно | сегодня | запуски | стоимость",
+    tableUsage: "id | аккаунт | сегодня | запуски | стоимость | токены вх/исх"
   }
 })
 

@@ -1,7 +1,7 @@
 import { Config, ConfigProvider, Duration, Effect, Layer, Option, Redacted, Schedule, Schema, Semaphore, Stream } from "effect"
 import { AgentRunner, type RunInput } from "@bot/core-contracts/agent-runner"
 import { AgentEvent } from "@bot/core-contracts/agent-event"
-import { ContainerDown, type SubscriptionLimitReached } from "@bot/core-contracts/errors"
+import { type ApiCreditsExhausted, ContainerDown, type SubscriptionLimitReached } from "@bot/core-contracts/errors"
 import type { TgId } from "@bot/core-contracts/ids"
 import type { Lang } from "@bot/core-contracts/lang"
 import { splitLines } from "@bot/agent-stream-json/split-lines"
@@ -43,8 +43,28 @@ const systemPrompt = (lang: Lang): string =>
 export const INSTANCE_TYPES = ["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"] as const
 export type InstanceType = (typeof INSTANCE_TYPES)[number]
 
+export type ClaudeAuth =
+  | { readonly mode: "subscription"; readonly token: Redacted.Redacted<string> }
+  | { readonly mode: "api_key"; readonly apiKey: Redacted.Redacted<string> }
+
+export const CLAUDE_AUTH_MODES = ["subscription", "api_key"] as const
+
+export const ClaudeAuthConfig: Config.Config<ClaudeAuth> = Config.Literals(CLAUDE_AUTH_MODES, "CLAUDE_AUTH_MODE").pipe(
+  Config.withDefault("subscription" as const),
+  Config.flatMap((mode): Config.Config<ClaudeAuth> =>
+    mode === "api_key"
+      ? Config.map(Config.Redacted("ANTHROPIC_API_KEY"), (apiKey) => ({ mode, apiKey }))
+      : Config.map(Config.Redacted("CLAUDE_CODE_OAUTH_TOKEN"), (token) => ({ mode, token }))
+  )
+)
+
+export const authEnv = (auth: ClaudeAuth): Record<string, string> =>
+  auth.mode === "api_key"
+    ? { ANTHROPIC_API_KEY: Redacted.value(auth.apiKey) }
+    : { CLAUDE_CODE_OAUTH_TOKEN: Redacted.value(auth.token) }
+
 export interface RunnerConfig {
-  readonly oauthToken: Redacted.Redacted<string>
+  readonly auth: ClaudeAuth
   readonly model: Option.Option<string>
   readonly instanceType: InstanceType
   readonly maxTurns: number
@@ -64,7 +84,7 @@ const parseDuration = (raw: string): Option.Option<Duration.Duration> => {
 }
 
 export const RunnerConfig = Config.all({
-  oauthToken: Config.Redacted("CLAUDE_CODE_OAUTH_TOKEN"),
+  auth: ClaudeAuthConfig,
   model: Config.option(Config.String("CLAUDE_MODEL")),
   instanceType: Config.Literals(INSTANCE_TYPES, "CONTAINER_INSTANCE_TYPE").pipe(Config.withDefault("basic" as InstanceType)),
   maxTurns: Config.Int("AGENT_MAX_TURNS").pipe(Config.withDefault(30)),
@@ -127,7 +147,7 @@ const textOf = (b: ArrayBuffer) => new TextDecoder().decode(b)
 export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Config.ConfigError> =>
   Effect.gen(function* () {
     const cfg = yield* RunnerConfig
-    const token = Redacted.value(cfg.oauthToken)
+    const credentials = authEnv(cfg.auth)
     const { container, backup, bucket } = deps
     const user = deps.user ?? "1000:1000"
     const home = deps.home ?? "/home/node"
@@ -137,7 +157,8 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
     /** start/restore/snapshot/destroy never overlap (DirectoryBackup also serialises per container). */
     const lock = Semaphore.makeUnsafe(1)
 
-    const scrub = (s: string) => (token.length > 0 ? s.split(token).join("[redacted]") : s)
+    const secret = Object.values(credentials)[0] ?? ""
+    const scrub = (s: string) => (secret.length > 0 ? s.split(secret).join("[redacted]") : s)
     const down = (reason: string, cause?: unknown) =>
       new ContainerDown({ reason: scrub(reason), ...(cause === undefined ? {} : { cause }) })
     const wrap = <A>(label: string, f: () => Promise<A>): Effect.Effect<A, ContainerDown> =>
@@ -269,7 +290,7 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
         )
       )
 
-    const run = (input: RunInput): Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached> =>
+    const run = (input: RunInput): Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted> =>
       Stream.unwrap(
         Effect.gen(function* () {
           yield* ensureStarted(input.tgId)
@@ -290,7 +311,7 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
                 env: {
                   HOME: home,
                   PATH: PATH_ENV,
-                  CLAUDE_CODE_OAUTH_TOKEN: token,
+                  ...credentials,
                   ...(input.mcp === undefined ? {} : { BOT_MCP_TOKEN: input.mcp.token })
                 }
               })
@@ -382,10 +403,11 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
           if (v.code !== 0) return yield* Effect.fail(down(`claude --version exited ${v.code}: ${v.stderr.trim()}`))
           // `claude auth status` makes no model call: it only reports whether credentials are present
           // (a revoked/expired token is NOT detected; that surfaces as an is_error result on the next run).
-          const a = yield* sh(["claude", "auth", "status"], { env: { CLAUDE_CODE_OAUTH_TOKEN: token } })
+          const a = yield* sh(["claude", "auth", "status"], { env: credentials })
           let authOk = false
           try {
-            authOk = a.code === 0 && (JSON.parse(a.stdout) as { loggedIn?: boolean }).loggedIn === true
+            const status = JSON.parse(a.stdout) as { loggedIn?: boolean; authMethod?: string }
+            authOk = a.code === 0 && status.loggedIn === true && (cfg.auth.mode !== "api_key" || status.authMethod === "api_key")
           } catch { /* unparsable -> not ok */ }
           return { version: v.stdout.trim().split(" ")[0] ?? v.stdout.trim(), authOk }
         })

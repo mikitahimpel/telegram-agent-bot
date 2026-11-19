@@ -23,7 +23,13 @@ export default Alchemy.Stack(
     // Secrets (values come from the environment; `pp run --env-file .env -- alchemy deploy`).
     const telegramBotToken = yield* Config.Redacted("TELEGRAM_BOT_TOKEN")
     const telegramWebhookSecret = yield* Config.Redacted("TELEGRAM_WEBHOOK_SECRET")
-    const claudeOauthToken = yield* Config.Redacted("CLAUDE_CODE_OAUTH_TOKEN")
+    const claudeAuthMode = yield* Config.Literals(["subscription", "api_key"], "CLAUDE_AUTH_MODE").pipe(
+      Config.withDefault("subscription" as const)
+    )
+    const claudeCredential =
+      claudeAuthMode === "api_key"
+        ? { ANTHROPIC_API_KEY: yield* Config.Redacted("ANTHROPIC_API_KEY") }
+        : { CLAUDE_CODE_OAUTH_TOKEN: yield* Config.Redacted("CLAUDE_CODE_OAUTH_TOKEN") }
     const mcpTokenSecret = yield* Config.Redacted("MCP_TOKEN_SECRET")
 
     // Plain config (defaults are resolved here: `Config.withDefault` values are not bound to the Worker).
@@ -71,13 +77,14 @@ export default Alchemy.Stack(
         R2_S3: Cloudflare.R2.S3Credentials(data, { access: "read-write" }),
         TELEGRAM_BOT_TOKEN: telegramBotToken,
         TELEGRAM_WEBHOOK_SECRET: telegramWebhookSecret,
-        CLAUDE_CODE_OAUTH_TOKEN: claudeOauthToken,
+        CLAUDE_AUTH_MODE: claudeAuthMode,
+        ...claudeCredential,
         MCP_TOKEN_SECRET: mcpTokenSecret,
         ADMIN_TG_ID: String(adminTgId),
         DAILY_RUN_LIMIT: String(dailyRunLimit),
         CAR_WEB_URL: carWebUrl,
         CONTAINER_INSTANCE_TYPE: instanceType,
-        CLAUDE_TOKEN_ISSUED_AT: tokenIssuedAt
+        CLAUDE_TOKEN_ISSUED_AT: claudeAuthMode === "api_key" ? "" : tokenIssuedAt
       }
     })
 

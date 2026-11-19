@@ -14,7 +14,9 @@ export interface Env {
   readonly R2_S3: string
   readonly TELEGRAM_BOT_TOKEN: string
   readonly TELEGRAM_WEBHOOK_SECRET: string
-  readonly CLAUDE_CODE_OAUTH_TOKEN: string
+  readonly CLAUDE_AUTH_MODE?: string
+  readonly CLAUDE_CODE_OAUTH_TOKEN?: string
+  readonly ANTHROPIC_API_KEY?: string
   readonly MCP_TOKEN_SECRET: string
   readonly ADMIN_TG_ID: string
   /** Public Mini App/recorder URL (`https://host/car/`); derived from the request origin when empty. */

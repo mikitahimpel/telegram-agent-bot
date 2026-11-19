@@ -64,18 +64,21 @@ Each stage has its own Worker, Durable Objects, container application, R2 bucket
 push to `main` deploys `prod`; a pull request deploys `pr-<n>`; closing the PR destroys it. After each deploy
 `scripts/smoke.ts` checks `/health`, that a wrong webhook secret gets 403, and that a synthetic admin "ping"
 update is accepted. Repository secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `TELEGRAM_BOT_TOKEN`,
-`TELEGRAM_WEBHOOK_SECRET`, `CLAUDE_CODE_OAUTH_TOKEN`, `MCP_TOKEN_SECRET`. Repository variables: `ADMIN_TG_ID`,
-`DAILY_RUN_LIMIT`, `CONTAINER_INSTANCE_TYPE`, `CLAUDE_TOKEN_ISSUED_AT`.
+`TELEGRAM_WEBHOOK_SECRET`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`, `MCP_TOKEN_SECRET`. Repository variables:
+`ADMIN_TG_ID`, `CLAUDE_AUTH_MODE`, `DAILY_RUN_LIMIT`, `CONTAINER_INSTANCE_TYPE`, `CLAUDE_TOKEN_ISSUED_AT`.
 
 ## Configuration
 
 | Name | Kind | Default |
 |---|---|---|
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `CLAUDE_CODE_OAUTH_TOKEN`, `MCP_TOKEN_SECRET` | secret | required |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `MCP_TOKEN_SECRET` | secret | required |
+| `CLAUDE_AUTH_MODE` | plain | `subscription`; `api_key` switches the agent to pay-as-you-go API billing |
+| `CLAUDE_CODE_OAUTH_TOKEN` | secret | required when `CLAUDE_AUTH_MODE=subscription` (`claude setup-token`) |
+| `ANTHROPIC_API_KEY` | secret | required when `CLAUDE_AUTH_MODE=api_key` (Claude Console) |
 | `ADMIN_TG_ID` | plain | required |
 | `DAILY_RUN_LIMIT` | plain | 50 runs per account per UTC day |
 | `CONTAINER_INSTANCE_TYPE` | plain | `basic` |
-| `CLAUDE_TOKEN_ISSUED_AT` | plain | empty (no expiry reminders) |
+| `CLAUDE_TOKEN_ISSUED_AT` | plain | empty (no expiry reminders; ignored in `api_key` mode) |
 
 ## Add a plugin
 

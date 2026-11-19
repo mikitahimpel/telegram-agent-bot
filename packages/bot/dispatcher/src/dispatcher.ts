@@ -79,6 +79,7 @@ interface Origin {
 
 export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
   const { registry, present } = options
+  const profiles = new Map<number, string>()
 
   /** Last line of defense: show a localized error, report unexpected ones to the admin, never fail. */
   const guard = <A, E, Rx>(origin: Origin | undefined, lang: Lang, effect: Effect.Effect<A, E, Rx>) =>
@@ -280,6 +281,20 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
 
       const role = yield* allowlist.roleOf(o.tgId).pipe(Effect.catch(() => Effect.succeed(undefined)))
       if (role === undefined) return
+
+      const from = message?.from ?? callback?.from
+      if (role === "user" && from !== undefined) {
+        const signature = `${from.first_name}\u0000${from.username ?? ""}`
+        if (profiles.get(o.tgId) !== signature) {
+          const updated = yield* allowlist
+            .updateProfile(o.tgId, {
+              name: from.first_name,
+              ...(from.username === undefined ? {} : { username: from.username })
+            })
+            .pipe(Effect.result)
+          if (updated._tag === "Success") profiles.set(o.tgId, signature)
+        }
+      }
 
       const stored = yield* sessions.getLang.pipe(Effect.catch(() => Effect.succeed(undefined)))
       const lang = stored ?? langFromTelegram(o.languageCode)

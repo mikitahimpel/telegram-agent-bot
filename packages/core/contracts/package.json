@@ -15,7 +15,8 @@
     "./agent-directory": "./src/agent-directory.ts",
     "./commands": "./src/commands.ts",
     "./plugin": "./src/plugin.ts",
-    "./run-control": "./src/run-control.ts"
+    "./run-control": "./src/run-control.ts",
+    "./invites": "./src/invites.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

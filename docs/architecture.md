@@ -26,6 +26,7 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 | packages/bot/commands | @bot/bot-commands | registry, /help builder, setMyCommands payloads (default + admin chat scope, ru+en) |
 | packages/bot/core-commands | @bot/bot-core-commands | handlers: start help new sessions stop lang + admin agents usage allow revoke kill restart |
 | packages/bot/allowlist | @bot/bot-allowlist | `Allowlist` Layer on KV |
+| packages/bot/invites | @bot/bot-invites | `Invites` on admin DO SQLite (+ memory layer), /invite /invites, invite redemption flow |
 | packages/bot/dispatcher | @bot/bot-dispatcher | decoded Update → command / callback / agent prompt / stop routing |
 | packages/agent/stream-json | @bot/agent-stream-json | Schema for claude CLI stream-json lines → AgentEvent; usage-limit detection |
 | packages/agent/runner | @bot/agent-runner | `AgentRunner` Layer over @cloudflare/sandbox; R2 snapshot/restore |

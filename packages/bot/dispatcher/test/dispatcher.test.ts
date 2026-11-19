@@ -87,7 +87,8 @@ const setup = (opts: { events?: ReadonlyArray<AgentEvent>; gate?: Deferred.Defer
     Layer.succeed(Telegram, telegram),
     Layer.succeed(Allowlist, {
       adminId: ADMIN,
-      roleOf: (id: TgId) => Effect.succeed(id === ADMIN ? ("admin" as const) : id === USER ? ("user" as const) : undefined)
+      roleOf: (id: TgId) => Effect.succeed(id === ADMIN ? ("admin" as const) : id === USER ? ("user" as const) : undefined),
+      updateProfile: () => Effect.void
     } as unknown as Allowlist["Service"]),
     Layer.succeed(AgentRunner, {
       run: () => Stream.fromIterable(events),

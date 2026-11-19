@@ -18,6 +18,7 @@
     "@bot/car-server": "workspace:*",
     "@bot/bot-commands": "workspace:*",
     "@bot/bot-core-commands": "workspace:*",
+    "@bot/bot-invites": "workspace:*",
     "@bot/bot-dispatcher": "workspace:*",
     "@bot/core-contracts": "workspace:*",
     "@bot/plugins-car": "workspace:*",

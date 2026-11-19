@@ -20,6 +20,9 @@ const PREFIX = "allow:"
 interface StoredEntry {
   readonly addedAt: number
   readonly addedBy: number
+  readonly name?: string
+  readonly username?: string
+  readonly invitedVia?: string
 }
 
 const parseStored = (raw: string | null): StoredEntry | undefined => {
@@ -28,7 +31,15 @@ const parseStored = (raw: string | null): StoredEntry | undefined => {
     const value: unknown = JSON.parse(raw)
     if (typeof value !== "object" || value === null) return undefined
     const { addedAt, addedBy } = value as Record<string, unknown>
-    return typeof addedAt === "number" && typeof addedBy === "number" ? { addedAt, addedBy } : undefined
+    if (typeof addedAt !== "number" || typeof addedBy !== "number") return undefined
+    const { name, username, invitedVia } = value as Record<string, unknown>
+    return {
+      addedAt,
+      addedBy,
+      ...(typeof name === "string" ? { name } : {}),
+      ...(typeof username === "string" ? { username } : {}),
+      ...(typeof invitedVia === "string" ? { invitedVia } : {})
+    }
   } catch {
     return undefined
   }
@@ -52,7 +63,7 @@ export const make = (kv: KvLike, adminId: TgId): Allowlist["Service"] => {
         if (!Number.isSafeInteger(id)) continue
         const stored = parseStored(yield* storage("allowlist.get", () => kv.get(name)))
         if (stored === undefined) continue
-        entries.push({ tgId: TgId.make(id), addedAt: stored.addedAt, addedBy: TgId.make(stored.addedBy) })
+        entries.push({ ...stored, tgId: TgId.make(id), addedBy: TgId.make(stored.addedBy) })
       }
       if (page.list_complete || page.cursor === undefined) return entries
       cursor = page.cursor
@@ -67,10 +78,36 @@ export const make = (kv: KvLike, adminId: TgId): Allowlist["Service"] => {
         : storage("allowlist.roleOf", () => kv.get(keyOf(tgId))).pipe(
             Effect.map((raw) => (parseStored(raw) === undefined ? undefined : ("user" as const)))
           ),
-    allow: (tgId, by) =>
+    allow: (tgId, by, meta) =>
       storage("allowlist.allow", () =>
-        kv.put(keyOf(tgId), JSON.stringify({ addedAt: Date.now(), addedBy: by } satisfies StoredEntry))
+        kv.put(
+          keyOf(tgId),
+          JSON.stringify({
+            addedAt: Date.now(),
+            addedBy: by,
+            ...(meta?.name === undefined ? {} : { name: meta.name }),
+            ...(meta?.username === undefined ? {} : { username: meta.username }),
+            ...(meta?.invitedVia === undefined ? {} : { invitedVia: meta.invitedVia })
+          } satisfies StoredEntry)
+        )
       ),
+    updateProfile: (tgId, profile) =>
+      Effect.gen(function* () {
+        const stored = parseStored(yield* storage("allowlist.profile.get", () => kv.get(keyOf(tgId))))
+        if (stored === undefined) return
+        if (stored.name === profile.name && stored.username === profile.username) return
+        const { name: _n, username: _u, ...rest } = stored
+        yield* storage("allowlist.profile.put", () =>
+          kv.put(
+            keyOf(tgId),
+            JSON.stringify({
+              ...rest,
+              ...(profile.name === undefined ? {} : { name: profile.name }),
+              ...(profile.username === undefined ? {} : { username: profile.username })
+            })
+          )
+        )
+      }),
     revoke: (tgId) => storage("allowlist.revoke", () => kv.delete(keyOf(tgId))),
     list: listEntries
   }
@@ -89,7 +126,10 @@ export const layer = (kv: KvLike) =>
 /** In-memory KV with the same shape, for tests. */
 export const makeMemoryKv = (initial: ReadonlyArray<AllowlistEntry> = []): KvLike => {
   const store = new Map<string, string>(
-    initial.map((e) => [`${PREFIX}${e.tgId}`, JSON.stringify({ addedAt: e.addedAt, addedBy: e.addedBy })])
+    initial.map((e) => {
+      const { tgId, ...rest } = e
+      return [`${PREFIX}${tgId}`, JSON.stringify(rest)] as [string, string]
+    })
   )
   return {
     get: async (key) => store.get(key) ?? null,

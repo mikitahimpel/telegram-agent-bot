@@ -16,6 +16,8 @@ import { TgId, ChatId } from "@bot/core-contracts/ids"
 import { RunControl } from "@bot/core-contracts/run-control"
 import { Sessions } from "@bot/core-contracts/sessions"
 import { Telegram } from "@bot/core-contracts/telegram"
+import { makeSqlite } from "@bot/bot-invites/sqlite"
+import { Invites, InviteInvalid, type Invite, type InviteInvalidReason } from "@bot/core-contracts/invites"
 import { importDocument, isCsvDocument } from "@bot/plugins-car/import"
 import { McpToken } from "@bot/plugins-registry/mcp-token"
 import { PluginFlags } from "@bot/plugins-registry/flags"
@@ -24,6 +26,7 @@ import { presentRun } from "@bot/telegram-streaming/streaming"
 import { agentDirectoryLayer } from "./agent-directory.ts"
 import { configLayer } from "./config.ts"
 import type { Env } from "./env.ts"
+import { invitesStubLayer } from "./invites-stub.ts"
 import { pluginEnvironment } from "./layers.ts"
 import { pluginRegistry, type PluginR } from "./plugins.ts"
 import type { CoreR } from "@bot/bot-core-commands/core-commands"
@@ -50,7 +53,53 @@ export interface AgentInfoDto extends Omit<AgentInfo, "tgId"> {
   readonly tgId: number
 }
 
-const makeRuntime = (ctx: DurableObjectState, env: Env, tgId: number, origin: () => string) => {
+export interface InviteDto {
+  readonly code: string
+  readonly createdBy: number
+  readonly note: string | null
+  readonly plugins: Array<string>
+  readonly usesTotal: number
+  readonly usesLeft: number
+  readonly createdAt: number
+  readonly expiresAt: number
+  readonly revoked: boolean
+}
+
+export interface RedemptionDto {
+  readonly code: string
+  readonly tgId: number
+  readonly name: string | null
+  readonly username: string | null
+  readonly note: string | null
+  readonly at: number
+}
+
+export interface RedeemedDto {
+  readonly code: string
+  readonly createdBy: number
+  readonly note: string | null
+  readonly plugins: Array<string>
+  readonly redeemedAt: number
+}
+
+export interface RedeemResult {
+  readonly value: RedeemedDto | null
+  readonly reason: InviteInvalidReason | null
+}
+
+const inviteDto = (i: Invite): InviteDto => ({
+  ...i,
+  note: i.note ?? null,
+  plugins: [...i.plugins]
+})
+
+const makeRuntime = (
+  ctx: DurableObjectState,
+  env: Env,
+  tgId: number,
+  origin: () => string,
+  invites: Invites["Service"]
+) => {
   const container = ctx.container
   if (container === undefined) throw new Error("UserAgent has no container binding")
   const gateway = (ctx as unknown as { exports: { DirectoryBackupGateway: DirectoryBackupGatewayBinding } }).exports
@@ -67,7 +116,8 @@ const makeRuntime = (ctx: DurableObjectState, env: Env, tgId: number, origin: ()
     allowlistLayer(env.KV),
     sessionsLayer(ctx.storage.sql),
     runnerLayer(deps),
-    runControlLayer
+    runControlLayer,
+    tgId === Number(env.ADMIN_TG_ID) ? Layer.succeed(Invites, invites) : invitesStubLayer(env)
   )
 
   const mcpAccess = Layer.effect(
@@ -103,11 +153,17 @@ const makeRuntime = (ctx: DurableObjectState, env: Env, tgId: number, origin: ()
 export class UserAgent extends DurableObject<Env> {
   #state: { readonly tgId: number; readonly runtime: ReturnType<typeof makeRuntime> } | undefined
   #origin = ""
+  #invites: Invites["Service"] | undefined
+
+  #invitesService(): Invites["Service"] {
+    if (this.#invites === undefined) this.#invites = makeSqlite(this.ctx.storage.sql)
+    return this.#invites
+  }
 
   #runtime(tgId: number, origin?: string) {
     if (origin !== undefined && origin !== "") this.#origin = origin
     if (this.#state === undefined) {
-      this.#state = { tgId, runtime: makeRuntime(this.ctx, this.env, tgId, () => this.#origin) }
+      this.#state = { tgId, runtime: makeRuntime(this.ctx, this.env, tgId, () => this.#origin, this.#invitesService()) }
     }
     if (this.#state.tgId !== tgId) throw new Error(`UserAgent ${this.#state.tgId} received a call for ${tgId}`)
     return this.#state.runtime
@@ -123,6 +179,68 @@ export class UserAgent extends DurableObject<Env> {
         Effect.withSpan("user-agent.handleUpdate", { attributes: { tgId } })
       )
     )
+  }
+
+  async createInvite(input: {
+    readonly createdBy: number
+    readonly uses: number
+    readonly ttlMs: number
+    readonly plugins: Array<string>
+    readonly note: string | null
+  }): Promise<InviteDto> {
+    const created = await Effect.runPromise(
+      this.#invitesService().create({
+        createdBy: TgId.make(input.createdBy),
+        uses: input.uses,
+        ttlMs: input.ttlMs,
+        plugins: input.plugins,
+        note: input.note ?? undefined
+      })
+    )
+    return inviteDto(created)
+  }
+
+  async listInvites(): Promise<Array<InviteDto>> {
+    return (await Effect.runPromise(this.#invitesService().list)).map(inviteDto)
+  }
+
+  async recentRedemptions(limit: number): Promise<Array<RedemptionDto>> {
+    const rows = await Effect.runPromise(this.#invitesService().recentRedemptions(limit))
+    return rows.map((r) => ({ ...r, name: r.name ?? null, username: r.username ?? null, note: r.note ?? null }))
+  }
+
+  async revokeInvite(code: string): Promise<boolean> {
+    return Effect.runPromise(this.#invitesService().revoke(code))
+  }
+
+  async redeemInvite(
+    code: string,
+    tgId: number,
+    who: { readonly name: string | null; readonly username: string | null }
+  ): Promise<RedeemResult> {
+    const result = await Effect.runPromise(
+      this.#invitesService()
+        .redeem(code, TgId.make(tgId), {
+          ...(who.name === null ? {} : { name: who.name }),
+          ...(who.username === null ? {} : { username: who.username })
+        })
+        .pipe(Effect.result)
+    )
+    if (result._tag === "Success") {
+      const v = result.success
+      return { value: { ...v, note: v.note ?? null, plugins: [...v.plugins] }, reason: null }
+    }
+    if (result.failure instanceof InviteInvalid) return { value: null, reason: result.failure.reason }
+    throw result.failure
+  }
+
+  async adminLang(): Promise<"ru" | "en"> {
+    try {
+      const rows = this.ctx.storage.sql.exec("SELECT value FROM settings WHERE key = 'lang'").toArray()
+      return rows[0]?.value === "ru" ? "ru" : "en"
+    } catch {
+      return "en"
+    }
   }
 
   async info(tgId: number): Promise<AgentInfoDto> {

@@ -1,11 +1,15 @@
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { layer as allowlistLayer } from "@bot/bot-allowlist/allowlist"
+import { HelpRegistry } from "@bot/bot-core-commands/help-registry"
+import { redeemInviteStart } from "@bot/bot-invites/redeem-flow"
 import { handleCarApi } from "@bot/car-server/api"
 import { handleMcpRequest } from "@bot/plugins-registry/mcp-server"
 import { configLayer } from "./config.ts"
 import type { Env } from "./env.ts"
 import { pluginEnvironment } from "./layers.ts"
+import { invitesStubLayer } from "./invites-stub.ts"
 import { pluginRegistry } from "./plugins.ts"
+import { registry } from "./registry.ts"
 import { screenWebhook } from "./webhook.ts"
 
 export { DirectoryBackupGateway } from "@cloudflare/sandbox"
@@ -35,6 +39,27 @@ const carApiRuntime = (env: Env) => {
   return rt
 }
 
+const inviteRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
+
+const inviteRuntime = (env: Env) => {
+  let rt = inviteRuntimes.get(env)
+  if (rt === undefined) {
+    rt = ManagedRuntime.make(
+      Layer.provide(
+        Layer.mergeAll(
+          pluginEnvironment(env),
+          allowlistLayer(env.KV),
+          invitesStubLayer(env),
+          Layer.succeed(HelpRegistry, registry)
+        ),
+        configLayer(env)
+      )
+    )
+    inviteRuntimes.set(env, rt)
+  }
+  return rt
+}
+
 const text = (body: string, status: number) => new Response(body, { status, headers: { "content-type": "text/plain" } })
 
 const webhook = async (request: Request, env: Env, ctx: ExecutionContext): Promise<Response> => {
@@ -44,6 +69,24 @@ const webhook = async (request: Request, env: Env, ctx: ExecutionContext): Promi
       return text("forbidden", 403)
     case "Ignored":
       return text("ok", 200)
+    case "Invite": {
+      const { from, code } = outcome
+      ctx.waitUntil(
+        env.USER_AGENT.getByName(String(env.ADMIN_TG_ID))
+          .adminLang()
+          .catch(() => "en" as const)
+          .then((adminLang) =>
+            inviteRuntime(env).runPromise(
+              redeemInviteStart({ from, code, adminLang }).pipe(
+                Effect.catchCause((cause) => Effect.logError("invite redemption failed", cause)),
+                Effect.withSpan("gateway.invite")
+              )
+            )
+          )
+          .catch((e: unknown) => console.error("invite redemption failed", e))
+      )
+      return text("ok", 200)
+    }
     case "Forward": {
       const stub = env.USER_AGENT.getByName(String(outcome.tgId))
       const origin = new URL(request.url).origin

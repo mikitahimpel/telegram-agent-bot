@@ -30,6 +30,8 @@ export class SubscriptionLimitReached extends Data.TaggedError("SubscriptionLimi
   readonly resetsAt?: number
 }> {}
 
+export class ApiCreditsExhausted extends Data.TaggedError("ApiCreditsExhausted")<{}> {}
+
 /** Per-account daily run quota is exhausted. */
 export class DailyLimitReached extends Data.TaggedError("DailyLimitReached")<{
   readonly limit: number
@@ -52,6 +54,7 @@ export type BotError =
   | ContainerDown
   | TelegramError
   | SubscriptionLimitReached
+  | ApiCreditsExhausted
   | DailyLimitReached
   | StorageError
   | RunInterrupted

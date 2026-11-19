@@ -25,11 +25,28 @@ export const agentDirectoryLayer = (env: Env): Layer.Layer<AgentDirectory, never
         )
 
       return {
-        info,
+        info: (tgId) =>
+          Effect.gen(function* () {
+            const base = yield* info(tgId)
+            const entry = (yield* allowlist.list).find((e) => e.tgId === tgId)
+            return {
+              ...base,
+              ...(entry?.name === undefined ? {} : { name: entry.name }),
+              ...(entry?.username === undefined ? {} : { username: entry.username })
+            }
+          }),
         list: Effect.gen(function* () {
           const entries = yield* allowlist.list
           const ids = [...new Set([allowlist.adminId, ...entries.map((e) => e.tgId)])]
-          return yield* Effect.forEach(ids, info, { concurrency: 5 })
+          const infos = yield* Effect.forEach(ids, info, { concurrency: 5 })
+          return infos.map((a): AgentInfo => {
+            const entry = entries.find((e) => e.tgId === a.tgId)
+            return {
+              ...a,
+              ...(entry?.name === undefined ? {} : { name: entry.name }),
+              ...(entry?.username === undefined ? {} : { username: entry.username })
+            }
+          })
         }),
         kill: (tgId) => viaStub("kill", () => stub(tgId).kill(tgId)),
         restart: (tgId) => viaStub("restart", () => stub(tgId).restart(tgId))

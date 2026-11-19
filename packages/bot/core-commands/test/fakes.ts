@@ -75,6 +75,7 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
     adminId,
     roleOf: (id) => Effect.succeed(id === adminId ? ("admin" as const) : allowed.has(id) ? ("user" as const) : undefined),
     allow: (id) => Effect.sync(() => void allowed.add(id)),
+    updateProfile: () => Effect.void,
     revoke: (id) => Effect.sync(() => void allowed.delete(id)),
     list: Effect.succeed([])
   })

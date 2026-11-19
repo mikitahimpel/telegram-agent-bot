@@ -8,6 +8,8 @@ export interface AgentInfo {
   readonly sessions: number
   readonly running: number
   readonly usage: UsageSummary
+  readonly name?: string
+  readonly username?: string
 }
 
 /** Cross-account operations for admin commands. Implemented via user-agent DO stubs. */

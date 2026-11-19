@@ -1,6 +1,6 @@
 import { Data, Effect, Option, Schema, Stream } from "effect"
 import { AgentEvent } from "@bot/core-contracts/agent-event"
-import { SubscriptionLimitReached } from "@bot/core-contracts/errors"
+import { ApiCreditsExhausted, SubscriptionLimitReached } from "@bot/core-contracts/errors"
 import { ClaudeSessionId } from "@bot/core-contracts/ids"
 
 const opt = <S extends Schema.Top>(s: S) => Schema.optional(Schema.NullOr(s))
@@ -206,6 +206,7 @@ export const decodeLine = (line: string): Effect.Effect<Option.Option<AgentEvent
 export const decodeLineEvents = (line: string): Effect.Effect<ReadonlyArray<AgentEvent>> =>
   Effect.sync(() => Option.match(parseLine(line), { onNone: () => [], onSome: toEvents }))
 
+const CREDITS_TEXT = /credit balance is too low|insufficient credit|billing/i
 const LIMIT_TEXT = /usage limit|hit your limit|limit reached|usage_limit_reached/i
 const EPOCH_PIPE = /\|\s*(\d{9,})/
 
@@ -224,7 +225,7 @@ interface State {
   readonly lastResetsAt: number | undefined
 }
 
-type Item = { readonly event: AgentEvent } | { readonly limit: SubscriptionLimitReached }
+type Item = { readonly event: AgentEvent } | { readonly limit: SubscriptionLimitReached | ApiCreditsExhausted }
 
 const initial = (): State => ({
   assistantError: undefined,
@@ -252,6 +253,7 @@ const step = (s: State, p: Parsed): readonly [State, ReadonlyArray<Item>] => {
       ]
     }
     case "Result": {
+      if (p.isError && CREDITS_TEXT.test(p.text)) return [s, [{ limit: new ApiCreditsExhausted() }]]
       if (p.isError) {
         const limited =
           s.assistantError === "rate_limit" ||
@@ -274,7 +276,7 @@ const step = (s: State, p: Parsed): readonly [State, ReadonlyArray<Item>] => {
  */
 export const toAgentEvents = <E, R>(
   lines: Stream.Stream<string, E, R>
-): Stream.Stream<AgentEvent, E | SubscriptionLimitReached, R> =>
+): Stream.Stream<AgentEvent, E | SubscriptionLimitReached | ApiCreditsExhausted, R> =>
   lines.pipe(
     Stream.map((line) => Option.toArray(parseLine(line))),
     Stream.flattenIterable,

@@ -1,7 +1,8 @@
 import { Effect } from "effect"
 import { make as makeAllowlist } from "@bot/bot-allowlist/allowlist"
 import { TgId } from "@bot/core-contracts/ids"
-import { decodeUpdate, type Update } from "@bot/telegram-schema/schema"
+import { inviteCodeFromMessage } from "@bot/bot-invites/parse"
+import { decodeUpdate, type Update, type User } from "@bot/telegram-schema/schema"
 import type { Env } from "./env.ts"
 
 export const SECRET_HEADER = "x-telegram-bot-api-secret-token"
@@ -25,6 +26,7 @@ export const senderOf = (update: Update): number | undefined =>
 export type WebhookOutcome =
   | { readonly _tag: "Forbidden" }
   | { readonly _tag: "Ignored"; readonly reason: string }
+  | { readonly _tag: "Invite"; readonly from: User; readonly code: string }
   | { readonly _tag: "Forward"; readonly tgId: number; readonly raw: unknown }
 
 /** Secret check, decoding and the early allowlist check. The DO re-checks the role itself. */
@@ -38,6 +40,10 @@ export const screenWebhook = (request: Request, env: Env): Effect.Effect<Webhook
     if (decoded._tag === "Failure") return { _tag: "Ignored", reason: "undecodable update" } as const
     const tgId = senderOf(decoded.success)
     if (tgId === undefined) return { _tag: "Ignored", reason: "no sender" } as const
+    const inviteCode = decoded.success.message === undefined ? undefined : inviteCodeFromMessage(decoded.success.message)
+    if (inviteCode !== undefined && decoded.success.message?.from !== undefined) {
+      return { _tag: "Invite", from: decoded.success.message.from, code: inviteCode } as const
+    }
     const allowlist = makeAllowlist(env.KV, TgId.make(Number(env.ADMIN_TG_ID)))
     const role = yield* allowlist.roleOf(TgId.make(tgId)).pipe(Effect.catchCause(() => Effect.succeed("user" as const)))
     if (role === undefined) return { _tag: "Ignored", reason: "unknown user" } as const

@@ -26,6 +26,7 @@ export const messages = defineMessages({
       resetsAt === undefined
         ? "The Claude usage limit is exhausted. Please try again later."
         : `The Claude usage limit is exhausted. It resets at ${formatDateTime(resetsAt, "en")}.`,
+    apiCredits: "The Anthropic API credits for this bot have run out. The admin has been notified.",
     containerDown: "The agent's environment is not available right now. Please try again in a minute.",
     genericError: "Something went wrong. Please try again later."
   },
@@ -37,6 +38,7 @@ export const messages = defineMessages({
       resetsAt === undefined
         ? "Лимит использования Claude исчерпан. Попробуйте позже."
         : `Лимит использования Claude исчерпан. Он сбросится ${formatDateTime(resetsAt, "ru")}.`,
+    apiCredits: "Закончились кредиты Anthropic API для этого бота. Админ уже получил уведомление.",
     containerDown: "Окружение агента сейчас недоступно. Попробуйте через минуту.",
     genericError: "Что-то пошло не так. Попробуйте позже."
   }
@@ -58,6 +60,8 @@ export const errorMessage = (err: BotError, lang: Lang): string | undefined => {
       return m.dailyLimit(err.limit)
     case "SubscriptionLimitReached":
       return m.subscriptionLimit(err.resetsAt)
+    case "ApiCreditsExhausted":
+      return m.apiCredits
     case "ContainerDown":
       return m.containerDown
     case "TelegramError":

@@ -1,6 +1,6 @@
 import { Context, type Effect, type Stream } from "effect"
 import type { AgentEvent } from "./agent-event.ts"
-import type { ContainerDown, SubscriptionLimitReached } from "./errors.ts"
+import type { ApiCreditsExhausted, ContainerDown, SubscriptionLimitReached } from "./errors.ts"
 import type { ClaudeSessionId, SessionKey, TgId } from "./ids.ts"
 import type { Lang } from "./lang.ts"
 
@@ -22,7 +22,7 @@ export interface RunInput {
 export class AgentRunner extends Context.Service<
   AgentRunner,
   {
-    readonly run: (input: RunInput) => Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached>
+    readonly run: (input: RunInput) => Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted>
     /** Restore ~/.claude from R2 (`agents/<tgId>/`). Called before the first run of a container. */
     readonly restore: (tgId: TgId) => Effect.Effect<void, ContainerDown>
     /** Save ~/.claude to R2. Called after runs and before the container sleeps. */

@@ -48,6 +48,11 @@ const table = (header: string, rows: ReadonlyArray<ReadonlyArray<string>>) => {
   return `<pre>${escapeHtml([pad(head, widths), ...rows.map((r) => pad(r, widths))].join("\n"))}</pre>`
 }
 
+const whoOf = (a: AgentInfo) =>
+  a.name === undefined && a.username === undefined
+    ? "-"
+    : [a.name, a.username === undefined ? undefined : `@${a.username}`].filter((x) => x !== undefined).join(" ")
+
 const todayOf = (a: AgentInfo) => `${a.usage.runsToday}/${a.usage.dailyLimit}`
 
 // ---- user commands ----
@@ -168,6 +173,7 @@ const agents: CommandDef<CoreR> = {
       if (list.length === 0) return yield* reply(ctx, m.agentsEmpty)
       const rows = list.map((a) => [
         String(a.tgId),
+        whoOf(a),
         String(a.sessions),
         String(a.running),
         todayOf(a),
@@ -192,6 +198,7 @@ const usage: CommandDef<CoreR> = {
         if (list.length === 0) return yield* reply(ctx, m.agentsEmpty)
         const rows = list.map((a) => [
           String(a.tgId),
+          whoOf(a),
           todayOf(a),
           String(a.usage.runsTotal),
           `$${money(a.usage.costUsdTotal)}`,
@@ -205,7 +212,7 @@ const usage: CommandDef<CoreR> = {
       const last = a.usage.lastRunAt === undefined ? m.never : formatDateTime(a.usage.lastRunAt, ctx.lang)
       yield* reply(
         ctx,
-        m.usageOne(a.tgId, todayOf(a), a.usage.runsTotal, money(a.usage.costUsdTotal), a.usage.inputTokensTotal, a.usage.outputTokensTotal, last)
+        m.usageOne(a.tgId, whoOf(a), todayOf(a), a.usage.runsTotal, money(a.usage.costUsdTotal), a.usage.inputTokensTotal, a.usage.outputTokensTotal, last)
       )
     })
 }
@@ -335,6 +342,23 @@ const revokeCallback: CallbackDef<CoreR> = {
   )
 }
 
+const revokeAskCallback: CallbackDef<CoreR> = {
+  prefix: "revask",
+  role: "admin",
+  handler: (ctx) =>
+    Effect.gen(function* () {
+      const tg = yield* Telegram
+      const allowlist = yield* Allowlist
+      const m = messages[ctx.lang]
+      yield* tg.answerCallbackQuery(ctx.callbackId)
+      const id = ctx.role === "admin" ? parseTgId(ctx.payload) : undefined
+      if (id === undefined || id === allowlist.adminId) return
+      yield* tg.sendMessage(target(ctx), m.revokeAsk(id), {
+        keyboard: confirmKeyboard(m.btnRevoke, `revoke:${id}`, m.btnCancel)
+      })
+    })
+}
+
 const killCallback: CallbackDef<CoreR> = {
   prefix: "kill",
   role: "admin",
@@ -359,5 +383,5 @@ const cancelCallback: CallbackDef<CoreR> = {
 }
 
 export const coreCallbacks: ReadonlyArray<CallbackDef<CoreR>> = [
-  langCallback, revokeCallback, killCallback, cancelCallback
+  langCallback, revokeCallback, revokeAskCallback, killCallback, cancelCallback
 ]

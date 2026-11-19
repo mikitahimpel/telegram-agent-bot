@@ -147,6 +147,9 @@ importers:
       '@bot/bot-dispatcher':
         specifier: workspace:*
         version: link:../../packages/bot/dispatcher
+      '@bot/bot-invites':
+        specifier: workspace:*
+        version: link:../../packages/bot/invites
       '@bot/car-server':
         specifier: workspace:*
         version: link:../../packages/car/server
@@ -335,6 +338,43 @@ importers:
       '@bot/agent-sessions':
         specifier: workspace:*
         version: link:../../agent/sessions
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/bot/invites:
+    dependencies:
+      '@bot/bot-commands':
+        specifier: workspace:*
+        version: link:../commands
+      '@bot/bot-core-commands':
+        specifier: workspace:*
+        version: link:../core-commands
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      '@bot/plugins-registry':
+        specifier: workspace:*
+        version: link:../../plugins/registry
+      '@bot/telegram-schema':
+        specifier: workspace:*
+        version: link:../../telegram/schema
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@bot/bot-allowlist':
+        specifier: workspace:*
+        version: link:../allowlist
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))

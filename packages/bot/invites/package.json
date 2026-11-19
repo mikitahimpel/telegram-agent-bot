@@ -1,0 +1,32 @@
+{
+  "name": "@bot/bot-invites",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./sqlite": "./src/sqlite.ts",
+    "./memory": "./src/memory.ts",
+    "./parse": "./src/parse.ts",
+    "./commands": "./src/commands.ts",
+    "./redeem-flow": "./src/redeem-flow.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/bot-commands": "workspace:*",
+    "@bot/bot-core-commands": "workspace:*",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/plugins-registry": "workspace:*",
+    "@bot/telegram-schema": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@bot/bot-allowlist": "workspace:*",
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

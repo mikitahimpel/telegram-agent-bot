@@ -3,7 +3,7 @@ import { ConfigProvider, Deferred, Effect, Fiber, Layer, Option, Stream } from "
 import { AgentRunner, type RunInput } from "@bot/core-contracts/agent-runner"
 import { ClaudeSessionId, SessionKey, TgId } from "@bot/core-contracts/ids"
 import { ContainerDown, SubscriptionLimitReached } from "@bot/core-contracts/errors"
-import { layer, buildClaudeArgv } from "../src/runner.ts"
+import { layer, buildClaudeArgv, ClaudeAuthConfig } from "../src/runner.ts"
 import type { ContainerLike } from "../src/container-like.ts"
 import { makeFake, type FakeOptions } from "./fake-container.ts"
 
@@ -81,6 +81,29 @@ describe("AgentRunner", () => {
       for (const c of fake.execs) if (c !== call) expect(c.opts?.env?.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined()
     }).pipe(Effect.provide(l))
   })
+
+  it.effect("api_key mode passes only ANTHROPIC_API_KEY to the claude run", () => {
+    const { fake, l } = setup(
+      { claudeLines: [init, result()] },
+      { CLAUDE_AUTH_MODE: "api_key", ANTHROPIC_API_KEY: "sk-ant-api-SECRET", CLAUDE_CODE_OAUTH_TOKEN: "" }
+    )
+    return Effect.gen(function* () {
+      yield* collect(input({}))
+      const call = fake.execs.find((c) => c.cmd[0] === "claude" && c.cmd.includes("-p"))!
+      expect(call.cmd.join("\u0000")).not.toContain("sk-ant-api-SECRET")
+      expect(call.opts?.env?.ANTHROPIC_API_KEY).toBe("sk-ant-api-SECRET")
+      expect(call.opts?.env?.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined()
+    }).pipe(Effect.provide(l))
+  })
+
+  it.effect("api_key mode without ANTHROPIC_API_KEY is a config error", () =>
+    Effect.gen(function* () {
+      const exit = yield* Effect.exit(
+        ClaudeAuthConfig.pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord({ CLAUDE_AUTH_MODE: "api_key" }))))
+      )
+      expect(exit._tag).toBe("Failure")
+    })
+  )
 
   it("no --resume / mcp flags when not requested", () => {
     const argv = buildClaudeArgv(input({ prompt: "-rf" }), { maxTurns: 30, model: Option.none() })

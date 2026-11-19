@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Option, Stream } from "effect"
-import { SubscriptionLimitReached } from "@bot/core-contracts/errors"
+import { ApiCreditsExhausted, SubscriptionLimitReached } from "@bot/core-contracts/errors"
 import { splitLines } from "../src/split-lines.ts"
 import { decodeLine, toAgentEvents } from "../src/stream-json.ts"
 
@@ -95,11 +95,17 @@ describe("toAgentEvents", () => {
       expect(evs[0]).toMatchObject({ _tag: "Completed", isError: true, text: "max turns", numTurns: 30 })
     }))
 
+  it.effect("api key: credit balance too low -> ApiCreditsExhausted", () =>
+    Effect.gen(function* () {
+      const err = yield* run([init, result({ is_error: true, result: "Credit balance is too low" })]).pipe(Effect.flip)
+      expect(err).toBeInstanceOf(ApiCreditsExhausted)
+    }))
+
   it.effect("limit: legacy `|epoch` text", () =>
     Effect.gen(function* () {
       const err = yield* run([init, result({ is_error: true, result: "Claude AI usage limit reached|1900000000" })]).pipe(Effect.flip)
       expect(err).toBeInstanceOf(SubscriptionLimitReached)
-      expect(err.resetsAt).toBe(1900000000_000)
+      expect(err._tag === "SubscriptionLimitReached" ? err.resetsAt : undefined).toBe(1900000000_000)
     }))
 
   it.effect("limit: assistant error rate_limit + rate_limit_event resetsAt; synthetic text suppressed", () =>

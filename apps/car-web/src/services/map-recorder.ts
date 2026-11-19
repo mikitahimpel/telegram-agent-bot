@@ -2,7 +2,16 @@ import type { RecorderState } from "@bot/car-recorder/recorder"
 import type { ChunkViewState, SyncState, SyncStatus, TripSync, TripSyncInfo } from "@bot/car-recorder/sync"
 import type { Gap } from "@bot/car-format/manifest"
 import type { AutoState } from "@bot/car-recorder/auto"
-import type { AutoVm, ChunkState, ChunkVm, RecorderVm, SyncErrorCode, SyncGlobalVm, TripSyncVm, TripVm } from "../model/types.ts"
+import type {
+  AutoVm,
+  ChunkState,
+  ChunkVm,
+  RecorderVm,
+  SyncErrorCode,
+  SyncGlobalVm,
+  TripSyncVm,
+  TripVm
+} from "../model/types.ts"
 
 export const mapRecorderState = (s: RecorderState): RecorderVm => {
   switch (s._tag) {
@@ -61,7 +70,8 @@ export const mapChunkState = (s: ChunkViewState): ChunkState => {
 }
 
 const seqs = (chunks: ChunkVm[], st: ChunkState): number[] => chunks.filter((c) => c.state === st).map((c) => c.seq)
-const lists = (n: number, found: number[]): number[] => (found.length >= n ? found : [...found, ...Array.from({ length: n - found.length }, (_, i) => i)].slice(0, n))
+const lists = (n: number, found: number[]): number[] =>
+  found.length >= n ? found : [...found, ...Array.from({ length: n - found.length }, (_, i) => i)].slice(0, n)
 
 export const mapTripSync = (s: TripSync, chunks: ChunkVm[], now: number): TripSyncVm => {
   switch (s._tag) {
@@ -72,7 +82,14 @@ export const mapTripSync = (s: TripSync, chunks: ChunkVm[], now: number): TripSy
     case "Uploading":
       return { _tag: "Uploading", sent: s.sent, total: s.total, confirmed: s.confirmed }
     case "Waiting":
-      return { _tag: "Waiting", sent: s.sent, total: s.total, nextRetryAt: s.nextRetryAt ?? now, lastError: mapSyncError(s.lastError), detail: s.lastError }
+      return {
+        _tag: "Waiting",
+        sent: s.sent,
+        total: s.total,
+        nextRetryAt: s.nextRetryAt ?? now,
+        lastError: mapSyncError(s.lastError),
+        detail: s.lastError
+      }
     case "Verifying":
       return { _tag: "Verifying" }
     case "Confirmed":
@@ -114,8 +131,11 @@ export const mapTrip = (i: TripSyncInfo, gaps: ReadonlyArray<Gap>, now: number):
   }
 }
 
-export const mapSyncTrips = (s: SyncState, gapsByTrip: ReadonlyMap<string, ReadonlyArray<Gap>>, now: number): TripVm[] =>
-  s.trips.map((t) => mapTrip(t, gapsByTrip.get(t.tripId) ?? [], now))
+export const mapSyncTrips = (
+  s: SyncState,
+  gapsByTrip: ReadonlyMap<string, ReadonlyArray<Gap>>,
+  now: number
+): TripVm[] => s.trips.map((t) => mapTrip(t, gapsByTrip.get(t.tripId) ?? [], now))
 
 export const mapAutoState = (s: AutoState): AutoVm => {
   switch (s._tag) {
@@ -136,7 +156,13 @@ export const mapAutoState = (s: AutoState): AutoVm => {
     case "WaitingForEngine":
       return { _tag: "WaitingForEngine", adapterName: s.adapterName }
     case "Recording":
-      return { _tag: "Recording", tripId: s.tripId, startedAt: s.startedAt, adapterName: s.adapterName, linkLostSince: s.linkLost?.since ?? null }
+      return {
+        _tag: "Recording",
+        tripId: s.tripId,
+        startedAt: s.startedAt,
+        adapterName: s.adapterName,
+        linkLostSince: s.linkLost?.since ?? null
+      }
     case "AutoStopped":
       return { _tag: "AutoStopped", tripId: s.tripId, startedAt: s.startedAt, endedAt: s.endedAt }
   }

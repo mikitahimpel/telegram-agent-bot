@@ -19,7 +19,9 @@ const pos = (g: GapVm) => ({
   <div data-testid="gaps">
     <p v-if="gaps.length === 0" class="muted">{{ t("trip.gaps.none") }}</p>
     <template v-else>
-      <div class="timeline" aria-hidden="true"><span v-for="(g, i) in gaps" :key="i" class="gap-mark" :style="pos(g)" /></div>
+      <div class="timeline" aria-hidden="true">
+        <span v-for="(g, i) in gaps" :key="i" class="gap-mark" :style="pos(g)" />
+      </div>
       <ul class="gap-list">
         <li v-for="(g, i) in gaps" :key="i">
           <strong>{{ fmtTime(lang, g.from) }}–{{ fmtTime(lang, g.to) }}</strong> · {{ t(`trip.gap.${g.reason}`) }}

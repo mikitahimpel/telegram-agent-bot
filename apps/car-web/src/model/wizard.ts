@@ -76,7 +76,10 @@ export const wizardSteps = (
     if (failIdx >= 0) {
       step.status = idx < failIdx ? "done" : idx === failIdx ? "failed" : "pending"
       if (idx === failIdx && conn._tag === "Failed") {
-        step.problem = describeStatus({ kind: "error", code: conn.error.code, step: conn.error.step, detail: conn.error.detail }, lang)
+        step.problem = describeStatus(
+          { kind: "error", code: conn.error.code, step: conn.error.step, detail: conn.error.detail },
+          lang
+        )
       }
     } else if (conn._tag === "Idle") {
       step.status = idx === 0 ? (supported && caps.secureContext !== false ? "done" : "failed") : "pending"

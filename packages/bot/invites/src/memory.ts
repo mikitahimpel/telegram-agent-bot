@@ -1,5 +1,11 @@
 import { Effect, Layer } from "effect"
-import { InviteInvalid, Invites, type Invite, type InviteInvalidReason, type RedemptionRecord } from "@bot/core-contracts/invites"
+import {
+  InviteInvalid,
+  Invites,
+  type Invite,
+  type InviteInvalidReason,
+  type RedemptionRecord
+} from "@bot/core-contracts/invites"
 import { FAILURE_LIMIT, FAILURE_WINDOW_MS, generateCode } from "./sqlite.ts"
 
 export const makeMemory = (now: () => number = Date.now): Invites["Service"] => {

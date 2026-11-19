@@ -14,13 +14,16 @@ export type GeoFailure = {
   readonly reason: GeoFailureReason
 }
 
-export class GeoSource extends Context.Service<GeoSource, {
-  readonly watch: Stream.Stream<GeoFix, GeoFailure>
-}>()("@bot/car-recorder/GeoSource") {}
+export class GeoSource extends Context.Service<
+  GeoSource,
+  {
+    readonly watch: Stream.Stream<GeoFix, GeoFailure>
+  }
+>()("@bot/car-recorder/GeoSource") {}
 
 export const geoBrowserLayer: Layer.Layer<GeoSource> = Layer.succeed(GeoSource, {
   watch: Stream.callback<GeoFix, GeoFailure>((queue) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const geo = typeof navigator === "undefined" ? undefined : navigator.geolocation
       if (geo === undefined) {
         yield* Queue.fail(queue, { _tag: "GeoFailure", reason: "unavailable" })
@@ -39,7 +42,10 @@ export const geoBrowserLayer: Layer.Layer<GeoSource> = Layer.succeed(GeoSource, 
         },
         (e) => {
           Effect.runSync(
-            Queue.fail(queue, { _tag: "GeoFailure", reason: e.code === 1 ? "denied" : e.code === 3 ? "timeout" : "unavailable" })
+            Queue.fail(queue, {
+              _tag: "GeoFailure",
+              reason: e.code === 1 ? "denied" : e.code === 3 ? "timeout" : "unavailable"
+            })
           )
         },
         { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 }
@@ -53,18 +59,21 @@ export type FakeGeo = {
   readonly layer: Layer.Layer<GeoSource>
   readonly emit: (fix: GeoFix) => Effect.Effect<void>
 }
-export const makeFakeGeo = Effect.gen(function*() {
+export const makeFakeGeo = Effect.gen(function* () {
   const pubsub = yield* PubSub.unbounded<GeoFix>()
   const layer = Layer.succeed(GeoSource, { watch: Stream.fromPubSub(pubsub) })
   return { layer, emit: (fix: GeoFix) => PubSub.publish(pubsub, fix).pipe(Effect.asVoid) } satisfies FakeGeo
 })
 
-export class WakeLock extends Context.Service<WakeLock, {
-  readonly acquire: Effect.Effect<boolean>
-  readonly release: Effect.Effect<void>
-  readonly hold: Effect.Effect<boolean>
-  readonly unhold: Effect.Effect<void>
-}>()("@bot/car-recorder/WakeLock") {}
+export class WakeLock extends Context.Service<
+  WakeLock,
+  {
+    readonly acquire: Effect.Effect<boolean>
+    readonly release: Effect.Effect<void>
+    readonly hold: Effect.Effect<boolean>
+    readonly unhold: Effect.Effect<void>
+  }
+>()("@bot/car-recorder/WakeLock") {}
 
 export const wakeLockBrowserLayer: Layer.Layer<WakeLock> = Layer.sync(WakeLock, () => {
   let sentinel: WakeLockSentinel | undefined
@@ -86,8 +95,7 @@ export const wakeLockBrowserLayer: Layer.Layer<WakeLock> = Layer.sync(WakeLock, 
     sentinel = undefined
     try {
       await s?.release()
-    } catch {
-    }
+    } catch {}
   })
   const take = (owner: string) => Effect.suspend(() => (owners.add(owner), ensure))
   const give = (owner: string) => Effect.suspend(() => (owners.delete(owner), drop))
@@ -107,18 +115,21 @@ export const wakeLockFake = Effect.sync(() => {
 
 export type Visibility = "visible" | "hidden"
 
-export class AppLifecycle extends Context.Service<AppLifecycle, {
-  readonly isOnline: Effect.Effect<boolean>
-  readonly isVisible: Effect.Effect<boolean>
-  readonly online: Stream.Stream<boolean>
-  readonly visibility: Stream.Stream<Visibility>
-}>()("@bot/car-recorder/AppLifecycle") {}
+export class AppLifecycle extends Context.Service<
+  AppLifecycle,
+  {
+    readonly isOnline: Effect.Effect<boolean>
+    readonly isVisible: Effect.Effect<boolean>
+    readonly online: Stream.Stream<boolean>
+    readonly visibility: Stream.Stream<Visibility>
+  }
+>()("@bot/car-recorder/AppLifecycle") {}
 
 export const lifecycleBrowserLayer: Layer.Layer<AppLifecycle> = Layer.succeed(AppLifecycle, {
   isOnline: Effect.sync(() => typeof navigator === "undefined" || navigator.onLine !== false),
   isVisible: Effect.sync(() => typeof document === "undefined" || document.visibilityState !== "hidden"),
   online: Stream.callback<boolean>((queue) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const on = () => void Queue.offerUnsafe(queue, true)
       const off = () => void Queue.offerUnsafe(queue, false)
       globalThis.addEventListener("online", on)
@@ -132,7 +143,7 @@ export const lifecycleBrowserLayer: Layer.Layer<AppLifecycle> = Layer.succeed(Ap
     })
   ),
   visibility: Stream.callback<Visibility>((queue) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const f = () => void Queue.offerUnsafe(queue, document.visibilityState === "hidden" ? "hidden" : "visible")
       document.addEventListener("visibilitychange", f)
       yield* Effect.addFinalizer(() => Effect.sync(() => document.removeEventListener("visibilitychange", f)))
@@ -145,7 +156,7 @@ export type FakeLifecycle = {
   readonly setOnline: (online: boolean) => Effect.Effect<void>
   readonly setVisible: (visible: boolean) => Effect.Effect<void>
 }
-export const makeFakeLifecycle = Effect.gen(function*() {
+export const makeFakeLifecycle = Effect.gen(function* () {
   const onlineRef = yield* Ref.make(true)
   const visibleRef = yield* Ref.make(true)
   const onlinePs = yield* PubSub.unbounded<boolean>()

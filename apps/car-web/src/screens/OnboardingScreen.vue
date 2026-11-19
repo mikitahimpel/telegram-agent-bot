@@ -39,13 +39,14 @@ const needAdapter = () => {
 const finish = () => {
   try {
     localStorage.setItem(ONBOARDED, "1")
-  } catch {
-  }
+  } catch {}
   if (backend.pairing.value === "paired") go({ name: "overview" })
   else back()
 }
 const BULLET_COUNT: Record<Step["id"], number> = { adapter: 0, buy: 3, port: 3, connect: 4, home: 3, tips: 4 }
-const bullets = computed(() => Array.from({ length: BULLET_COUNT[step.value.id] }, (_, n) => `onboarding.${step.value.id}.b${n + 1}`))
+const bullets = computed(() =>
+  Array.from({ length: BULLET_COUNT[step.value.id] }, (_, n) => `onboarding.${step.value.id}.b${n + 1}`)
+)
 </script>
 
 <template>
@@ -63,16 +64,28 @@ const bullets = computed(() => Array.from({ length: BULLET_COUNT[step.value.id] 
     <ul v-if="bullets.length" class="list ob-list">
       <li v-for="b in bullets" :key="b">{{ t(b as MessageKey) }}</li>
     </ul>
-    <p v-if="step.id === 'buy'" class="notice warn" role="note" data-testid="ob-warning">{{ t("onboarding.buy.warning") }}</p>
-    <button v-if="step.id === 'home' && installPrompt" class="btn" type="button" @click="perform('install')">{{ t("action.install") }}</button>
+    <p v-if="step.id === 'buy'" class="notice warn" role="note" data-testid="ob-warning">
+      {{ t("onboarding.buy.warning") }}
+    </p>
+    <button v-if="step.id === 'home' && installPrompt" class="btn" type="button" @click="perform('install')">
+      {{ t("action.install") }}
+    </button>
     <div class="ob-actions">
       <template v-if="step.id === 'adapter'">
-        <button class="btn btn-primary btn-big" type="button" data-testid="ob-have" @click="haveAdapter">{{ t("onboarding.adapter.have") }}</button>
-        <button class="btn btn-big" type="button" data-testid="ob-need" @click="needAdapter">{{ t("onboarding.adapter.need") }}</button>
+        <button class="btn btn-primary btn-big" type="button" data-testid="ob-have" @click="haveAdapter">
+          {{ t("onboarding.adapter.have") }}
+        </button>
+        <button class="btn btn-big" type="button" data-testid="ob-need" @click="needAdapter">
+          {{ t("onboarding.adapter.need") }}
+        </button>
       </template>
       <template v-else>
-        <button v-if="!last" class="btn btn-primary btn-big" type="button" data-testid="ob-next" @click="next()">{{ t("onboarding.next") }}</button>
-        <button v-else class="btn btn-primary btn-big" type="button" data-testid="ob-done" @click="finish">{{ t("onboarding.done") }}</button>
+        <button v-if="!last" class="btn btn-primary btn-big" type="button" data-testid="ob-next" @click="next()">
+          {{ t("onboarding.next") }}
+        </button>
+        <button v-else class="btn btn-primary btn-big" type="button" data-testid="ob-done" @click="finish">
+          {{ t("onboarding.done") }}
+        </button>
         <button class="btn" type="button" @click="prev">{{ t("common.back") }}</button>
       </template>
     </div>

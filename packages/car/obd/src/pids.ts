@@ -18,7 +18,14 @@ export const PIDS: ReadonlyArray<PidDef> = [
   { pid: "0C", key: "rpm", label: "Engine RPM", bytes: 2, decode: (b) => AB(b) / 4, slow: false },
   { pid: "0D", key: "speedKmh", label: "Vehicle speed", bytes: 1, decode: A, slow: false },
   { pid: "04", key: "loadPct", label: "Engine load", bytes: 1, decode: (b) => (A(b) * 100) / 255, slow: false },
-  { pid: "11", key: "throttlePct", label: "Throttle position", bytes: 1, decode: (b) => (A(b) * 100) / 255, slow: false },
+  {
+    pid: "11",
+    key: "throttlePct",
+    label: "Throttle position",
+    bytes: 1,
+    decode: (b) => (A(b) * 100) / 255,
+    slow: false
+  },
   { pid: "10", key: "mafGps", label: "MAF", bytes: 2, decode: (b) => AB(b) / 100, slow: false },
   { pid: "0B", key: "mapKpa", label: "Intake manifold pressure", bytes: 1, decode: A, slow: false },
   { pid: "5E", key: "fuelRateLph", label: "Fuel rate", bytes: 2, decode: (b) => AB(b) / 20, slow: false },
@@ -72,7 +79,10 @@ const PROTOCOLS: Record<string, string> = {
 }
 
 export const protocolName = (dpn: string): string => {
-  const code = dpn.trim().toUpperCase().replace(/^A(?=[0-9A-C]$)/, "")
+  const code = dpn
+    .trim()
+    .toUpperCase()
+    .replace(/^A(?=[0-9A-C]$)/, "")
   return PROTOCOLS[code] ?? dpn.trim()
 }
 

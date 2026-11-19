@@ -73,7 +73,10 @@ const setup = (
     gate?: Deferred.Deferred<void>
     timeZone?: string
     memory?: Effect.Effect<string, StorageError>
-    run?: (input: RunInput, call: number) => Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted>
+    run?: (
+      input: RunInput,
+      call: number
+    ) => Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted>
   } = {}
 ) => {
   const sql = fakeSql()
@@ -86,7 +89,12 @@ const setup = (
   const notified: Array<string> = []
   const presented: Array<string> = []
   const commands: ReadonlyArray<CommandDef> = [
-    { name: "ping", role: "user", description: { en: "Ping", ru: "Пинг" }, handler: () => Effect.sync(() => void sent.push("pong")) }
+    {
+      name: "ping",
+      role: "user",
+      description: { en: "Ping", ru: "Пинг" },
+      handler: () => Effect.sync(() => void sent.push("pong"))
+    }
   ]
   const registry = makeRegistry(commands, [])
   const { dispatch, jobs: handlers } = makeDispatcher({
@@ -115,7 +123,8 @@ const setup = (
   ]
   const telegram = Telegram.of({
     sendMessage: (_to: unknown, html: string) => Effect.sync(() => (sent.push(html), { messageId: 1 })),
-    sendDocument: (_to: unknown, f: { fileName: string }) => Effect.sync(() => (docs.push(f.fileName), { messageId: 2 })),
+    sendDocument: (_to: unknown, f: { fileName: string }) =>
+      Effect.sync(() => (docs.push(f.fileName), { messageId: 2 })),
     answerCallbackQuery: () => Effect.void,
     setMessageReaction: (_to: unknown, emoji: string) => Effect.sync(() => void reactions.push(emoji))
   } as unknown as Telegram["Service"])
@@ -123,7 +132,8 @@ const setup = (
     Layer.succeed(Telegram, telegram),
     Layer.succeed(Allowlist, {
       adminId: ADMIN,
-      roleOf: (id: TgId) => Effect.succeed(id === ADMIN ? ("admin" as const) : id === USER ? ("user" as const) : undefined),
+      roleOf: (id: TgId) =>
+        Effect.succeed(id === ADMIN ? ("admin" as const) : id === USER ? ("user" as const) : undefined),
       updateProfile: () => Effect.void
     } as unknown as Allowlist["Service"]),
     Layer.succeed(AgentRunner, {
@@ -140,7 +150,8 @@ const setup = (
     Layer.succeed(McpAccess, { issue: () => Effect.succeed(undefined) }),
     Layer.succeed(UserPrefs, { timeZone: () => Effect.succeed(opts.timeZone), lang: () => Effect.succeed(undefined) }),
     Layer.succeed(UserMemory, {
-      forUser: () => ({ render: opts.memory ?? Effect.succeed("MEMORY [0/2000 tokens]\n(empty)") }) as unknown as MemoryStore
+      forUser: () =>
+        ({ render: opts.memory ?? Effect.succeed("MEMORY [0/2000 tokens]\n(empty)") }) as unknown as MemoryStore
     }),
     Layer.succeed(Scheduler, {
       schedule: (job: ScheduledJob) => Effect.sync(() => void jobs.set(job.id, job)),
@@ -326,7 +337,8 @@ describe("dispatcher", () => {
     const resetsAt = Date.now() + 3_600_000
     let limited = true
     const t = setup({
-      run: () => (limited ? Stream.fail(new SubscriptionLimitReached({ resetsAt })) : Stream.fromIterable(completedEvents("late")))
+      run: () =>
+        limited ? Stream.fail(new SubscriptionLimitReached({ resetsAt })) : Stream.fromIterable(completedEvents("late"))
     })
     await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "question"))))
     const job = [...t.jobs.values()][0]!

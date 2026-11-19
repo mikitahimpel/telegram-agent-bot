@@ -60,7 +60,15 @@ export type DtcSyncInfo = {
   readonly explanations: ReadonlyArray<DtcExplanation>
 }
 
-export type ChunkViewState = "pending" | "uploading" | "waiting" | "sent" | "confirmed" | "conflict" | "corrupt" | "lost"
+export type ChunkViewState =
+  | "pending"
+  | "uploading"
+  | "waiting"
+  | "sent"
+  | "confirmed"
+  | "conflict"
+  | "corrupt"
+  | "lost"
 
 export type ChunkView = {
   readonly seq: number
@@ -124,7 +132,7 @@ export const backoffDelayMs = (attempts: number, jitter: number): number =>
 
 export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifecycle> = Layer.effect(
   SyncEngine,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const store = yield* TripStore
     const api = yield* CarApi
     const lifecycle = yield* AppLifecycle
@@ -166,7 +174,11 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         let st: ChunkViewState
         if (c === undefined) st = "lost"
         else if (c.uploadState === "pending") {
-          st = inflight.has(key(trip.tripId, seq)) ? "uploading" : gate !== undefined && gate.nextAt > now ? "waiting" : "pending"
+          st = inflight.has(key(trip.tripId, seq))
+            ? "uploading"
+            : gate !== undefined && gate.nextAt > now
+              ? "waiting"
+              : "pending"
         } else st = c.uploadState
         views.push({
           seq,
@@ -193,8 +205,9 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       else if (open === 0 && (conflict > 0 || corrupt > 0 || lost > 0 || trip.localDeleted)) {
         sync = TripSync.Incomplete({ missing: lost, corrupt, conflict, localCopy: !trip.localDeleted && lost === 0 })
       } else if (views.some((v) => v.state === "waiting") || gateWaiting) {
-        const next = [...views.map((v) => v.nextRetryAt), gateWaiting ? tripGate.nextAt : undefined]
-          .filter((x): x is number => x !== undefined)
+        const next = [...views.map((v) => v.nextRetryAt), gateWaiting ? tripGate.nextAt : undefined].filter(
+          (x): x is number => x !== undefined
+        )
         sync = TripSync.Waiting({
           sent,
           total,
@@ -236,21 +249,25 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
     const deriveDtc = (r: DtcRecord, now: number): DtcSyncInfo => {
       const gate = dtcGates.get(r.id)
       const sync: DtcSync =
-        r.uploadState === "confirmed" ? DtcSync.Confirmed({ at: r.confirmedAt ?? r.createdAt })
-        : r.uploadState === "rejected" ? DtcSync.Rejected({ reason: r.lastError ?? "rejected" })
-        : inflight.has(`dtc:${r.id}`) ? DtcSync.Sending()
-        : gate !== undefined && gate.nextAt > now ? DtcSync.Waiting({ attempts: gate.attempts, nextRetryAt: gate.nextAt, lastError: gate.lastError })
-        : DtcSync.Queued()
+        r.uploadState === "confirmed"
+          ? DtcSync.Confirmed({ at: r.confirmedAt ?? r.createdAt })
+          : r.uploadState === "rejected"
+            ? DtcSync.Rejected({ reason: r.lastError ?? "rejected" })
+            : inflight.has(`dtc:${r.id}`)
+              ? DtcSync.Sending()
+              : gate !== undefined && gate.nextAt > now
+                ? DtcSync.Waiting({ attempts: gate.attempts, nextRetryAt: gate.nextAt, lastError: gate.lastError })
+                : DtcSync.Queued()
       return { id: r.id, report: r.report, createdAt: r.createdAt, sync, explanations: r.explanations }
     }
 
-    const publishDtc = Effect.gen(function*() {
+    const publishDtc = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
       const records = yield* store.listDtc
       yield* SubscriptionRef.update(state, (s) => ({ ...s, dtc: records.map((r) => deriveDtc(r, now)) }))
     }).pipe(Effect.catch(() => Effect.void))
 
-    const publishAll = Effect.gen(function*() {
+    const publishAll = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
       const trips = yield* store.listTrips
       const infos: Array<TripSyncInfo> = []
@@ -260,20 +277,22 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
     })
 
     const publishTrip = (tripId: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis
         const trip = yield* store.getTrip(tripId)
         if (trip === undefined) return
         const info = derive(trip, yield* store.listChunks(tripId), now)
         yield* SubscriptionRef.update(state, (s) => {
-          const local = s.trips.filter((t) => t.sync._tag !== "CloudOnly" || t.tripId === tripId).filter((t) => t.tripId !== tripId)
+          const local = s.trips
+            .filter((t) => t.sync._tag !== "CloudOnly" || t.tripId === tripId)
+            .filter((t) => t.tripId !== tripId)
           return { ...s, trips: mergeTrips([...local, info]) }
         })
       }).pipe(Effect.catch(() => Effect.void))
 
     const setStatus = (status: SyncStatus) => SubscriptionRef.update(state, (s) => ({ ...s, status }))
 
-    const reauthStatus = Effect.gen(function*() {
+    const reauthStatus = Effect.gen(function* () {
       const c = yield* api.credential
       return SyncStatus.NeedsReauth({ reason: c !== undefined ? "device_revoked" : "not_paired" })
     })
@@ -281,7 +300,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
     const guard = <A>(eff: Effect.Effect<A, ApiFailure>): Effect.Effect<A, ApiFailure | Halt> =>
       eff.pipe(
         Effect.catch((f) =>
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             if (f.code === "unauthorized") return yield* Effect.fail(new Halt({ status: yield* reauthStatus }))
             if (f.code === "plugin_disabled" || f.code === "forbidden") {
               return yield* Effect.fail(new Halt({ status: SyncStatus.Blocked({ code: f.code }) }))
@@ -294,7 +313,14 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         )
       )
 
-    const bump = (gates: Map<string, Gate>, k: string, message: string, now: number, jitter: number, checksum = false) => {
+    const bump = (
+      gates: Map<string, Gate>,
+      k: string,
+      message: string,
+      now: number,
+      jitter: number,
+      checksum = false
+    ) => {
       const g = gates.get(k) ?? { attempts: 0, nextAt: 0, lastError: "", checksumFails: 0 }
       g.attempts += 1
       if (checksum) g.checksumFails += 1
@@ -305,12 +331,16 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
     }
 
     const uploadChunk = (c: ChunkRecord) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const k = key(c.tripId, c.seq)
         inflight.add(k)
         yield* publishTrip(c.tripId)
         const result = yield* guard(api.putChunk(c.tripId, c.seq, c.csv, c.sha256)).pipe(
-          Effect.map((r) => (r.sha256 === c.sha256 ? undefined : new ApiFailure({ code: "checksum_mismatch", retryable: true, message: "Server stored different bytes" }))),
+          Effect.map((r) =>
+            r.sha256 === c.sha256
+              ? undefined
+              : new ApiFailure({ code: "checksum_mismatch", retryable: true, message: "Server stored different bytes" })
+          ),
           Effect.catchTag("ApiFailure", (f) => Effect.succeed(f)),
           Effect.ensuring(Effect.sync(() => void inflight.delete(k)))
         )
@@ -340,17 +370,23 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       })
 
     const sendManifestIfDirty = (tripId: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const t = yield* store.getTrip(tripId)
         if (t === undefined || t.manifestRev <= t.manifestSentRev) return true
         const rev = t.manifestRev
         const ok = yield* guard(api.putManifest(t.manifest)).pipe(
           Effect.as(true),
           Effect.catchTag("ApiFailure", (f) =>
-            Effect.gen(function*() {
+            Effect.gen(function* () {
               const now = yield* Clock.currentTimeMillis
               if (f.retryable) bump(tripGates, tripId, f.message, now, yield* Random.next)
-              else tripGates.set(tripId, { attempts: 99, nextAt: now + BACKOFF_CAP_MS, lastError: f.message, checksumFails: 0 })
+              else
+                tripGates.set(tripId, {
+                  attempts: 99,
+                  nextAt: now + BACKOFF_CAP_MS,
+                  lastError: f.message,
+                  checksumFails: 0
+                })
               return false
             })
           )
@@ -363,7 +399,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       })
 
     const reconcile = (tripId: string, status: TripStatus) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const trip = yield* store.getTrip(tripId)
         if (trip === undefined) return "done" as const
         const chunks = yield* store.listChunks(tripId)
@@ -373,7 +409,8 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         const lost = [...Array(total).keys()].some((s) => !bySeq.has(s))
         if (status.complete && status.missing.length === 0 && status.corrupt.length === 0 && !bad && !lost) {
           const now = yield* Clock.currentTimeMillis
-          for (const c of chunks) if (c.uploadState !== "confirmed") yield* store.setChunkState(tripId, c.seq, "confirmed")
+          for (const c of chunks)
+            if (c.uploadState !== "confirmed") yield* store.setChunkState(tripId, c.seq, "confirmed")
           yield* store.updateTrip(tripId, (t) => ({ ...t, confirmedAt: now }))
           tripGates.delete(tripId)
           rounds.delete(tripId)
@@ -389,7 +426,12 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
             continue
           }
           chunkGates.delete(key(tripId, seq))
-          yield* store.setChunkState(tripId, seq, "pending", "re-sent: server reported it " + (status.missing.includes(seq) ? "missing" : "corrupt"))
+          yield* store.setChunkState(
+            tripId,
+            seq,
+            "pending",
+            "re-sent: server reported it " + (status.missing.includes(seq) ? "missing" : "corrupt")
+          )
           requeued += 1
         }
         rounds.set(tripId, round)
@@ -400,13 +442,18 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         }
         if (bad || lost) {
           const now = yield* Clock.currentTimeMillis
-          tripGates.set(tripId, { attempts: 0, nextAt: now + BACKOFF_CAP_MS, lastError: "needs user action", checksumFails: 0 })
+          tripGates.set(tripId, {
+            attempts: 0,
+            nextAt: now + BACKOFF_CAP_MS,
+            lastError: "needs user action",
+            checksumFails: 0
+          })
         }
         return "stuck" as const
       })
 
     const syncTrip = (tripId: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         for (let round = 0; round < RECONCILE_ROUNDS + 2; round++) {
           const now = yield* Clock.currentTimeMillis
           const trip = yield* store.getTrip(tripId)
@@ -444,7 +491,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
           const statusResult = yield* guard(call).pipe(
             Effect.ensuring(Effect.sync(() => void verifying.delete(tripId))),
             Effect.catchTag("ApiFailure", (f) =>
-              Effect.gen(function*() {
+              Effect.gen(function* () {
                 const t = yield* Clock.currentTimeMillis
                 bump(tripGates, tripId, f.message, t, yield* Random.next)
                 return undefined
@@ -462,7 +509,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         }
       })
 
-    const syncDtc = Effect.gen(function*() {
+    const syncDtc = Effect.gen(function* () {
       const records = yield* store.listDtc
       const now = yield* Clock.currentTimeMillis
       for (const r of records) {
@@ -482,23 +529,33 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
           if (outcome.retryable) bump(dtcGates, r.id, outcome.message, at, yield* Random.next)
           else {
             dtcGates.delete(r.id)
-            yield* store.updateDtc(r.id, (x) => ({ ...x, uploadState: "rejected" as const, lastError: outcome.message }))
+            yield* store.updateDtc(r.id, (x) => ({
+              ...x,
+              uploadState: "rejected" as const,
+              lastError: outcome.message
+            }))
           }
         } else {
           dtcGates.delete(r.id)
-          yield* store.updateDtc(r.id, (x) => ({ ...x, uploadState: "confirmed" as const, confirmedAt: at, explanations: outcome.explanations }))
+          yield* store.updateDtc(r.id, (x) => ({
+            ...x,
+            uploadState: "confirmed" as const,
+            confirmedAt: at,
+            explanations: outcome.explanations
+          }))
         }
         yield* publishDtc
       }
     })
 
-    const startup = Effect.gen(function*() {
+    const startup = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
       if (startupGate !== undefined && startupGate.nextAt > now) return
       const me = yield* guard(api.me).pipe(Effect.catchTag("ApiFailure", () => Effect.succeed(undefined)))
       if (me !== undefined) {
         yield* SubscriptionRef.update(state, (s) => ({ ...s, clockOffsetMs: now - me.serverTime }))
-        if (!me.pluginEnabled) return yield* Effect.fail(new Halt({ status: SyncStatus.Blocked({ code: "plugin_disabled" }) }))
+        if (!me.pluginEnabled)
+          return yield* Effect.fail(new Halt({ status: SyncStatus.Blocked({ code: "plugin_disabled" }) }))
       }
       const list = yield* guard(api.listTrips(50)).pipe(Effect.catchTag("ApiFailure", () => Effect.succeed(undefined)))
       if (me === undefined || list === undefined) {
@@ -514,7 +571,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       startupGate = undefined
     })
 
-    const cleanup = Effect.gen(function*() {
+    const cleanup = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
       for (const t of yield* store.listTrips) {
         if (t.confirmedAt !== undefined && now - t.confirmedAt > LOCAL_RETENTION_MS) yield* store.deleteTrip(t.tripId)
@@ -524,7 +581,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       }
     })
 
-    const pass = Effect.gen(function*() {
+    const pass = Effect.gen(function* () {
       const early = (status: SyncStatus) => setStatus(status).pipe(Effect.andThen(publishAll))
       if (paused) return yield* early(SyncStatus.Paused())
       if (halt !== undefined) return yield* early(halt)
@@ -541,7 +598,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       yield* publishAll
     }).pipe(
       Effect.catchTag("Halt", (h) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           if (h.status._tag !== "Offline") halt = h.status
           yield* setStatus(h.status)
           yield* publishAll
@@ -561,7 +618,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       return times.length === 0 ? undefined : Math.min(...times)
     }
 
-    const waitForWork = Effect.gen(function*() {
+    const waitForWork = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
       const next = halt !== undefined || paused ? undefined : nextWakeAt(now)
       const take = Queue.take(wake)
@@ -571,20 +628,18 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
 
     yield* Effect.forkScoped(Effect.forever(pass.pipe(Effect.andThen(waitForWork))))
     yield* Effect.forkScoped(
-      lifecycle.online.pipe(
-        Stream.runForEach((on) => (on ? kick : setStatus(SyncStatus.Offline())))
-      )
+      lifecycle.online.pipe(Stream.runForEach((on) => (on ? kick : setStatus(SyncStatus.Offline()))))
     )
     yield* Effect.forkScoped(store.changes.pipe(Stream.runForEach(() => kick)))
     yield* kick
 
     const retryNow = (tripId?: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         halt = undefined
         refreshCloud = true
         startupGate = undefined
         const reset = (tid: string | undefined) =>
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             const trips = tid === undefined ? yield* store.listTrips : [yield* store.getTrip(tid)]
             for (const t of trips) {
               if (t === undefined) continue
@@ -601,7 +656,11 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         dtcGates.clear()
         yield* store.listDtc.pipe(
           Effect.flatMap((rs) =>
-            Effect.forEach(rs.filter((r) => r.uploadState === "rejected"), (r) => store.updateDtc(r.id, (x) => ({ ...x, uploadState: "pending" as const })), { discard: true })
+            Effect.forEach(
+              rs.filter((r) => r.uploadState === "rejected"),
+              (r) => store.updateDtc(r.id, (x) => ({ ...x, uploadState: "pending" as const })),
+              { discard: true }
+            )
           ),
           Effect.catch(() => Effect.void)
         )
@@ -614,7 +673,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       pause: Effect.sync(() => void (paused = true)).pipe(Effect.andThen(setStatus(SyncStatus.Paused()))),
       resume: Effect.sync(() => void (paused = false)).pipe(Effect.andThen(kick)),
       discardLocal: (tripId) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const t = yield* store.getTrip(tripId)
           if (t === undefined) return
           if (t.confirmedAt !== undefined) yield* store.deleteTrip(tripId)
@@ -626,7 +685,7 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
         }),
       refresh: publishAll,
       queueDtc: (report) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const id = `${report.readAt}-${report.tripId ?? "none"}`
           const now = yield* Clock.currentTimeMillis
           yield* store.putDtc({ id, report, createdAt: now, uploadState: "pending", explanations: [] })

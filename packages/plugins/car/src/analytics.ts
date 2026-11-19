@@ -47,7 +47,8 @@ export const analyzeTrip = (
     const d = distanceStep(a, b, gaps)
     if (d === undefined) continue
     const { dt, obdKm, gpsKm } = d
-    const fuelL = num(a.fuelRateLph) && num(b.fuelRateLph) ? (((a.fuelRateLph + b.fuelRateLph) / 2) * dt) / 3600 : undefined
+    const fuelL =
+      num(a.fuelRateLph) && num(b.fuelRateLph) ? (((a.fuelRateLph + b.fuelRateLph) / 2) * dt) / 3600 : undefined
     const idle = num(a.rpm) && a.rpm > 0 && num(a.speedKmh) && a.speedKmh === 0
     steps.push({ dt, obdKm, gpsKm, fuelL, idle })
   }
@@ -55,7 +56,15 @@ export const analyzeTrip = (
   const obdSteps = steps.filter((s) => s.obdKm !== undefined).length
   const gpsSteps = steps.filter((s) => s.gpsKm !== undefined).length
   const source: "obd" | "gps" | "none" =
-    steps.length === 0 ? "none" : obdSteps > 0 && obdSteps >= steps.length / 2 ? "obd" : gpsSteps > 0 ? "gps" : obdSteps > 0 ? "obd" : "none"
+    steps.length === 0
+      ? "none"
+      : obdSteps > 0 && obdSteps >= steps.length / 2
+        ? "obd"
+        : gpsSteps > 0
+          ? "gps"
+          : obdSteps > 0
+            ? "obd"
+            : "none"
   const km = (s: Step) => (source === "obd" ? s.obdKm : source === "gps" ? s.gpsKm : undefined)
 
   const distanceKm = source === "none" ? undefined : steps.reduce((t, s) => t + (km(s) ?? 0), 0)
@@ -65,7 +74,8 @@ export const analyzeTrip = (
 
   const fuelSteps = steps.filter((s) => s.fuelL !== undefined)
   const fuelLiters = fuelSteps.length === 0 ? undefined : fuelSteps.reduce((t, s) => t + (s.fuelL ?? 0), 0)
-  const fuelDistanceKm = fuelSteps.length === 0 || source === "none" ? undefined : fuelSteps.reduce((t, s) => t + (km(s) ?? 0), 0)
+  const fuelDistanceKm =
+    fuelSteps.length === 0 || source === "none" ? undefined : fuelSteps.reduce((t, s) => t + (km(s) ?? 0), 0)
 
   const speeds = samples.map((s) => (num(s.speedKmh) ? s.speedKmh : s.gpsSpeedKmh)).filter(num)
   const coolant = samples.map((s) => s.coolantC).filter(num)
@@ -112,7 +122,11 @@ export type TotalMetrics = {
 export const combineMetrics = (all: ReadonlyArray<TripMetrics>): TotalMetrics => {
   const sum = (f: (m: TripMetrics) => number) => all.reduce((t, m) => t + f(m), 0)
   const distanceKm = sum((m) => m.distanceKm ?? 0)
-  const speedSeconds = sum((m) => (m.avgSpeedKmh !== undefined && m.distanceKm !== undefined && m.avgSpeedKmh > 0 ? (m.distanceKm / m.avgSpeedKmh) * 3600 : 0))
+  const speedSeconds = sum((m) =>
+    m.avgSpeedKmh !== undefined && m.distanceKm !== undefined && m.avgSpeedKmh > 0
+      ? (m.distanceKm / m.avgSpeedKmh) * 3600
+      : 0
+  )
   const withFuel = all.filter((m) => m.fuelLiters !== undefined)
   const fuelLiters = withFuel.length === 0 ? undefined : withFuel.reduce((t, m) => t + (m.fuelLiters ?? 0), 0)
   const fuelKm = withFuel.reduce((t, m) => t + (m.fuelDistanceKm ?? 0), 0)

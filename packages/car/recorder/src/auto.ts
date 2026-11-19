@@ -7,7 +7,13 @@ import { Disconnected, type ObdError } from "@bot/car-obd/errors"
 import type { ConnectOptions, ObdSession, SessionInfo, WatchTick } from "@bot/car-obd/session"
 import { AdapterMemory, type RememberedAdapter } from "./adapter-memory.ts"
 import { type ConnectTarget, ObdConnector, type PickedAdapter } from "./connector.ts"
-import { type EngineDetector, type EngineDetectorConfig, makeEngineDetector, START_RPM, STOP_AFTER_MS } from "./engine-detector.ts"
+import {
+  type EngineDetector,
+  type EngineDetectorConfig,
+  makeEngineDetector,
+  START_RPM,
+  STOP_AFTER_MS
+} from "./engine-detector.ts"
 import type { RecorderFailure, StorageFailure } from "./errors.ts"
 import { AppLifecycle, WakeLock } from "./platform.ts"
 import { Recorder, type ReadingInfo, type ReadingSource } from "./recorder.ts"
@@ -95,7 +101,9 @@ export type AutoRecorderShape = {
   readonly forgetAdapter: Effect.Effect<void>
 }
 
-export class AutoRecorder extends Context.Service<AutoRecorder, AutoRecorderShape>()("@bot/car-recorder/AutoRecorder") {}
+export class AutoRecorder extends Context.Service<AutoRecorder, AutoRecorderShape>()(
+  "@bot/car-recorder/AutoRecorder"
+) {}
 
 type Command =
   | { readonly _tag: "Start"; readonly reply: Deferred.Deferred<string, AutoFailure> }
@@ -121,7 +129,7 @@ export const layer: Layer.Layer<
   Recorder | SyncEngine | TripStore | WakeLock | ObdConnector | AdapterMemory | AppLifecycle
 > = Layer.effect(
   AutoRecorder,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const recorder = yield* Recorder
     const sync = yield* SyncEngine
     const store = yield* TripStore
@@ -147,12 +155,13 @@ export const layer: Layer.Layer<
     const now = Clock.currentTimeMillis
 
     const runScan = (session: ObdSession, trigger: ScanTrigger, tripId: string | null) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* SubscriptionRef.set(codes, CodesState.Scanning({ trigger }))
         const result = yield* Effect.result(session.scanDtc)
         const at = yield* now
         if (result._tag === "Failure") {
-          const reason: CodesFailureReason = result.failure._tag === "Disconnected" ? "disconnected" : "ecu_not_responding"
+          const reason: CodesFailureReason =
+            result.failure._tag === "Disconnected" ? "disconnected" : "ecu_not_responding"
           yield* SubscriptionRef.set(codes, CodesState.Failed({ trigger, at, reason }))
           return yield* result.failure
         }
@@ -165,20 +174,28 @@ export const layer: Layer.Layer<
         }
         yield* SubscriptionRef.set(
           codes,
-          CodesState.Result({ trigger, at, report, modes: scan.modes, reportedCount: scan.reportedCount, queuedId: queued.success })
+          CodesState.Result({
+            trigger,
+            at,
+            report,
+            modes: scan.modes,
+            reportedCount: scan.reportedCount,
+            queuedId: queued.success
+          })
         )
         return report
       })
 
     const writeBattery = (tripId: string, tracker: BatteryTracker) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const report = tracker.report()
         yield* SubscriptionRef.set(battery, report)
-        if (nonEmpty(report)) yield* store.updateManifest(tripId, (m) => ({ ...m, battery: report })).pipe(Effect.ignore)
+        if (nonEmpty(report))
+          yield* store.updateManifest(tripId, (m) => ({ ...m, battery: report })).pipe(Effect.ignore)
       })
 
     const recording = (session: ObdSession, tracker: BatteryTracker, detector: EngineDetector, decision: Decision) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const sourceEnded = yield* Deferred.make<void>()
         const stopSignal = yield* Deferred.make<TripEndReason>()
         const startedAt = yield* now
@@ -186,8 +203,15 @@ export const layer: Layer.Layer<
         let lastRpm: number | undefined
         let tripId = ""
 
-        const observe = (e: { readonly _tag: string; readonly sample?: { readonly ts: number; readonly rpm?: number | undefined; readonly voltageV?: number | undefined } }) =>
-          Effect.gen(function*() {
+        const observe = (e: {
+          readonly _tag: string
+          readonly sample?: {
+            readonly ts: number
+            readonly rpm?: number | undefined
+            readonly voltageV?: number | undefined
+          }
+        }) =>
+          Effect.gen(function* () {
             if (e._tag !== "Reading" || e.sample === undefined) return
             const { ts, rpm, voltageV } = e.sample
             let changed = false
@@ -202,10 +226,9 @@ export const layer: Layer.Layer<
 
         const source: ReadingSource = {
           readings: () =>
-            session.readings({ intervalMs: opts.readingsIntervalMs ?? 1000 }).pipe(
-              Stream.tap(observe),
-              Stream.ensuring(Deferred.succeed(sourceEnded, undefined))
-            )
+            session
+              .readings({ intervalMs: opts.readingsIntervalMs ?? 1000 })
+              .pipe(Stream.tap(observe), Stream.ensuring(Deferred.succeed(sourceEnded, undefined)))
         }
 
         const started = yield* Effect.result(
@@ -226,17 +249,23 @@ export const layer: Layer.Layer<
         if (decision.reply !== undefined) yield* Deferred.succeed(decision.reply, tripId)
         const report = tracker.report()
         yield* store
-          .updateManifest(tripId, (m) => ({ ...m, trigger: decision.trigger, ...(nonEmpty(report) ? { battery: report } : {}) }))
+          .updateManifest(tripId, (m) => ({
+            ...m,
+            trigger: decision.trigger,
+            ...(nonEmpty(report) ? { battery: report } : {})
+          }))
           .pipe(Effect.ignore)
         yield* SubscriptionRef.set(battery, report)
         const adapterName = session.info.adapterName
-        yield* setState(AutoState.Recording({ tripId, startedAt, trigger: decision.trigger, adapterName, linkLost: undefined }))
+        yield* setState(
+          AutoState.Recording({ tripId, startedAt, trigger: decision.trigger, adapterName, linkLost: undefined })
+        )
 
         const scanStart = yield* Effect.forkIn(Effect.ignore(runScan(session, "trip_start", tripId)), layerScope)
 
         const timer = yield* Effect.forkIn(
           Effect.forever(
-            Effect.gen(function*() {
+            Effect.gen(function* () {
               yield* Effect.sleep("500 millis")
               const t = yield* now
               const cmd = yield* Queue.poll(commands)
@@ -281,7 +310,7 @@ export const layer: Layer.Layer<
       })
 
     const watching = (session: ObdSession) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const detector = makeEngineDetector(opts.detector)
         const tracker = makeBatteryTracker()
         const adapterName = session.info.adapterName
@@ -290,7 +319,7 @@ export const layer: Layer.Layer<
           let decision: Decision | undefined
           yield* session.watch({ intervalMs: opts.watchIntervalMs ?? 500 }).pipe(
             Stream.runForEachWhile((tick: WatchTick) =>
-              Effect.gen(function*() {
+              Effect.gen(function* () {
                 for (const v of tick.voltages) tracker.voltage(v.ts, v.volts)
                 const events = tracker.rpm(tick.ts, tick.rpm)
                 if (events.length > 0) yield* SubscriptionRef.set(battery, tracker.report())
@@ -300,18 +329,22 @@ export const layer: Layer.Layer<
                 if (!responding) {
                   ecuSince ??= tick.ts
                   yield* SubscriptionRef.update(state, (s) =>
-                    s._tag === "AutoStopped" ? s : AutoState.EcuNotResponding({ since: ecuSince as number, adapterName }))
+                    s._tag === "AutoStopped"
+                      ? s
+                      : AutoState.EcuNotResponding({ since: ecuSince as number, adapterName })
+                  )
                 } else {
                   ecuSince = undefined
                   yield* SubscriptionRef.update(state, (s) =>
                     s._tag === "AutoStopped" || s._tag === "Recording"
                       ? s
                       : AutoState.WaitingForEngine({
-                        adapterName,
-                        rpm: tick.rpm,
-                        voltageV: lastV,
-                        startingSince: detector.startingSince()
-                      }))
+                          adapterName,
+                          rpm: tick.rpm,
+                          voltageV: lastV,
+                          startingSince: detector.startingSince()
+                        })
+                  )
                 }
                 const cmd = yield* Queue.poll(commands)
                 if (cmd._tag === "Some") {
@@ -342,18 +375,26 @@ export const layer: Layer.Layer<
 
     const sessionPhase = (target: ConnectTarget, attempt: number) =>
       Effect.scoped(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           let connecting = true
           const since = yield* now
           yield* setState(
-            target._tag === "Remembered" ? AutoState.Reconnecting({ attempt, since }) : AutoState.Connecting({ deviceName: target.picked.name, step: 0, total: 0 })
+            target._tag === "Remembered"
+              ? AutoState.Reconnecting({ attempt, since })
+              : AutoState.Connecting({ deviceName: target.picked.name, step: 0, total: 0 })
           )
           const session = yield* connector.connect(target, {
             ...(opts.reconnect !== undefined ? { reconnect: opts.reconnect } : {}),
             onState: (s) => {
               if (connecting && s._tag === "InitializingAdapter") {
                 Effect.runSync(
-                  setState(AutoState.Connecting({ deviceName: target._tag === "Picked" ? target.picked.name : undefined, step: s.step, total: s.total }))
+                  setState(
+                    AutoState.Connecting({
+                      deviceName: target._tag === "Picked" ? target.picked.name : undefined,
+                      step: s.step,
+                      total: s.total
+                    })
+                  )
                 )
               }
             }
@@ -365,7 +406,12 @@ export const layer: Layer.Layer<
           }
           current = session
           yield* wake.hold
-          yield* Effect.addFinalizer(() => Effect.andThen(Effect.sync(() => void (current = undefined)), wake.unhold))
+          yield* Effect.addFinalizer(() =>
+            Effect.andThen(
+              Effect.sync(() => void (current = undefined)),
+              wake.unhold
+            )
+          )
           yield* Effect.forkScoped(
             SubscriptionRef.changes(session.state).pipe(
               Stream.runForEach((s) =>
@@ -374,15 +420,20 @@ export const layer: Layer.Layer<
                     return cur._tag === "Recording"
                       ? AutoState.Recording({ ...cur, linkLost: { since: s.since, attempt: s.attempt } })
                       : cur._tag === "AutoStopped"
-                      ? cur
-                      : AutoState.Reconnecting({ attempt: s.attempt, since: s.since })
+                        ? cur
+                        : AutoState.Reconnecting({ attempt: s.attempt, since: s.since })
                   }
-                  return cur._tag === "Recording" && cur.linkLost !== undefined ? AutoState.Recording({ ...cur, linkLost: undefined }) : cur
-                }))
+                  return cur._tag === "Recording" && cur.linkLost !== undefined
+                    ? AutoState.Recording({ ...cur, linkLost: undefined })
+                    : cur
+                })
+              )
             )
           )
           yield* Effect.forkScoped(
-            lifecycle.visibility.pipe(Stream.runForEach((v) => (v === "visible" ? Effect.asVoid(wake.hold) : Effect.void)))
+            lifecycle.visibility.pipe(
+              Stream.runForEach((v) => (v === "visible" ? Effect.asVoid(wake.hold) : Effect.void))
+            )
           )
           yield* watching(session)
         })
@@ -391,7 +442,7 @@ export const layer: Layer.Layer<
     const waitForTap = (reason: NeedsTapReason) =>
       setState(AutoState.NeedsTap({ reason })).pipe(Effect.andThen(Queue.take(taps)))
 
-    const mainLoop = Effect.gen(function*() {
+    const mainLoop = Effect.gen(function* () {
       let target: ConnectTarget | undefined
       let attempts = 0
       const baseMs = opts.retryBaseMs ?? 5000
@@ -423,13 +474,17 @@ export const layer: Layer.Layer<
             continue
           }
           if (reason === "forgotten") yield* memory.clear
-          const tapReason: NeedsTapReason = reason === "forgotten" ? "forgotten" : reason === "unsupported" ? "unsupported" : "gesture_required"
+          const tapReason: NeedsTapReason =
+            reason === "forgotten" ? "forgotten" : reason === "unsupported" ? "unsupported" : "gesture_required"
           target = { _tag: "Picked", picked: yield* waitForTap(tapReason) }
           attempts = 0
           continue
         }
         if (tag === "PermissionDenied" || tag === "DeviceNotSelected") {
-          target = { _tag: "Picked", picked: yield* waitForTap(tag === "DeviceNotSelected" ? "first_use" : "permission_denied") }
+          target = {
+            _tag: "Picked",
+            picked: yield* waitForTap(tag === "DeviceNotSelected" ? "first_use" : "permission_denied")
+          }
           attempts = 0
           continue
         }
@@ -456,13 +511,13 @@ export const layer: Layer.Layer<
     })
 
     const enable = (options: AutoOptions = {}) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         opts = options
         if (fiber !== undefined) return
         fiber = yield* Effect.forkIn(mainLoop.pipe(Effect.catch(() => Effect.void)), layerScope)
       })
 
-    const disable = Effect.gen(function*() {
+    const disable = Effect.gen(function* () {
       const f = fiber
       fiber = undefined
       if (f !== undefined) yield* Fiber.interrupt(f)
@@ -473,7 +528,7 @@ export const layer: Layer.Layer<
     })
 
     const request = <A>(make: (reply: Deferred.Deferred<A, AutoFailure>) => Command) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (fiber === undefined) return yield* new AutoNotConnected({ reason: "disabled" })
         if (current === undefined) return yield* new AutoNotConnected({ reason: "no_session" })
         const reply = yield* Deferred.make<A, AutoFailure>()
@@ -487,7 +542,10 @@ export const layer: Layer.Layer<
       battery,
       enable,
       disable,
-      connectNew: connector.pick.pipe(Effect.flatMap((p) => Queue.offer(taps, p)), Effect.asVoid),
+      connectNew: connector.pick.pipe(
+        Effect.flatMap((p) => Queue.offer(taps, p)),
+        Effect.asVoid
+      ),
       startNow: request<string>((reply) => ({ _tag: "Start", reply })),
       stopNow: request<void>((reply) => ({ _tag: "Stop", reply })),
       scanNow: Effect.suspend(() =>
@@ -497,8 +555,14 @@ export const layer: Layer.Layer<
       ),
       dismissStopped: SubscriptionRef.update(state, (s) =>
         s._tag === "AutoStopped"
-          ? AutoState.WaitingForEngine({ adapterName: current?.info.adapterName ?? "", rpm: undefined, voltageV: undefined, startingSince: undefined })
-          : s),
+          ? AutoState.WaitingForEngine({
+              adapterName: current?.info.adapterName ?? "",
+              rpm: undefined,
+              voltageV: undefined,
+              startingSince: undefined
+            })
+          : s
+      ),
       forgetAdapter: memory.clear
     })
   })

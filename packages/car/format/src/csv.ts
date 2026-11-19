@@ -19,7 +19,10 @@ export const encodeCsv = (samples: ReadonlyArray<Sample>): string => {
 
 export const parseCsv = (text: string): Effect.Effect<ReadonlyArray<Sample>, CsvParseError> =>
   Effect.suspend(() => {
-    const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim() !== "")
+    const lines = text
+      .replace(/^﻿/, "")
+      .split(/\r?\n/)
+      .filter((l) => l.trim() !== "")
     const header = lines[0]?.split(",").map((h) => h.trim())
     if (header === undefined || !header.includes("ts")) {
       return Effect.fail(new CsvParseError({ line: 1, message: "missing header with a `ts` column" }))
@@ -34,7 +37,9 @@ export const parseCsv = (text: string): Effect.Effect<ReadonlyArray<Sample>, Csv
         if (raw === "") continue
         const v = Number(raw)
         if (!Number.isFinite(v)) {
-          return Effect.fail(new CsvParseError({ line: n + 1, message: `column ${String(key)}: not a number "${raw}"` }))
+          return Effect.fail(
+            new CsvParseError({ line: n + 1, message: `column ${String(key)}: not a number "${raw}"` })
+          )
         }
         row[key] = v
       }

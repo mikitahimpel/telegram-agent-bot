@@ -25,14 +25,24 @@ export const messages = defineMessages({
     revokeAdmin: "The admin cannot be revoked.",
     revokeAsk: (id: number) => `Revoke access for <code>${id}</code>?`,
     revoked: (id: number) => `Access revoked for <code>${id}</code>.`,
-    killAsk: (id: number) => `Kill the agent of <code>${id}</code>? Running requests stop and the container is destroyed.`,
+    killAsk: (id: number) =>
+      `Kill the agent of <code>${id}</code>? Running requests stop and the container is destroyed.`,
     killed: (id: number) => `Agent <code>${id}</code> killed.`,
     restarted: (id: number) => `Agent <code>${id}</code> restarted.`,
     cancelled: "Cancelled.",
     btnRevoke: "Revoke",
     btnKill: "Kill",
     btnCancel: "Cancel",
-    usageOne: (id: number, who: string, today: string, total: number, cost: string, tin: number, tout: number, last: string) =>
+    usageOne: (
+      id: number,
+      who: string,
+      today: string,
+      total: number,
+      cost: string,
+      tin: number,
+      tout: number,
+      last: string
+    ) =>
       `<b>Agent ${id}</b> ${e(who)}\nToday: ${today}\nRuns total: ${total}\nCost: $${cost}\nTokens: ${tin} in / ${tout} out\nLast run: ${last}`,
     never: "never",
     tableAgents: "id | user | sessions | running | today | runs | cost",
@@ -60,14 +70,24 @@ export const messages = defineMessages({
     revokeAdmin: "Администратора нельзя отозвать.",
     revokeAsk: (id: number) => `Отозвать доступ у <code>${id}</code>?`,
     revoked: (id: number) => `Доступ отозван: <code>${id}</code>.`,
-    killAsk: (id: number) => `Убить агента <code>${id}</code>? Запущенные запросы остановятся, контейнер будет уничтожен.`,
+    killAsk: (id: number) =>
+      `Убить агента <code>${id}</code>? Запущенные запросы остановятся, контейнер будет уничтожен.`,
     killed: (id: number) => `Агент <code>${id}</code> убит.`,
     restarted: (id: number) => `Агент <code>${id}</code> перезапущен.`,
     cancelled: "Отменено.",
     btnRevoke: "Отозвать",
     btnKill: "Убить",
     btnCancel: "Отмена",
-    usageOne: (id: number, who: string, today: string, total: number, cost: string, tin: number, tout: number, last: string) =>
+    usageOne: (
+      id: number,
+      who: string,
+      today: string,
+      total: number,
+      cost: string,
+      tin: number,
+      tout: number,
+      last: string
+    ) =>
       `<b>Агент ${id}</b> ${e(who)}\nСегодня: ${today}\nВсего запусков: ${total}\nСтоимость: $${cost}\nТокены: ${tin} вх. / ${tout} исх.\nПоследний запуск: ${last}`,
     never: "никогда",
     tableAgents: "id | аккаунт | сессии | активно | сегодня | запуски | стоимость",

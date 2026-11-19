@@ -38,9 +38,18 @@ describe("decodeUpdate", () => {
       decodeUpdate({
         update_id: 4,
         message: {
-          message_id: 1, date: 1, chat: { id: 1, type: "private" }, message_thread_id: 9, is_topic_message: true,
+          message_id: 1,
+          date: 1,
+          chat: { id: 1, type: "private" },
+          message_thread_id: 9,
+          is_topic_message: true,
           forum_topic_created: { name: "n", icon_color: 1 },
-          reply_to_message: { message_id: 0, date: 1, chat: { id: 1, type: "private" }, reply_to_message: { message_id: 1 } }
+          reply_to_message: {
+            message_id: 0,
+            date: 1,
+            chat: { id: 1, type: "private" },
+            reply_to_message: { message_id: 1 }
+          }
         }
       })
     )
@@ -76,7 +85,13 @@ describe("parseCommand", () => {
 describe("media messages", () => {
   const msg = (extra: Record<string, unknown>) => ({
     update_id: 9,
-    message: { message_id: 1, date: 1, chat: { id: 1, type: "private" }, from: { id: 1, is_bot: false, first_name: "A" }, ...extra }
+    message: {
+      message_id: 1,
+      date: 1,
+      chat: { id: 1, type: "private" },
+      from: { id: 1, is_bot: false, first_name: "A" },
+      ...extra
+    }
   })
   it("decodes voice, audio, video_note", async () => {
     const u = await Effect.runPromise(

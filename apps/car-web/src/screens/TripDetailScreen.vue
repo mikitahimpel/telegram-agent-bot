@@ -35,26 +35,84 @@ const domain = computed<readonly [number, number]>(() => {
 })
 const col = (name: string) => s.value?.columns[name] ?? []
 const hasFuelSeries = computed(() => col("fuel_rate_lph").some((v) => v !== null))
-const gapMinutes = computed(() => Math.round((s.value?.gaps ?? []).reduce((sum, g) => sum + (g.to - g.from), 0) / 60_000))
+const gapMinutes = computed(() =>
+  Math.round((s.value?.gaps ?? []).reduce((sum, g) => sum + (g.to - g.from), 0) / 60_000)
+)
 const partial = computed(() => !!i.value && (!i.value.complete || gapMinutes.value > 0))
 const clock = (n: number) => fmtTime(lang.value, n)
 const int = (n: number) => String(Math.round(n))
 const one = (n: number) => fmtNumber(lang.value, n, 1)
 
-type ChartDef = { id: string; column: string; label: string; format: (n: number) => string; axis: (n: number) => string; zero: boolean; show: boolean; missing?: string }
+type ChartDef = {
+  id: string
+  column: string
+  label: string
+  format: (n: number) => string
+  axis: (n: number) => string
+  zero: boolean
+  show: boolean
+  missing?: string
+}
 const charts = computed<ChartDef[]>(() => [
-  { id: "speed", column: "speed_kmh", label: t.value("trip.chart.speed"), format: (n) => f.kmh(n), axis: int, zero: true, show: true },
-  { id: "rpm", column: "rpm", label: t.value("trip.chart.rpm"), format: (n) => f.rpm(n), axis: int, zero: true, show: true },
-  { id: "coolant", column: "coolant_c", label: t.value("trip.chart.coolant"), format: (n) => f.celsius(n), axis: int, zero: false, show: true },
-  { id: "fuel", column: "fuel_rate_lph", label: t.value("trip.chart.fuel"), format: (n) => f.lph(n), axis: one, zero: true, show: hasFuelSeries.value, missing: t.value("trip.chart.fuel.missing") },
-  { id: "voltage", column: "voltage_v", label: t.value("trip.chart.voltage"), format: (n) => f.volts(n), axis: one, zero: false, show: true }
+  {
+    id: "speed",
+    column: "speed_kmh",
+    label: t.value("trip.chart.speed"),
+    format: (n) => f.kmh(n),
+    axis: int,
+    zero: true,
+    show: true
+  },
+  {
+    id: "rpm",
+    column: "rpm",
+    label: t.value("trip.chart.rpm"),
+    format: (n) => f.rpm(n),
+    axis: int,
+    zero: true,
+    show: true
+  },
+  {
+    id: "coolant",
+    column: "coolant_c",
+    label: t.value("trip.chart.coolant"),
+    format: (n) => f.celsius(n),
+    axis: int,
+    zero: false,
+    show: true
+  },
+  {
+    id: "fuel",
+    column: "fuel_rate_lph",
+    label: t.value("trip.chart.fuel"),
+    format: (n) => f.lph(n),
+    axis: one,
+    zero: true,
+    show: hasFuelSeries.value,
+    missing: t.value("trip.chart.fuel.missing")
+  },
+  {
+    id: "voltage",
+    column: "voltage_v",
+    label: t.value("trip.chart.voltage"),
+    format: (n) => f.volts(n),
+    axis: one,
+    zero: false,
+    show: true
+  }
 ])
 
 const totalBandSeconds = computed(() => (i.value?.speedBands ?? []).reduce((sum, b) => sum + b.seconds, 0) || 1)
 const maxBandFuel = computed(() => Math.max(1, ...(i.value?.speedBands ?? []).map((b) => b.fuelPer100Km ?? 0)))
 
 const view = computed(() =>
-  trip.value ? describeStatus({ kind: "trip", state: trip.value.sync, localCopyLost: !trip.value.localCopy, sync: backend.sync.value }, lang.value, now.value) : null
+  trip.value
+    ? describeStatus(
+        { kind: "trip", state: trip.value.sync, localCopyLost: !trip.value.localCopy, sync: backend.sync.value },
+        lang.value,
+        now.value
+      )
+    : null
 )
 const counters = computed(() => (trip.value ? tripCounters(trip.value) : null))
 const confirmDelete = ref(false)
@@ -111,11 +169,15 @@ const retryAll = async () => {
             <b>{{ f.kmh(i.maxSpeedKmh) }}</b>
           </div>
           <div class="num">
-            <span class="stat-label">{{ t("trip.fuel") }}<template v-if="i.fuelIsEstimate"> · {{ t("common.estimate") }}</template></span>
+            <span class="stat-label"
+              >{{ t("trip.fuel") }}<template v-if="i.fuelIsEstimate"> · {{ t("common.estimate") }}</template></span
+            >
             <b data-testid="trip-fuel">{{ i.fuelL === null ? t("trip.fuel.none") : f.l(i.fuelL, 2) }}</b>
           </div>
           <div class="num">
-            <span class="stat-label">{{ t("trip.per100") }}<template v-if="i.fuelIsEstimate"> · {{ t("common.estimate") }}</template></span>
+            <span class="stat-label"
+              >{{ t("trip.per100") }}<template v-if="i.fuelIsEstimate"> · {{ t("common.estimate") }}</template></span
+            >
             <b>{{ i.fuelPer100Km === null ? t("trip.fuel.none") : f.l100(i.fuelPer100Km) }}</b>
           </div>
           <div class="num">
@@ -127,7 +189,12 @@ const retryAll = async () => {
 
         <section class="card compare" data-testid="trip-compare">
           <h3>{{ t("trip.compare") }}</h3>
-          <p v-if="i.comparedToUsual.fuelPer100KmDeltaPct === null && i.comparedToUsual.avgSpeedDeltaPct === null" class="muted">{{ t("trip.compare.none") }}</p>
+          <p
+            v-if="i.comparedToUsual.fuelPer100KmDeltaPct === null && i.comparedToUsual.avgSpeedDeltaPct === null"
+            class="muted"
+          >
+            {{ t("trip.compare.none") }}
+          </p>
           <ul v-else class="plain">
             <li v-if="i.comparedToUsual.fuelPer100KmDeltaPct !== null">
               {{ t("trip.compare.fuel") }}: <b>{{ f.signedPct(i.comparedToUsual.fuelPer100KmDeltaPct) }}</b>
@@ -148,10 +215,17 @@ const retryAll = async () => {
         <section class="card charts" data-testid="trip-charts">
           <div class="charts-head">
             <h3>{{ t("trip.charts") }}</h3>
-            <button v-if="hover !== null" class="link" type="button" data-testid="clear-hover" @click="hover = null">{{ t("trip.charts.clear", { time: clock(hover) }) }}</button>
+            <button v-if="hover !== null" class="link" type="button" data-testid="clear-hover" @click="hover = null">
+              {{ t("trip.charts.clear", { time: clock(hover) }) }}
+            </button>
             <span v-else class="muted fine">{{ t("trip.charts.hint") }}</span>
           </div>
-          <AsyncState :loading="series.loading.value" :error="series.error.value" :has-data="!!s" @retry="series.reload">
+          <AsyncState
+            :loading="series.loading.value"
+            :error="series.error.value"
+            :has-data="!!s"
+            @retry="series.reload"
+          >
             <template v-if="s">
               <template v-for="c in charts" :key="c.id">
                 <TimeChart
@@ -169,7 +243,9 @@ const retryAll = async () => {
                   :zero-based="c.zero"
                   @hover="hover = $event"
                 />
-                <p v-else class="muted chart-missing" :data-testid="`chart-${c.id}-missing`">{{ c.label }}: {{ c.missing }}</p>
+                <p v-else class="muted chart-missing" :data-testid="`chart-${c.id}-missing`">
+                  {{ c.label }}: {{ c.missing }}
+                </p>
               </template>
               <p v-if="s.gaps.length" class="muted fine">{{ t("trip.charts.gaps") }}</p>
             </template>
@@ -182,9 +258,16 @@ const retryAll = async () => {
           <ul class="bandlist">
             <li v-for="b in i.speedBands" :key="b.fromKmh">
               <span class="band-name">{{ b.fromKmh }}–{{ b.toKmh >= 120 ? "+" : b.toKmh }} {{ t("unit.kmh") }}</span>
-              <span class="band-bar"><span class="band-fill" :style="{ width: `${b.fuelPer100Km === null ? 0 : (b.fuelPer100Km / maxBandFuel) * 100}%` }" /></span>
+              <span class="band-bar"
+                ><span
+                  class="band-fill"
+                  :style="{ width: `${b.fuelPer100Km === null ? 0 : (b.fuelPer100Km / maxBandFuel) * 100}%` }"
+              /></span>
               <b class="band-val">{{ f.l100(b.fuelPer100Km) }}</b>
-              <small class="band-time">{{ t("trip.bands.share", { p: fmtNumber(lang, Math.round((b.seconds / totalBandSeconds) * 100)) }) }} · {{ f.dur(b.seconds) }}</small>
+              <small class="band-time"
+                >{{ t("trip.bands.share", { p: fmtNumber(lang, Math.round((b.seconds / totalBandSeconds) * 100)) }) }} ·
+                {{ f.dur(b.seconds) }}</small
+              >
             </li>
           </ul>
         </section>
@@ -246,11 +329,26 @@ const retryAll = async () => {
       <h4>{{ t("trip.gaps") }}</h4>
       <GapTimeline :gaps="trip.gaps" :started-at="trip.startedAt" :ended-at="trip.endedAt" />
       <div class="actions">
-        <button class="btn" type="button" data-testid="export" :disabled="!exportable" @click="showExport = true; backend.exportTrip(trip.tripId)">
+        <button
+          class="btn"
+          type="button"
+          data-testid="export"
+          :disabled="!exportable"
+          @click="
+            showExport = true;
+            backend.exportTrip(trip.tripId)
+          "
+        >
           {{ t("trip.export") }}
         </button>
         <pre v-if="showExport" class="steps">{{ t("trip.export.steps") }}</pre>
-        <button class="btn btn-danger" type="button" data-testid="delete" :disabled="!canDeleteLocal(trip)" @click="confirmDelete = true">
+        <button
+          class="btn btn-danger"
+          type="button"
+          data-testid="delete"
+          :disabled="!canDeleteLocal(trip)"
+          @click="confirmDelete = true"
+        >
           {{ t("trip.delete") }}
         </button>
         <p v-if="!canDeleteLocal(trip) && trip.localCopy" class="muted">{{ t("trip.delete.only") }}</p>

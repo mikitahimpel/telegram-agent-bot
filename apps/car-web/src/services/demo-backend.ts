@@ -54,7 +54,9 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
   const trips = ref<TripVm[]>(o.trips ?? fixtureTrips())
   const reading = ref<Reading>({ ...fixtureReading })
   const supported = ref<SensorKey[] | null>(o.supported ?? null)
-  const storage = ref<StorageHealthVm | null>(o.storage === undefined ? { usedBytes: 12_400_000, quotaBytes: 900_000_000, persisted: false } : o.storage)
+  const storage = ref<StorageHealthVm | null>(
+    o.storage === undefined ? { usedBytes: 12_400_000, quotaBytes: 900_000_000, persisted: false } : o.storage
+  )
   const diag = ref<DiagEvent[]>(o.diag ?? fixtureDiag())
   const devices = ref<PairedDevice[]>(o.devices ?? [])
   const interrupted = ref<InterruptedTrip | null>(o.interrupted ?? null)
@@ -79,7 +81,13 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
   const tick = () => {
     const r = rec.value
     if (r._tag !== "Recording") return
-    rec.value = { ...r, points: r.points + 1, distanceKm: r.distanceKm + 0.015, lastSampleAt: Date.now(), chunks: Math.floor((r.points + 1) / 100) }
+    rec.value = {
+      ...r,
+      points: r.points + 1,
+      distanceKm: r.distanceKm + 0.015,
+      lastSampleAt: Date.now(),
+      chunks: Math.floor((r.points + 1) / 100)
+    }
     reading.value = {
       speedKmh: Math.round(40 + Math.random() * 40),
       rpm: Math.round(1800 + Math.random() * 900),
@@ -138,7 +146,12 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     async scanDtc(): Promise<DtcScanOutcome> {
       await wait(o.scanDelayMs ?? 1800)
       scannedAt = Date.now()
-      return { _tag: "Done", at: scannedAt, codes: scenario === "issues" ? ["P0420", "P0171"] : [], milOn: scenario === "issues" }
+      return {
+        _tag: "Done",
+        at: scannedAt,
+        codes: scenario === "issues" ? ["P0420", "P0171"] : [],
+        milOn: scenario === "issues"
+      }
     },
     async enableAuto() {
       auto.value = { _tag: "WaitingForEngine", adapterName: "Demo" }
@@ -156,7 +169,10 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     async connect(kind: TransportKind, scenario: SimScenario = "normal") {
       cancelled = false
       log("obd", `connect ${kind} ${scenario}`)
-      const fail = (code: "BluetoothUnavailable" | "SerialUnavailable" | "EcuNotResponding" | "AdapterNotResponding", step?: string) => {
+      const fail = (
+        code: "BluetoothUnavailable" | "SerialUnavailable" | "EcuNotResponding" | "AdapterNotResponding",
+        step?: string
+      ) => {
         conn.value = { _tag: "Failed", error: { code, ...(step ? { step } : {}) } }
       }
       if (kind === "ble" && !caps.ble) return fail("BluetoothUnavailable")
@@ -183,9 +199,16 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
         log("elm", "< UNABLE TO CONNECT")
         return fail("EcuNotResponding")
       }
-      const sensors: SensorKey[] = scenario === "no_fuel_pid" ? ["speedKmh", "rpm", "coolantC", "voltageV"] : ["speedKmh", "rpm", "coolantC", "voltageV", "fuelRateLph"]
+      const sensors: SensorKey[] =
+        scenario === "no_fuel_pid"
+          ? ["speedKmh", "rpm", "coolantC", "voltageV"]
+          : ["speedKmh", "rpm", "coolantC", "voltageV", "fuelRateLph"]
       supported.value = sensors
-      conn.value = { ...readyConn, sensors: sensors.length, adapterName: kind === "simulator" ? "Demo" : "OBDII" } as ConnectionVm
+      conn.value = {
+        ...readyConn,
+        sensors: sensors.length,
+        adapterName: kind === "simulator" ? "Demo" : "OBDII"
+      } as ConnectionVm
     },
     cancelConnect() {
       cancelled = true
@@ -193,7 +216,16 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     },
     async startRecording() {
       const startedAt = Date.now()
-      rec.value = { _tag: "Recording", tripId: `demo-${startedAt}`, startedAt, points: 0, chunks: 0, distanceKm: 0, lastSampleAt: startedAt, gapOpen: false }
+      rec.value = {
+        _tag: "Recording",
+        tripId: `demo-${startedAt}`,
+        startedAt,
+        points: 0,
+        chunks: 0,
+        distanceKm: 0,
+        lastSampleAt: startedAt,
+        gapOpen: false
+      }
       wakeLock.value = true
       if (!o.static) timer = setInterval(tick, 1000)
     },
@@ -208,7 +240,16 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
       const i = interrupted.value
       interrupted.value = null
       if (!i) return
-      rec.value = { _tag: "Recording", tripId: i.tripId, startedAt: i.interruptedAt - 60_000, points: i.points, chunks: Math.floor(i.points / 100), distanceKm: 0, lastSampleAt: Date.now(), gapOpen: true }
+      rec.value = {
+        _tag: "Recording",
+        tripId: i.tripId,
+        startedAt: i.interruptedAt - 60_000,
+        points: i.points,
+        chunks: Math.floor(i.points / 100),
+        distanceKm: 0,
+        lastSampleAt: Date.now(),
+        gapOpen: true
+      }
     },
     async finishInterrupted() {
       interrupted.value = null
@@ -217,17 +258,30 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
       log("sync", `retry ${tripId}`)
       trips.value = trips.value.map((t) =>
         t.tripId === tripId
-          ? { ...t, sync: { _tag: "Uploading", sent: t.chunks.length, total: t.chunks.length, confirmed: t.chunks.length - 1 }, chunks: t.chunks.map((c) => ({ ...c, state: "confirmed" as const })) }
+          ? {
+              ...t,
+              sync: {
+                _tag: "Uploading",
+                sent: t.chunks.length,
+                total: t.chunks.length,
+                confirmed: t.chunks.length - 1
+              },
+              chunks: t.chunks.map((c) => ({ ...c, state: "confirmed" as const }))
+            }
           : t
       )
       await sleep(o.static ? 0 : 800)
-      trips.value = trips.value.map((t) => (t.tripId === tripId ? { ...t, sync: { _tag: "Confirmed", at: Date.now() } } : t))
+      trips.value = trips.value.map((t) =>
+        t.tripId === tripId ? { ...t, sync: { _tag: "Confirmed", at: Date.now() } } : t
+      )
     },
     async exportTrip(tripId) {
       log("app", `export ${tripId}`)
     },
     async deleteLocal(tripId) {
-      trips.value = trips.value.map((t) => (t.tripId === tripId ? { ...t, localCopy: false, sync: { _tag: "CloudOnly" } } : t))
+      trips.value = trips.value.map((t) =>
+        t.tripId === tripId ? { ...t, localCopy: false, sync: { _tag: "CloudOnly" } } : t
+      )
     },
     async requestPersistence() {
       if (storage.value) storage.value = { ...storage.value, persisted: true }

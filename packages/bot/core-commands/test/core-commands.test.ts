@@ -4,7 +4,13 @@ import { renderHelp } from "@bot/bot-commands/help"
 import { adminId, aliceId, ctxOf, makeWorld } from "./fakes.ts"
 import { coreCallbacks, coreCommands } from "../src/core-commands.ts"
 
-const runCmd = (w: ReturnType<typeof makeWorld>, name: string, role: "admin" | "user", args = "", lang: "ru" | "en" = "en") => {
+const runCmd = (
+  w: ReturnType<typeof makeWorld>,
+  name: string,
+  role: "admin" | "user",
+  args = "",
+  lang: "ru" | "en" = "en"
+) => {
   const def = w.registry.find(name, role)
   if (def === undefined) return Effect.die(`unknown ${name}`)
   return def.handler(ctxOf(role, args, lang)).pipe(Effect.provide(w.layer))
@@ -24,7 +30,12 @@ describe("role visibility", () => {
       expect(w.registry.find(n, "admin")).toBeDefined()
     }
     expect(w.registry.visibleFor("user").map((c) => c.name)).toEqual(["start", "help", "lang"])
-    expect(w.registry.visibleFor("admin").map((c) => c.name).slice(0, 6)).toEqual(["start", "help", "stop", "lang", "new", "sessions"])
+    expect(
+      w.registry
+        .visibleFor("admin")
+        .map((c) => c.name)
+        .slice(0, 6)
+    ).toEqual(["start", "help", "stop", "lang", "new", "sessions"])
     expect(w.registry.find("new", "user")).toBeUndefined()
     expect(w.registry.find("sessions", "user")).toBeUndefined()
     expect(w.registry.find("stop", "user")).toBeDefined()
@@ -192,7 +203,15 @@ describe("admin flows", () => {
   })
 
   it.effect("/agents and /usage render", () => {
-    const usage = { runsToday: 2, dailyLimit: 50, runsTotal: 9, costUsdTotal: 1.234, inputTokensTotal: 100, outputTokensTotal: 200, lastRunAt: undefined }
+    const usage = {
+      runsToday: 2,
+      dailyLimit: 50,
+      runsTotal: 9,
+      costUsdTotal: 1.234,
+      inputTokensTotal: 100,
+      outputTokensTotal: 200,
+      lastRunAt: undefined
+    }
     const w = makeWorld({ agents: [{ tgId: aliceId, sessions: 2, running: 1, usage }] })
     return Effect.gen(function* () {
       yield* runCmd(w, "agents", "admin")

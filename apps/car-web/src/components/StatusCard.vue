@@ -16,7 +16,13 @@ const run = () => {
 </script>
 
 <template>
-  <section class="card status" :class="[`tone-${view.tone}`, { big }]" role="status" aria-live="polite" data-testid="status-card">
+  <section
+    class="card status"
+    :class="[`tone-${view.tone}`, { big }]"
+    role="status"
+    aria-live="polite"
+    data-testid="status-card"
+  >
     <div class="status-head">
       <span class="status-icon" aria-hidden="true">{{ view.icon }}</span>
       <h2 class="status-title">{{ view.title }}</h2>

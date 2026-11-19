@@ -50,8 +50,7 @@ export const callTelegram = (
       const json = (await res.json()) as { ok: boolean; description?: string }
       if (!json.ok) throw new Error(json.description ?? `HTTP ${res.status}`)
     },
-    catch: (e) =>
-      new TelegramWebhookError({ method, description: e instanceof Error ? e.message : String(e) })
+    catch: (e) => new TelegramWebhookError({ method, description: e instanceof Error ? e.message : String(e) })
   })
 
 export const TelegramWebhookProvider = () =>

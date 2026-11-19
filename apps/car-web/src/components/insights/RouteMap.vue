@@ -34,7 +34,11 @@ const geo = computed(() => {
   const scale = Math.min((W - 2 * PAD) / spanX, (H - 2 * PAD) / spanY)
   const offX = (W - spanX * scale) / 2
   const offY = (H - spanY * scale) / 2
-  const out: Pt[] = pts.map((p, i) => ({ t: p.t, x: offX + (xs[i]! - minX) * scale, y: offY + (ys[i]! - minY) * scale }))
+  const out: Pt[] = pts.map((p, i) => ({
+    t: p.t,
+    x: offX + (xs[i]! - minX) * scale,
+    y: offY + (ys[i]! - minY) * scale
+  }))
   const paths: Pt[][] = []
   let cur: Pt[] = []
   out.forEach((p, i) => {

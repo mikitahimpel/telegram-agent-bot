@@ -26,7 +26,7 @@ export type ImportResult = {
 }
 
 export const storeImport = (tgId: TgId | number, text: string, fileName: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const parsed = yield* parseCsv(text)
     if (parsed.length === 0) return yield* Effect.fail(new EmptyImport())
     const bad = parsed.findIndex((s) => s.ts < MIN_TS)
@@ -109,7 +109,7 @@ export type ImportContext = {
 }
 
 const download = (fileId: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     const token = Redacted.value(yield* Config.Redacted("TELEGRAM_BOT_TOKEN"))
     const base = yield* Config.String("TELEGRAM_API_BASE").pipe(Config.withDefault("https://api.telegram.org"))
@@ -122,7 +122,7 @@ const download = (fileId: string) =>
   })
 
 export const importDocument = (ctx: ImportContext, doc: DocumentLike) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (!isCsvDocument(doc)) return false
     const tg = yield* Telegram
     const m = messages[ctx.lang]
@@ -164,5 +164,10 @@ export const importDocument = (ctx: ImportContext, doc: DocumentLike) =>
       )
     )
     return true
-  }).pipe(Effect.mapError((e) => (e instanceof StorageError || (e as { _tag?: string })._tag === "TelegramError" ? e : new StorageError({ operation: "car.import", cause: e }))))
-
+  }).pipe(
+    Effect.mapError((e) =>
+      e instanceof StorageError || (e as { _tag?: string })._tag === "TelegramError"
+        ? e
+        : new StorageError({ operation: "car.import", cause: e })
+    )
+  )

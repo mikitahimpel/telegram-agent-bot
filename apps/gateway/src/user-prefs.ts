@@ -40,6 +40,8 @@ export const localUserPrefs = (env: Env, own: TgId, sql: LangSql): Layer.Layer<U
     make(env, (tgId) =>
       tgId === own
         ? Effect.sync(() => readStoredLang(sql))
-        : Effect.fail(new StorageError({ operation: "prefs.lang", cause: new Error(`prefs of ${own} asked for ${tgId}`) }))
+        : Effect.fail(
+            new StorageError({ operation: "prefs.lang", cause: new Error(`prefs of ${own} asked for ${tgId}`) })
+          )
     )
   )

@@ -24,7 +24,10 @@ export const ENGINE_OPS = [
 export type EngineOp = (typeof ENGINE_OPS)[number]
 
 export type CarBackendShape = {
-  readonly [K in EngineOp]: (tgId: number, ...args: Parameters<CarEngine[K]>) => Effect.Effect<ReturnType<CarEngine[K]>, StorageError>
+  readonly [K in EngineOp]: (
+    tgId: number,
+    ...args: Parameters<CarEngine[K]>
+  ) => Effect.Effect<ReturnType<CarEngine[K]>, StorageError>
 }
 
 export class CarBackend extends Context.Service<CarBackend, CarBackendShape>()("@bot/car-store/CarBackend") {}
@@ -43,12 +46,16 @@ export const backendFromInvoke = (invoke: Invoke): CarBackendShape => {
   const out: Record<string, unknown> = {}
   for (const op of ENGINE_OPS) {
     out[op] = (tgId: number, ...args: ReadonlyArray<unknown>) =>
-      Effect.tryPromise({ try: () => invoke(tgId, op, args), catch: (cause) => new StorageError({ operation: `car.${op}`, cause }) })
+      Effect.tryPromise({
+        try: () => invoke(tgId, op, args),
+        catch: (cause) => new StorageError({ operation: `car.${op}`, cause })
+      })
   }
   return out as CarBackendShape
 }
 
-export const layerInvoke = (invoke: Invoke): Layer.Layer<CarBackend> => Layer.succeed(CarBackend, backendFromInvoke(invoke))
+export const layerInvoke = (invoke: Invoke): Layer.Layer<CarBackend> =>
+  Layer.succeed(CarBackend, backendFromInvoke(invoke))
 
 export const layerEngine = (engine: CarEngine): Layer.Layer<CarBackend> =>
   layerInvoke(async (_tgId, op, args) => runEngineOp(engine, op, args))

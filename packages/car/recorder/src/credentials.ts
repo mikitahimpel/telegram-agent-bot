@@ -16,7 +16,11 @@ export type CredentialsOptions = {
 const KEY = "device"
 const STORE = "kv"
 
-const withDb = <A>(opts: CredentialsOptions | undefined, mode: IDBTransactionMode, f: (s: IDBObjectStore) => IDBRequest<A>) =>
+const withDb = <A>(
+  opts: CredentialsOptions | undefined,
+  mode: IDBTransactionMode,
+  f: (s: IDBObjectStore) => IDBRequest<A>
+) =>
   Effect.tryPromise({
     try: () =>
       new Promise<A>((resolve, reject) => {
@@ -49,11 +53,15 @@ const withDb = <A>(opts: CredentialsOptions | undefined, mode: IDBTransactionMod
     catch: classifyStorageError
   })
 
-export const loadCredentials = (opts?: CredentialsOptions): Effect.Effect<DeviceCredentials | undefined, StorageFailure> =>
+export const loadCredentials = (
+  opts?: CredentialsOptions
+): Effect.Effect<DeviceCredentials | undefined, StorageFailure> =>
   withDb(opts, "readonly", (s) => s.get(KEY) as IDBRequest<DeviceCredentials | undefined>)
 
-export const saveCredentials = (creds: DeviceCredentials, opts?: CredentialsOptions): Effect.Effect<void, StorageFailure> =>
-  withDb(opts, "readwrite", (s) => s.put(creds, KEY)).pipe(Effect.asVoid)
+export const saveCredentials = (
+  creds: DeviceCredentials,
+  opts?: CredentialsOptions
+): Effect.Effect<void, StorageFailure> => withDb(opts, "readwrite", (s) => s.put(creds, KEY)).pipe(Effect.asVoid)
 
 export const clearCredentials = (opts?: CredentialsOptions): Effect.Effect<void, StorageFailure> =>
   withDb(opts, "readwrite", (s) => s.delete(KEY)).pipe(Effect.asVoid)

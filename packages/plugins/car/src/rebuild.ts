@@ -16,7 +16,7 @@ export type RebuildResult = {
 }
 
 export const rebuildFromR2 = (tgId: number, maxReads: number = REBUILD_MAX_CHUNK_READS) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const backend = yield* CarBackend
     const bucket = yield* CarBucket
     const ids = [...(yield* listTripIds(tgId, 1000))].reverse()
@@ -31,7 +31,9 @@ export const rebuildFromR2 = (tgId: number, maxReads: number = REBUILD_MAX_CHUNK
       const stored = yield* storedChunks(tgId, tripId)
       const known = new Map((yield* backend.knownChunks(tgId, tripId)).map((c) => [c.seq, c.sha256] as const))
       const expected = new Map(manifest.chunks.map((c) => [c.seq, c.sha256] as const))
-      const todo = [...stored.keys()].filter((seq) => expected.get(seq) !== undefined && known.get(seq) !== expected.get(seq))
+      const todo = [...stored.keys()].filter(
+        (seq) => expected.get(seq) !== undefined && known.get(seq) !== expected.get(seq)
+      )
       skipped += stored.size - todo.length
       if (reads + todo.length > maxReads && reads > 0) {
         remaining = true
@@ -44,7 +46,12 @@ export const rebuildFromR2 = (tgId: number, maxReads: number = REBUILD_MAX_CHUNK
         })
         reads++
         if (obj === null) continue
-        const bytes = new Uint8Array(yield* Effect.tryPromise({ try: () => obj.arrayBuffer(), catch: (cause) => new StorageError({ operation: "car.rebuild.read", cause }) }))
+        const bytes = new Uint8Array(
+          yield* Effect.tryPromise({
+            try: () => obj.arrayBuffer(),
+            catch: (cause) => new StorageError({ operation: "car.rebuild.read", cause })
+          })
+        )
         const sha = yield* Effect.promise(() => sha256Hex(bytes))
         const csv = new TextDecoder().decode(bytes)
         yield* backend.ingestChunk(tgId, tripId, seq, sha, csv).pipe(Effect.catch(() => Effect.void))
@@ -55,6 +62,10 @@ export const rebuildFromR2 = (tgId: number, maxReads: number = REBUILD_MAX_CHUNK
     }
     const lang = (yield* backend.getMeta(tgId, "lang")) === "ru" ? "ru" : "en"
     const pending = yield* backend.pending(tgId, lang)
-    yield* backend.markNotified(tgId, pending.alerts.map((a) => a.id), pending.codes.map((c) => ({ code: c.code, kind: c.kind })))
+    yield* backend.markNotified(
+      tgId,
+      pending.alerts.map((a) => a.id),
+      pending.codes.map((c) => ({ code: c.code, kind: c.kind }))
+    )
     return { trips, chunksIngested: ingested, chunksSkipped: skipped, remaining } satisfies RebuildResult
   })

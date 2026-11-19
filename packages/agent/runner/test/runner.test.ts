@@ -11,13 +11,33 @@ const TOKEN = "sk-ant-oat01-SECRET-TOKEN"
 const SID = "11111111-2222-3333-4444-555555555555"
 const j = (o: unknown) => JSON.stringify(o)
 const init = j({ type: "system", subtype: "init", session_id: SID, model: "m" })
-const delta = j({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: "Hi" } } })
+const delta = j({
+  type: "stream_event",
+  event: { type: "content_block_delta", delta: { type: "text_delta", text: "Hi" } }
+})
 const result = (extra: object = {}) =>
-  j({ type: "result", subtype: "success", is_error: false, result: "ok", session_id: SID, num_turns: 1, total_cost_usd: 0.01, duration_ms: 5, usage: { input_tokens: 1, output_tokens: 2 }, ...extra })
+  j({
+    type: "result",
+    subtype: "success",
+    is_error: false,
+    result: "ok",
+    session_id: SID,
+    num_turns: 1,
+    total_cost_usd: 0.01,
+    duration_ms: 5,
+    usage: { input_tokens: 1, output_tokens: 2 },
+    ...extra
+  })
 
 const tgId = TgId.make(42)
 const input = (extra: Partial<RunInput> = {}): RunInput => ({
-  tgId, sessionKey: SessionKey.make("main"), resume: undefined, prompt: "hello", lang: "ru", mcp: undefined, ...extra
+  tgId,
+  sessionKey: SessionKey.make("main"),
+  resume: undefined,
+  prompt: "hello",
+  lang: "ru",
+  mcp: undefined,
+  ...extra
 })
 
 const setup = (o: FakeOptions, env: Record<string, string> = {}) => {
@@ -40,21 +60,30 @@ describe("AgentRunner", () => {
       expect(evs.map((e) => e._tag)).toEqual(["SessionStarted", "TextDelta", "FileProduced", "Completed"])
       expect(evs[2]).toMatchObject({ path: "/workspace/out/chart.png", fileName: "chart.png" })
       expect(fake.events).toContain("start")
-      expect(fake.events.filter((e) => e.startsWith("backup:"))).toEqual(["backup:/home/node/.claude", "backup:/workspace"])
+      expect(fake.events.filter((e) => e.startsWith("backup:"))).toEqual([
+        "backup:/home/node/.claude",
+        "backup:/workspace"
+      ])
       expect(fake.store.has("agents/42/backup.json")).toBe(true)
     }).pipe(Effect.provide(l))
   })
 
   it.effect("restores once after start when an index exists; skips restore when already running", () => {
     const cold = setup({ claudeLines: [init, result()] })
-    cold.fake.store.set("agents/42/backup.json", j({
-      claude: { id: "o1", dir: "/home/node/.claude", size: 1, sha256: "x", format: "tar+zstd/1" },
-      workspace: { id: "o2", dir: "/workspace", size: 1, sha256: "x", format: "tar+zstd/1" }
-    }))
+    cold.fake.store.set(
+      "agents/42/backup.json",
+      j({
+        claude: { id: "o1", dir: "/home/node/.claude", size: 1, sha256: "x", format: "tar+zstd/1" },
+        workspace: { id: "o2", dir: "/workspace", size: 1, sha256: "x", format: "tar+zstd/1" }
+      })
+    )
     const warm = setup({ claudeLines: [init, result()], startRunning: true })
     return Effect.gen(function* () {
       yield* collect(input()).pipe(Effect.provide(cold.l))
-      expect(cold.fake.events.filter((e) => e.startsWith("restore:"))).toEqual(["restore:/home/node/.claude", "restore:/workspace"])
+      expect(cold.fake.events.filter((e) => e.startsWith("restore:"))).toEqual([
+        "restore:/home/node/.claude",
+        "restore:/workspace"
+      ])
       yield* collect(input()).pipe(Effect.provide(warm.l))
       expect(warm.fake.events.some((e) => e.startsWith("restore:") || e === "start")).toBe(false)
     })
@@ -98,7 +127,9 @@ describe("AgentRunner", () => {
   it.effect("api_key mode without ANTHROPIC_API_KEY is a config error", () =>
     Effect.gen(function* () {
       const exit = yield* Effect.exit(
-        ClaudeAuthConfig.pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord({ CLAUDE_AUTH_MODE: "api_key" }))))
+        ClaudeAuthConfig.pipe(
+          Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord({ CLAUDE_AUTH_MODE: "api_key" })))
+        )
       )
       expect(exit._tag).toBe("Failure")
     })
@@ -141,7 +172,9 @@ describe("AgentRunner", () => {
   })
 
   it.effect("usage limit -> SubscriptionLimitReached with resetsAt", () => {
-    const { l } = setup({ claudeLines: [init, result({ is_error: true, result: "Claude AI usage limit reached|1900000000" })] })
+    const { l } = setup({
+      claudeLines: [init, result({ is_error: true, result: "Claude AI usage limit reached|1900000000" })]
+    })
     return Effect.gen(function* () {
       const e = yield* collect(input()).pipe(Effect.flip)
       expect(e).toBeInstanceOf(SubscriptionLimitReached)
@@ -168,7 +201,13 @@ describe("AgentRunner", () => {
 
   it.effect("exec failure -> ContainerDown", () => {
     const fake = makeFake({ claudeLines: [], startRunning: true })
-    const broken: ContainerLike = { ...fake.container, running: true, exec: async () => { throw new Error("gone") } }
+    const broken: ContainerLike = {
+      ...fake.container,
+      running: true,
+      exec: async () => {
+        throw new Error("gone")
+      }
+    }
     const l = layer({ container: broken, backup: fake.backup, bucket: fake.bucket }).pipe(
       Layer.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord({ CLAUDE_CODE_OAUTH_TOKEN: TOKEN })))
     )
@@ -180,7 +219,10 @@ describe("AgentRunner", () => {
 
   it.effect("inactivity timeout: default 10m, overridable", () => {
     const d = setup({ claudeLines: [init, result()] })
-    const o = setup({ claudeLines: [init, result()] }, { AGENT_INACTIVITY_TIMEOUT: "30m", CONTAINER_INSTANCE_TYPE: "standard-1" })
+    const o = setup(
+      { claudeLines: [init, result()] },
+      { AGENT_INACTIVITY_TIMEOUT: "30m", CONTAINER_INSTANCE_TYPE: "standard-1" }
+    )
     return Effect.gen(function* () {
       yield* collect(input()).pipe(Effect.provide(d.l))
       expect(d.fake.events).toContain("timeout:600000")
@@ -209,9 +251,13 @@ describe("attachments", () => {
     expect(safeFileName("../../etc/pass wd.pdf")).toBe("pass_wd.pdf")
     expect(safeFileName("..")).toBe("file")
     expect(safeFileName("отчёт 1.xlsx")).toBe("отчёт_1.xlsx")
-    expect(attachmentPath({ fileName: "a/b.png", mimeType: "image/png", bytes: new Uint8Array() }, 1, "abc")).toBe("/workspace/in/abc-2-b.png")
+    expect(attachmentPath({ fileName: "a/b.png", mimeType: "image/png", bytes: new Uint8Array() }, 1, "abc")).toBe(
+      "/workspace/in/abc-2-b.png"
+    )
     expect(withAttachmentPaths("hi", [])).toBe("hi")
-    expect(withAttachmentPaths("hi", [{ path: "/workspace/in/x.png", mimeType: "image/png" }])).toContain("/workspace/in/x.png (image/png)")
+    expect(withAttachmentPaths("hi", [{ path: "/workspace/in/x.png", mimeType: "image/png" }])).toContain(
+      "/workspace/in/x.png (image/png)"
+    )
   })
 
   it.effect("writes attachments under /workspace/in before running claude", () => {

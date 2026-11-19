@@ -42,7 +42,10 @@ const confirmKeyboard = (confirmText: string, confirmData: string, cancelText: s
 const money = (n: number) => n.toFixed(2)
 
 const pad = (cols: ReadonlyArray<string>, widths: ReadonlyArray<number>) =>
-  cols.map((c, i) => c.padEnd(widths[i] ?? 0)).join("  ").trimEnd()
+  cols
+    .map((c, i) => c.padEnd(widths[i] ?? 0))
+    .join("  ")
+    .trimEnd()
 
 const table = (header: string, rows: ReadonlyArray<ReadonlyArray<string>>) => {
   const head = header.split(" | ")
@@ -215,7 +218,16 @@ const usage: CommandDef<CoreR> = {
       const last = a.usage.lastRunAt === undefined ? m.never : formatDateTime(a.usage.lastRunAt, ctx.lang)
       yield* reply(
         ctx,
-        m.usageOne(a.tgId, whoOf(a), todayOf(a), a.usage.runsTotal, money(a.usage.costUsdTotal), a.usage.inputTokensTotal, a.usage.outputTokensTotal, last)
+        m.usageOne(
+          a.tgId,
+          whoOf(a),
+          todayOf(a),
+          a.usage.runsTotal,
+          money(a.usage.costUsdTotal),
+          a.usage.inputTokensTotal,
+          a.usage.outputTokensTotal,
+          last
+        )
       )
     })
 }
@@ -284,8 +296,18 @@ const restart: CommandDef<CoreR> = {
 }
 
 export const coreCommands: ReadonlyArray<CommandDef<CoreR>> = [
-  start, help, newSession, sessionsCmd, stop, lang,
-  agents, usage, allow, revoke, kill, restart
+  start,
+  help,
+  newSession,
+  sessionsCmd,
+  stop,
+  lang,
+  agents,
+  usage,
+  allow,
+  revoke,
+  kill,
+  restart
 ]
 
 type CallbackCtx = Parameters<CallbackDef<CoreR>["handler"]>[0]
@@ -296,9 +318,10 @@ const edit = (ctx: CallbackCtx, html: string) =>
     yield* tg.editMessageText({ ...target(ctx), messageId: ctx.messageId }, html)
   })
 
-const adminCallback = (
-  run: (ctx: CallbackCtx, id: TgId) => Effect.Effect<string, import("@bot/core-contracts/errors").BotError, CoreR>
-): CallbackDef<CoreR>["handler"] =>
+const adminCallback =
+  (
+    run: (ctx: CallbackCtx, id: TgId) => Effect.Effect<string, import("@bot/core-contracts/errors").BotError, CoreR>
+  ): CallbackDef<CoreR>["handler"] =>
   (ctx) =>
     Effect.gen(function* () {
       const tg = yield* Telegram
@@ -321,9 +344,9 @@ const langCallback: CallbackDef<CoreR> = {
       const sessions = yield* Sessions
       if (!isLang(ctx.payload)) return yield* tg.answerCallbackQuery(ctx.callbackId)
       const text = messages[ctx.payload].langChanged
-      yield* sessions.setLang(ctx.payload).pipe(
-        Effect.tapError(() => Effect.ignore(tg.answerCallbackQuery(ctx.callbackId)))
-      )
+      yield* sessions
+        .setLang(ctx.payload)
+        .pipe(Effect.tapError(() => Effect.ignore(tg.answerCallbackQuery(ctx.callbackId))))
       yield* tg.answerCallbackQuery(ctx.callbackId, text)
       yield* edit(ctx, text)
     })
@@ -383,5 +406,9 @@ const cancelCallback: CallbackDef<CoreR> = {
 }
 
 export const coreCallbacks: ReadonlyArray<CallbackDef<CoreR>> = [
-  langCallback, revokeCallback, revokeAskCallback, killCallback, cancelCallback
+  langCallback,
+  revokeCallback,
+  revokeAskCallback,
+  killCallback,
+  cancelCallback
 ]

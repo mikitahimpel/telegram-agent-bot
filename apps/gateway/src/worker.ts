@@ -93,7 +93,9 @@ const webhook = async (request: Request, env: Env, ctx: ExecutionContext): Promi
       const stub = env.USER_AGENT.getByName(String(outcome.tgId))
       const origin = new URL(request.url).origin
       ctx.waitUntil(
-        stub.handleUpdate(outcome.tgId, outcome.raw, origin).catch((e: unknown) => console.error("handleUpdate failed", e))
+        stub
+          .handleUpdate(outcome.tgId, outcome.raw, origin)
+          .catch((e: unknown) => console.error("handleUpdate failed", e))
       )
       return text("ok", 200)
     }

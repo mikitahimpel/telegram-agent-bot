@@ -5,8 +5,17 @@ export const TripId = Schema.String.check(Schema.isPattern(TRIP_ID_PATTERN)).pip
 export type TripId = typeof TripId.Type
 
 export const makeTripId = (startedAt: Date, random: string): TripId => {
-  const iso = startedAt.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")
-  return TripId.make(`${iso}-${random.toLowerCase().replace(/[^a-z0-9]/g, "").padEnd(8, "0").slice(0, 8)}`)
+  const iso = startedAt
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "")
+  return TripId.make(
+    `${iso}-${random
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .padEnd(8, "0")
+      .slice(0, 8)}`
+  )
 }
 
 export const ChunkInfo = Schema.Struct({

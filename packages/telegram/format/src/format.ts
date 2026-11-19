@@ -1,5 +1,4 @@
-export const escapeHtml = (s: string): string =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+export const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 const escapeAttr = (s: string): string => escapeHtml(s).replace(/"/g, "&quot;")
 
@@ -111,7 +110,8 @@ const renderInline = (s: string): string => {
       }
       if (close !== -1) {
         let code = s.slice(i + run, close)
-        if (code.length > 1 && code.startsWith(" ") && code.endsWith(" ") && code.trim() !== "") code = code.slice(1, -1)
+        if (code.length > 1 && code.startsWith(" ") && code.endsWith(" ") && code.trim() !== "")
+          code = code.slice(1, -1)
         out += `<code>${escapeHtml(code)}</code>`
         i = close + run
       } else {
@@ -186,7 +186,11 @@ const renderTableText = (headers: ReadonlyArray<string>, rows: ReadonlyArray<Rea
   const cols = Math.max(headers.length, ...rows.map((r) => r.length))
   const all = [headers, ...rows].map((r) => Array.from({ length: cols }, (_, i) => r[i] ?? ""))
   const widths = Array.from({ length: cols }, (_, i) => Math.max(1, ...all.map((r) => width(r[i]!))))
-  const fmt = (r: ReadonlyArray<string>) => r.map((c, i) => c + " ".repeat(widths[i]! - width(c))).join(" | ").trimEnd()
+  const fmt = (r: ReadonlyArray<string>) =>
+    r
+      .map((c, i) => c + " ".repeat(widths[i]! - width(c)))
+      .join(" | ")
+      .trimEnd()
   const lines = all.map(fmt)
   lines.splice(1, 0, widths.map((w) => "-".repeat(w)).join("-+-"))
   return lines.join("\n")
@@ -296,7 +300,8 @@ const renderBlocks = (lines: ReadonlyArray<string>, inQuote: boolean): string =>
   return blocks.filter((b) => b !== "").join("\n\n")
 }
 
-export const markdownToTelegramHtml = (md: string): string => renderBlocks(md.replace(/\r\n?/g, "\n").split("\n"), false)
+export const markdownToTelegramHtml = (md: string): string =>
+  renderBlocks(md.replace(/\r\n?/g, "\n").split("\n"), false)
 
 type Atom =
   | { readonly kind: "open"; readonly name: string; readonly raw: string }
@@ -384,7 +389,10 @@ export const splitHtml = (html: string, limit = 4096): string[] => {
         s += a.s
       } else s += a.kind === "open" ? a.raw : `</${a.name}>`
     }
-    const closing = [...stack].reverse().map((o) => `</${o.name}>`).join("")
+    const closing = [...stack]
+      .reverse()
+      .map((o) => `</${o.name}>`)
+      .join("")
     return { html: seenText && s.replace(/<[^>]*>/g, "").trim() !== "" ? s + closing : "", end: stack }
   }
 

@@ -239,7 +239,11 @@ export const dtcExplanations = (lang: Lang, now: number): DtcExplanation[] => [
       "The engine computer sees that the exhaust cleaner is doing a worse job than it should. It is not a breakdown that stops the car, but the exhaust gets dirtier."
     ),
     severity: "soon",
-    canDrive: tx(lang, "Ехать можно. Покажите машину в сервисе в ближайшие 2 недели.", "You can drive. Have it checked within 2 weeks."),
+    canDrive: tx(
+      lang,
+      "Ехать можно. Покажите машину в сервисе в ближайшие 2 недели.",
+      "You can drive. Have it checked within 2 weeks."
+    ),
     commonCauses: [
       tx(lang, "Износ катализатора", "Worn catalytic converter"),
       tx(lang, "Неисправный кислородный датчик после катализатора", "Faulty oxygen sensor after the converter"),
@@ -281,7 +285,14 @@ export const dtcExplanations = (lang: Lang, now: number): DtcExplanation[] => [
   }
 ]
 
-const period = (label: string, trips: number, km: number, h: number, per100: number | null, idle: number): PeriodStats => ({
+const period = (
+  label: string,
+  trips: number,
+  km: number,
+  h: number,
+  per100: number | null,
+  idle: number
+): PeriodStats => ({
   period: label,
   trips,
   distanceKm: round(km, 1),
@@ -315,7 +326,14 @@ export const buildOverviewFixture = (scenario: InsightScenario, lang: Lang, now:
   const byWeek = weekKm.map((km, i) => {
     const at = now - (weekKm.length - 1 - i) * 7 * DAY
     const h = km / (28 + rand() * 6)
-    return period(isoWeek(at), 4 + Math.floor(rand() * 5), km, h, issues || i < 9 ? weekPer100[i]! : 8.0, round(0.16 + rand() * 0.08, 2))
+    return period(
+      isoWeek(at),
+      4 + Math.floor(rand() * 5),
+      km,
+      h,
+      issues || i < 9 ? weekPer100[i]! : 8.0,
+      round(0.16 + rand() * 0.08, 2)
+    )
   })
   const monthKm = [410, 520, 466, 540, 498, 330]
   const byMonth = monthKm.map((km, i) => {
@@ -342,8 +360,16 @@ export const buildOverviewFixture = (scenario: InsightScenario, lang: Lang, now:
           kind: "check_engine",
           severity: "soon",
           title: tx(lang, "Горит лампа «Проверьте двигатель»", "The check engine lamp is on"),
-          details: tx(lang, "Найдена постоянная ошибка P0420 и предварительная P0171.", "A stored code P0420 and a pending code P0171 were found."),
-          whatToDo: tx(lang, "Можно ехать. Запишитесь в сервис в течение 2 недель.", "You can drive. Book a service visit within 2 weeks."),
+          details: tx(
+            lang,
+            "Найдена постоянная ошибка P0420 и предварительная P0171.",
+            "A stored code P0420 and a pending code P0171 were found."
+          ),
+          whatToDo: tx(
+            lang,
+            "Можно ехать. Запишитесь в сервис в течение 2 недель.",
+            "You can drive. Book a service visit within 2 weeks."
+          ),
           createdAt: now - 9 * DAY,
           resolvedAt: null,
           tripId: null,
@@ -374,7 +400,11 @@ export const buildOverviewFixture = (scenario: InsightScenario, lang: Lang, now:
           kind: "fuel_consumption_up",
           severity: "info",
           title: tx(lang, "Расход топлива вырос", "Fuel use went up"),
-          details: tx(lang, "На прошлой неделе 9,2 л на 100 км, обычно около 8,0 л.", "Last week 9.2 L per 100 km, usually about 8.0 L."),
+          details: tx(
+            lang,
+            "На прошлой неделе 9,2 л на 100 км, обычно около 8,0 л.",
+            "Last week 9.2 L per 100 km, usually about 8.0 L."
+          ),
           whatToDo: tx(
             lang,
             "Если неделя была городской, это нормально. Если расход держится, проверьте давление в шинах.",
@@ -389,8 +419,16 @@ export const buildOverviewFixture = (scenario: InsightScenario, lang: Lang, now:
           id: "al-0",
           kind: "check_engine",
           severity: "watch",
-          title: tx(lang, "Была ошибка P0301: пропуски зажигания в 1 цилиндре", "Code P0301 appeared: misfire in cylinder 1"),
-          details: tx(lang, "Ошибка исчезла сама после замены свечей.", "The code went away after the spark plugs were replaced."),
+          title: tx(
+            lang,
+            "Была ошибка P0301: пропуски зажигания в 1 цилиндре",
+            "Code P0301 appeared: misfire in cylinder 1"
+          ),
+          details: tx(
+            lang,
+            "Ошибка исчезла сама после замены свечей.",
+            "The code went away after the spark plugs were replaced."
+          ),
           whatToDo: tx(lang, "Ничего делать не нужно.", "Nothing to do."),
           createdAt: now - 41 * DAY,
           resolvedAt: now - 33 * DAY,

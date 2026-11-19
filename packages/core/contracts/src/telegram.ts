@@ -45,15 +45,17 @@ export type BotCommandEntry = {
   readonly description: string
 }
 
-export type CommandScope =
-  | { readonly type: "default" }
-  | { readonly type: "chat"; readonly chatId: ChatId }
+export type CommandScope = { readonly type: "default" } | { readonly type: "chat"; readonly chatId: ChatId }
 
 export class Telegram extends Context.Service<
   Telegram,
   {
     readonly call: (method: string, params: Record<string, unknown>) => Effect.Effect<unknown, TelegramError>
-    readonly sendMessage: (to: SendTarget, html: string, options?: SendOptions) => Effect.Effect<SentMessage, TelegramError>
+    readonly sendMessage: (
+      to: SendTarget,
+      html: string,
+      options?: SendOptions
+    ) => Effect.Effect<SentMessage, TelegramError>
     readonly editMessageText: (
       to: SendTarget & { readonly messageId: number },
       html: string,
@@ -69,8 +71,14 @@ export class Telegram extends Context.Service<
     ) => Effect.Effect<SentMessage, TelegramError>
     readonly getFile: (fileId: string) => Effect.Effect<TelegramFileInfo, TelegramError>
     readonly downloadFile: (filePath: string) => Effect.Effect<Uint8Array, TelegramError>
-    readonly sendChatAction: (to: SendTarget, action: "typing" | "upload_document") => Effect.Effect<void, TelegramError>
-    readonly createForumTopic: (chatId: ChatId, name: string) => Effect.Effect<{ readonly threadId: ThreadId }, TelegramError>
+    readonly sendChatAction: (
+      to: SendTarget,
+      action: "typing" | "upload_document"
+    ) => Effect.Effect<void, TelegramError>
+    readonly createForumTopic: (
+      chatId: ChatId,
+      name: string
+    ) => Effect.Effect<{ readonly threadId: ThreadId }, TelegramError>
     readonly answerCallbackQuery: (id: string, text?: string) => Effect.Effect<void, TelegramError>
     readonly setMessageReaction: (
       to: SendTarget & { readonly messageId: number },

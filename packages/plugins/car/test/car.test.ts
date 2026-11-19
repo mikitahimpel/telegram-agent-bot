@@ -24,7 +24,8 @@ import { newUploadKey, validateKey } from "../src/trips.ts"
 
 const sent: Array<{ html: string; options?: any }> = []
 const telegram = Layer.succeed(Telegram, {
-  sendMessage: (_to: unknown, html: string, options?: unknown) => Effect.sync(() => (sent.push({ html, options }), { messageId: 1 })),
+  sendMessage: (_to: unknown, html: string, options?: unknown) =>
+    Effect.sync(() => (sent.push({ html, options }), { messageId: 1 })),
   answerCallbackQuery: () => Effect.void
 } as never)
 
@@ -44,7 +45,16 @@ const env = Layer.mergeAll(
 const tool = (name: string) => carPlugin.tools.find((t) => t.name === name)!
 const run = <A, E>(e: Effect.Effect<A, E, CarR>) => e.pipe(Effect.provide(env))
 const tg1 = { tgId: TgId.make(1) }
-const ctxOf = (args: string, tgId = 1): CommandContext => ({ tgId: TgId.make(tgId), chatId: tgId as never, threadId: undefined, sessionKey: "main" as never, role: "user", lang: "en", args, messageId: 1 })
+const ctxOf = (args: string, tgId = 1): CommandContext => ({
+  tgId: TgId.make(tgId),
+  chatId: tgId as never,
+  threadId: undefined,
+  sessionKey: "main" as never,
+  role: "user",
+  lang: "en",
+  args,
+  messageId: 1
+})
 
 describe("sigv4", () => {
   it("matches the AWS documented presigned GET example", async () => {
@@ -63,7 +73,7 @@ describe("sigv4", () => {
   })
 
   it.effect("car_app_link gives a one-time pairing link for the caller's account", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const res = (yield* run(tool("car_app_link").handler({}, tg1))) as { url: string; expiresInMinutes: number }
       expect(res.url.startsWith("https://bot.test/car/#pair=")).toBe(true)
       expect(res.expiresInMinutes).toBe(30)
@@ -76,7 +86,7 @@ describe("sigv4", () => {
   )
 
   it.effect("presigned PUT url shape", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const res: any = yield* run(tool("car_upload_link").handler({ ext: "csv" }, tg1))
       const u = new URL(res.url)
       expect(u.host).toBe("acc.r2.cloudflarestorage.com")
@@ -92,7 +102,7 @@ describe("sigv4", () => {
 
 describe("tenant isolation", () => {
   it.effect("lists only own prefix (raw uploads) and own trips", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const res: any = yield* run(tool("car_list_trips").handler({}, tg1))
       expect(res.uploads.map((t: any) => t.key).sort()).toEqual(["car/1/a.bin", "car/1/b.bin"])
       expect(res.trips).toEqual([])
@@ -100,8 +110,17 @@ describe("tenant isolation", () => {
   )
 
   it.effect("rejects foreign and traversal keys", () =>
-    Effect.gen(function*() {
-      for (const key of ["car/2/x.bin", "car/12/secret.bin", "car/1/../2/x.bin", "car/1/", "car/1//a.bin", "/car/1/a.bin", "car/1/%2e%2e/x", "car/1\\a"]) {
+    Effect.gen(function* () {
+      for (const key of [
+        "car/2/x.bin",
+        "car/12/secret.bin",
+        "car/1/../2/x.bin",
+        "car/1/",
+        "car/1//a.bin",
+        "/car/1/a.bin",
+        "car/1/%2e%2e/x",
+        "car/1\\a"
+      ]) {
         const exit = yield* run(tool("car_get_trip").handler({ key }, tg1)).pipe(Effect.exit)
         expect(exit._tag, key).toBe("Failure")
       }
@@ -114,7 +133,7 @@ describe("tenant isolation", () => {
   )
 
   it.effect("get_trip returns presigned GET for own raw key", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const res: any = yield* run(tool("car_get_trip").handler({ key: "car/1/a.bin" }, tg1))
       expect(res.found).toBe(true)
       expect(res.downloadUrl).toContain("/bkt/car/1/a.bin?")
@@ -129,7 +148,14 @@ describe("tenant isolation", () => {
 })
 
 const drive = (n: number, extra: Record<string, number> = {}) =>
-  Array.from({ length: n }, (_, i) => ({ ts: 1_800_000_000_000 + i * 1000, speedKmh: 36, rpm: 1500, coolantC: 90, fuelRateLph: 3.6, ...extra }))
+  Array.from({ length: n }, (_, i) => ({
+    ts: 1_800_000_000_000 + i * 1000,
+    speedKmh: 36,
+    rpm: 1500,
+    coolantC: 90,
+    fuelRateLph: 3.6,
+    ...extra
+  }))
 
 describe("analytics", () => {
   it("integrates speed, fuel, idle and never across gaps or jumps", () => {
@@ -144,14 +170,22 @@ describe("analytics", () => {
     expect(analyzeTrip(drive(11), [], "maf_estimate").fuelIsEstimate).toBe(true)
     const jump = [...drive(5), ...drive(5).map((s) => ({ ...s, ts: s.ts + 64_000 }))]
     expect(analyzeTrip(jump, [], "none").distanceKm).toBeCloseTo(0.08, 6)
-    const gapped = analyzeTrip(drive(11), [{ from: 1_800_000_003_500, to: 1_800_000_004_500, reason: "unknown" }], "none")
+    const gapped = analyzeTrip(
+      drive(11),
+      [{ from: 1_800_000_003_500, to: 1_800_000_004_500, reason: "unknown" }],
+      "none"
+    )
     expect(gapped.distanceKm).toBeCloseTo(0.08, 6)
     const idle = analyzeTrip(drive(11, { speedKmh: 0 }), [], "none")
     expect(idle.idleSeconds).toBe(10)
   })
 
   it("falls back to GPS haversine when OBD speed is missing", () => {
-    const pts = Array.from({ length: 11 }, (_, i) => ({ ts: 1_800_000_000_000 + i * 1000, lat: 50 + i * 0.0001, lon: 20 }))
+    const pts = Array.from({ length: 11 }, (_, i) => ({
+      ts: 1_800_000_000_000 + i * 1000,
+      lat: 50 + i * 0.0001,
+      lon: 20
+    }))
     const m = analyzeTrip(pts, [], "none")
     expect(m.distanceSource).toBe("gps")
     expect(m.distanceKm).toBeCloseTo(0.1112, 3)
@@ -163,7 +197,7 @@ const sendLines = () => sent.at(-1)!.html
 
 describe("trips, report, app, devices", () => {
   it.effect("import → trips → report → tools; other tenants see nothing", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const cmd = carPlugin.commands[0]!
       const csv = encodeCsv(drive(61))
       const res = yield* run(storeImport(7, csv, "t.csv"))
@@ -204,7 +238,7 @@ describe("trips, report, app, devices", () => {
   )
 
   it.effect("incomplete trip is flagged with N/M", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const res = yield* run(storeImport(9, encodeCsv(drive(2500)), "big.csv"))
       yield* Effect.promise(() => r2.delete(`car/9/trips/${res.tripId}/chunks/000001.csv`))
       sent.length = 0
@@ -215,7 +249,7 @@ describe("trips, report, app, devices", () => {
   )
 
   it.effect("/car app sends a one-time url button (no web_app); /car devices lists and revokes", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const cmd = carPlugin.commands[0]!
       sent.length = 0
       yield* run(cmd.handler(ctxOf("", 5)))
@@ -231,7 +265,17 @@ describe("trips, report, app, devices", () => {
       yield* run(cmd.handler(ctxOf("devices", 5)))
       expect(sendLines()).toContain("Pixel 8")
       const cb = carPlugin.callbacks[0]!
-      const other = { tgId: TgId.make(6), chatId: 6 as never, threadId: undefined, sessionKey: "main" as never, role: "user" as const, lang: "en" as const, messageId: 1, payload: paired!.record.deviceId, callbackId: "c" }
+      const other = {
+        tgId: TgId.make(6),
+        chatId: 6 as never,
+        threadId: undefined,
+        sessionKey: "main" as never,
+        role: "user" as const,
+        lang: "en" as const,
+        messageId: 1,
+        payload: paired!.record.deviceId,
+        callbackId: "c"
+      }
       yield* run(cb.handler(other))
       expect((yield* run(listDevicesFor(5))).length).toBe(1)
       yield* run(cb.handler({ ...other, tgId: TgId.make(5) }))
@@ -240,14 +284,16 @@ describe("trips, report, app, devices", () => {
   )
 
   it.effect("document import: precise errors and success", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const ctx = { tgId: TgId.make(3), chatId: 3 as never, threadId: undefined, lang: "en" as const }
       const doc = { file_id: "f", file_name: "trip.csv", file_size: 10 }
       expect(yield* run(importDocument(ctx, { file_id: "f", file_name: "photo.png" }))).toBe(false)
       sent.length = 0
       expect(yield* run(importDocument(ctx, { ...doc, file_size: 25 * 1024 * 1024 }))).toBe(true)
       expect(sendLines()).toContain("20 MB")
-      const bad = yield* run(storeImport(3, "ts,rpm\n1800000000000,1000\n1800000001000,abc\n", "x.csv")).pipe(Effect.flip)
+      const bad = yield* run(storeImport(3, "ts,rpm\n1800000000000,1000\n1800000001000,abc\n", "x.csv")).pipe(
+        Effect.flip
+      )
       expect(bad).toMatchObject({ _tag: "CsvParseError", line: 3 })
       const empty = yield* run(storeImport(3, "ts,rpm\n", "x.csv")).pipe(Effect.flip)
       expect(empty._tag).toBe("EmptyImport")

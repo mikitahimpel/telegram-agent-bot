@@ -10,7 +10,10 @@ const denied = ref(false)
 const copied = ref(false)
 const intervals = [250, 500, 1000, 2000]
 const log = computed(() =>
-  backend.diag.value.slice(-500).map((e) => `${new Date(e.at).toISOString()} [${e.kind}] ${e.text}`).join("\n")
+  backend.diag.value
+    .slice(-500)
+    .map((e) => `${new Date(e.at).toISOString()} [${e.kind}] ${e.text}`)
+    .join("\n")
 )
 const copyLog = async () => {
   try {
@@ -32,9 +35,12 @@ const revoke = async (id: string, name: string) => {
 
 <template>
   <div class="screen">
-    <button class="btn" type="button" data-testid="open-onboarding" @click="go({ name: 'onboarding' })">{{ t("settings.howItWorks") }}</button>
+    <button class="btn" type="button" data-testid="open-onboarding" @click="go({ name: 'onboarding' })">
+      {{ t("settings.howItWorks") }}
+    </button>
     <section class="card">
-      <label>{{ t("settings.language") }}
+      <label
+        >{{ t("settings.language") }}
         <select :value="lang" data-testid="lang" @change="onLang">
           <option value="ru">Русский</option>
           <option value="en">English</option>
@@ -43,7 +49,8 @@ const revoke = async (id: string, name: string) => {
     </section>
 
     <section class="card">
-      <label>{{ t("settings.polling") }}
+      <label
+        >{{ t("settings.polling") }}
         <select :value="backend.pollingMs.value" @change="onPoll">
           <option v-for="n in intervals" :key="n" :value="n">{{ t("settings.polling.value", { n }) }}</option>
         </select>
@@ -54,9 +61,20 @@ const revoke = async (id: string, name: string) => {
     <section class="card" data-testid="storage">
       <h3>{{ t("settings.storage") }}</h3>
       <template v-if="backend.storage.value">
-        <p>{{ t("settings.storage.used", { used: fmtBytes(backend.storage.value.usedBytes), quota: fmtBytes(backend.storage.value.quotaBytes) }) }}</p>
-        <p>{{ backend.storage.value.persisted ? t("settings.storage.persisted") : t("settings.storage.notPersisted") }}</p>
-        <button v-if="!backend.storage.value.persisted" class="btn" type="button" @click="request">{{ t("settings.storage.request") }}</button>
+        <p>
+          {{
+            t("settings.storage.used", {
+              used: fmtBytes(backend.storage.value.usedBytes),
+              quota: fmtBytes(backend.storage.value.quotaBytes)
+            })
+          }}
+        </p>
+        <p>
+          {{ backend.storage.value.persisted ? t("settings.storage.persisted") : t("settings.storage.notPersisted") }}
+        </p>
+        <button v-if="!backend.storage.value.persisted" class="btn" type="button" @click="request">
+          {{ t("settings.storage.request") }}
+        </button>
         <p v-if="denied" class="muted">{{ t("settings.storage.requestDenied") }}</p>
       </template>
     </section>
@@ -67,8 +85,12 @@ const revoke = async (id: string, name: string) => {
       <ul class="plain">
         <li v-for="d in backend.devices.value" :key="d.id">
           <strong>{{ d.name }}</strong><span v-if="d.current"> · {{ t("devices.thisOne") }}</span>
-          <div v-if="d.lastSeenAt" class="muted">{{ t("devices.lastSeen", { when: fmtDateTime(lang, d.lastSeenAt) }) }}</div>
-          <button v-if="!d.current" class="link" type="button" @click="revoke(d.id, d.name)">{{ t("action.revokeDevice") }}</button>
+          <div v-if="d.lastSeenAt" class="muted">
+            {{ t("devices.lastSeen", { when: fmtDateTime(lang, d.lastSeenAt) }) }}
+          </div>
+          <button v-if="!d.current" class="link" type="button" @click="revoke(d.id, d.name)">
+            {{ t("action.revokeDevice") }}
+          </button>
         </li>
       </ul>
     </section>
@@ -77,7 +99,9 @@ const revoke = async (id: string, name: string) => {
       <h3>{{ t("settings.diag") }}</h3>
       <p class="muted">{{ t("settings.diag.hint") }}</p>
       <pre class="details log">{{ log || t("settings.diag.empty") }}</pre>
-      <button class="btn" type="button" @click="copyLog">{{ copied ? t("common.copied") : t("settings.diag.copy") }}</button>
+      <button class="btn" type="button" @click="copyLog">
+        {{ copied ? t("common.copied") : t("settings.diag.copy") }}
+      </button>
     </section>
 
     <section class="card">

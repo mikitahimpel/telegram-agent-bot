@@ -41,9 +41,14 @@ const rpc = (token: string, body: unknown) =>
 
 describe("mcp", () => {
   it.effect("round trip", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const token = yield* McpToken.use((t) => t.sign(tg, 60))
-      const init = yield* rpc(token, { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } })
+      const init = yield* rpc(token, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-06-18" }
+      })
       const initBody: any = yield* Effect.promise(() => init.json())
       expect(initBody.result.protocolVersion).toBe("2025-06-18")
       expect(initBody.result.capabilities).toEqual({ tools: {} })
@@ -58,19 +63,28 @@ describe("mcp", () => {
       expect(listBody.result.tools[0].inputSchema.properties.text).toBeDefined()
 
       const call = yield* rpc(token, {
-        jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "fake_echo", arguments: { text: "hi" } }
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "fake_echo", arguments: { text: "hi" } }
       })
       const callBody: any = yield* Effect.promise(() => call.json())
       expect(callBody.result.isError).toBe(false)
       expect(JSON.parse(callBody.result.content[0].text)).toEqual({ input: { text: "hi" }, tgId: 42 })
 
       const bad = yield* rpc(token, {
-        jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "fake_echo", arguments: { text: 1 } }
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "fake_echo", arguments: { text: 1 } }
       })
       expect(((yield* Effect.promise(() => bad.json())) as any).result.isError).toBe(true)
 
       const disabled = yield* rpc(token, {
-        jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "off_echo", arguments: { text: "x" } }
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: { name: "off_echo", arguments: { text: "x" } }
       })
       expect(((yield* Effect.promise(() => disabled.json())) as any).error.code).toBe(-32602)
 
@@ -80,7 +94,7 @@ describe("mcp", () => {
   )
 
   it.effect("rejects bad token", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const res = yield* rpc("nope", { jsonrpc: "2.0", id: 1, method: "ping" })
       expect(res.status).toBe(401)
       const other = yield* McpToken.use((t) => t.sign(tg, 60)).pipe(Effect.provide(layerSecret("other")))
@@ -91,7 +105,7 @@ describe("mcp", () => {
   )
 
   it.effect("flags toggle tools and prompt", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const flags = yield* PluginFlags
       yield* flags.setEnabled("off", tg, true)
       yield* flags.setEnabled("fake", tg, false)

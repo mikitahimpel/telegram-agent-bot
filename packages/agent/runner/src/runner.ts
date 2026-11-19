@@ -1,4 +1,16 @@
-import { Config, ConfigProvider, Duration, Effect, Layer, Option, Redacted, Schedule, Schema, Semaphore, Stream } from "effect"
+import {
+  Config,
+  ConfigProvider,
+  Duration,
+  Effect,
+  Layer,
+  Option,
+  Redacted,
+  Schedule,
+  Schema,
+  Semaphore,
+  Stream
+} from "effect"
 import { AgentRunner, type Attachment, type RunInput } from "@bot/core-contracts/agent-runner"
 import { AgentEvent } from "@bot/core-contracts/agent-event"
 import { type ApiCreditsExhausted, ContainerDown, type SubscriptionLimitReached } from "@bot/core-contracts/errors"
@@ -6,7 +18,13 @@ import type { TgId } from "@bot/core-contracts/ids"
 import type { Lang } from "@bot/core-contracts/lang"
 import { splitLines } from "@bot/agent-stream-json/split-lines"
 import { toAgentEvents } from "@bot/agent-stream-json/stream-json"
-import type { ContainerLike, DirectoryBackupLike, DirectoryBackupRecord, ExecProcessLike, R2Like } from "./container-like.ts"
+import type {
+  ContainerLike,
+  DirectoryBackupLike,
+  DirectoryBackupRecord,
+  ExecProcessLike,
+  R2Like
+} from "./container-like.ts"
 
 export type RunnerDeps = {
   readonly container: ContainerLike
@@ -31,24 +49,33 @@ export const systemPrompt = (lang: Lang): string =>
     "Use plain everyday language. Never use jargon. Never mention tools, files, folders, the sandbox, commands, models, tokens, sessions, MCP or Claude Code, and never describe how you work internally; just do the work and say what you found or did.",
     "Give the short answer first, a few sentences at most, and offer more detail only if the user asks for it. The answer is read on a phone.",
     "Always answer in the language of the user's latest message (Russian or English); if unsure, use " +
-      (lang === "ru" ? "Russian" : "English") + ".",
+      (lang === "ru" ? "Russian" : "English") +
+      ".",
     "When the user shares a stable personal fact (name, family, health, preferences, car model, city), save it with the memory_remember tool as one short fact. Before saving, check the MEMORY block at the end of these instructions: update an existing fact with memory_update instead of duplicating it, and if memory is full, merge or forget facts. Use the remembered facts naturally without asking again. Never mention the memory tool or that you are saving something, and do not save passwords or one-off details.",
-    "Anything the user should receive as a file (documents, tables, charts, exports) must be saved in /workspace/out/ with a human-friendly name in the user's language, such as \"Отчёт за октябрь.pdf\" or \"Shopping list.docx\"; files anywhere else are not delivered. Mention the file naturally, for example \"I attached the report\"."
+    'Anything the user should receive as a file (documents, tables, charts, exports) must be saved in /workspace/out/ with a human-friendly name in the user\'s language, such as "Отчёт за октябрь.pdf" or "Shopping list.docx"; files anywhere else are not delivered. Mention the file naturally, for example "I attached the report".'
   ].join(" ")
 
 export const appendedPrompt = (input: Pick<RunInput, "lang" | "memory">): string =>
-  input.memory === undefined || input.memory === "" ? systemPrompt(input.lang) : `${systemPrompt(input.lang)}\n\n${input.memory}`
+  input.memory === undefined || input.memory === ""
+    ? systemPrompt(input.lang)
+    : `${systemPrompt(input.lang)}\n\n${input.memory}`
 
 export const safeFileName = (name: string): string => {
   const base = name.split(/[\\/]/).pop() ?? ""
-  const cleaned = base.replace(/[^\p{L}\p{N}._-]+/gu, "_").replace(/^[.-]+/, "").slice(-80)
+  const cleaned = base
+    .replace(/[^\p{L}\p{N}._-]+/gu, "_")
+    .replace(/^[.-]+/, "")
+    .slice(-80)
   return cleaned === "" ? "file" : cleaned
 }
 
 export const attachmentPath = (attachment: Attachment, index: number, nonce: string): string =>
   `${IN_DIR}/${nonce}-${index + 1}-${safeFileName(attachment.fileName)}`
 
-export const withAttachmentPaths = (prompt: string, entries: ReadonlyArray<{ readonly path: string; readonly mimeType: string }>): string =>
+export const withAttachmentPaths = (
+  prompt: string,
+  entries: ReadonlyArray<{ readonly path: string; readonly mimeType: string }>
+): string =>
   entries.length === 0
     ? prompt
     : `${prompt}\n\nFiles from the user (read them with your tools): ${entries.map((e) => `${e.path} (${e.mimeType})`).join(", ")}`
@@ -89,7 +116,13 @@ const parseDuration = (raw: string): Option.Option<Duration.Duration> => {
   if (m !== null) {
     const n = Number(m[1])
     return Option.some(
-      m[2] === "ms" ? Duration.millis(n) : m[2] === "s" ? Duration.seconds(n) : m[2] === "m" ? Duration.minutes(n) : Duration.hours(n)
+      m[2] === "ms"
+        ? Duration.millis(n)
+        : m[2] === "s"
+          ? Duration.seconds(n)
+          : m[2] === "m"
+            ? Duration.minutes(n)
+            : Duration.hours(n)
     )
   }
   return Duration.fromInput(raw as Duration.Input)
@@ -98,32 +131,47 @@ const parseDuration = (raw: string): Option.Option<Duration.Duration> => {
 export const RunnerConfig = Config.all({
   auth: ClaudeAuthConfig,
   model: Config.option(Config.String("CLAUDE_MODEL")),
-  instanceType: Config.Literals(INSTANCE_TYPES, "CONTAINER_INSTANCE_TYPE").pipe(Config.withDefault("basic" as InstanceType)),
+  instanceType: Config.Literals(INSTANCE_TYPES, "CONTAINER_INSTANCE_TYPE").pipe(
+    Config.withDefault("basic" as InstanceType)
+  ),
   maxTurns: Config.Int("AGENT_MAX_TURNS").pipe(Config.withDefault(30)),
   inactivityTimeout: Config.String("AGENT_INACTIVITY_TIMEOUT").pipe(
     Config.withDefault("10m"),
     Config.flatMap((raw) =>
       Option.match(parseDuration(raw), {
         onSome: (d) => Config.succeed(d),
-        onNone: () => Config.fail(new ConfigProvider.SourceError({ message: "AGENT_INACTIVITY_TIMEOUT: expected a duration like 10m, 90s, 2h or \"10 minutes\"" }))
+        onNone: () =>
+          Config.fail(
+            new ConfigProvider.SourceError({
+              message: 'AGENT_INACTIVITY_TIMEOUT: expected a duration like 10m, 90s, 2h or "10 minutes"'
+            })
+          )
       })
     )
   )
 })
 
-export const buildClaudeArgv = (input: RunInput, cfg: { readonly maxTurns: number; readonly model: Option.Option<string> }): string[] => {
+export const buildClaudeArgv = (
+  input: RunInput,
+  cfg: { readonly maxTurns: number; readonly model: Option.Option<string> }
+): string[] => {
   const tools = input.mcp === undefined ? BASE_TOOLS : [...BASE_TOOLS, `mcp__${MCP_SERVER}`]
   const argv = [
     "claude",
     "-p",
     input.prompt.startsWith("-") ? ` ${input.prompt}` : input.prompt,
-    "--output-format", "stream-json",
+    "--output-format",
+    "stream-json",
     "--verbose",
     "--include-partial-messages",
-    "--permission-mode", "dontAsk",
-    "--allowedTools", tools.join(","),
-    "--max-turns", String(cfg.maxTurns),
-    "--append-system-prompt", appendedPrompt(input)
+    "--permission-mode",
+    "dontAsk",
+    "--allowedTools",
+    tools.join(","),
+    "--max-turns",
+    String(cfg.maxTurns),
+    "--append-system-prompt",
+    appendedPrompt(input)
   ]
   if (Option.isSome(cfg.model)) argv.push("--model", cfg.model.value)
   if (input.resume !== undefined) argv.push("--resume", input.resume)
@@ -253,7 +301,11 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
         if (!container.running) return
         const old = yield* readIndex(tgId)
         const claude = yield* wrap("backup ~/.claude", () =>
-          backup.backup({ dir: claudeDir, name: "claude-home", exclude: ["cache/**", "**/node_modules/**", "downloads/**"] })
+          backup.backup({
+            dir: claudeDir,
+            name: "claude-home",
+            exclude: ["cache/**", "**/node_modules/**", "downloads/**"]
+          })
         )
         const workspace = yield* wrap("backup /workspace", () =>
           backup.backup({ dir: WORKSPACE, name: "workspace", exclude: ["**/node_modules/**", "**/.cache/**"] })
@@ -318,7 +370,9 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
         return entries
       })
 
-    const run = (input: RunInput): Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted> =>
+    const run = (
+      input: RunInput
+    ): Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted> =>
       Stream.unwrap(
         Effect.gen(function* () {
           yield* ensureStarted(input.tgId)
@@ -349,10 +403,14 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
               Effect.gen(function* () {
                 if (!finished) {
                   yield* Effect.sync(() => {
-                    try { p.kill(9) } catch {}
+                    try {
+                      p.kill(9)
+                    } catch {}
                     ac.abort()
                   })
-                  yield* Effect.promise(() => Promise.race([p.exitCode.catch(() => 0), new Promise((r) => setTimeout(r, 3000))]))
+                  yield* Effect.promise(() =>
+                    Promise.race([p.exitCode.catch(() => 0), new Promise((r) => setTimeout(r, 3000))])
+                  )
                   yield* sh(["pkill", "-KILL", "-u", user.split(":")[0] ?? "1000"], { root: true }).pipe(Effect.ignore)
                 }
                 yield* snapshotQuiet(input.tgId)
@@ -362,7 +420,10 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
           const stderrTail: Promise<string> =
             proc.stderr === null
               ? Promise.resolve("")
-              : new Response(proc.stderr).text().then((t) => t.slice(-2000), () => "")
+              : new Response(proc.stderr).text().then(
+                  (t) => t.slice(-2000),
+                  () => ""
+                )
 
           const stdout = Stream.fromReadableStream({
             evaluate: () => proc.stdout as ReadableStream<Uint8Array>,
@@ -412,7 +473,7 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
       readFile: (tgId, path) =>
         Effect.gen(function* () {
           const norm = path.startsWith("/") ? path : `${WORKSPACE}/${path}`
-          if (norm.includes("..") || !(norm.startsWith(`${WORKSPACE}/`))) {
+          if (norm.includes("..") || !norm.startsWith(`${WORKSPACE}/`)) {
             return yield* Effect.fail(down(`path outside /workspace: ${path}`))
           }
           yield* ensureStarted(tgId)
@@ -432,7 +493,10 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
           let authOk = false
           try {
             const status = JSON.parse(a.stdout) as { loggedIn?: boolean; authMethod?: string }
-            authOk = a.code === 0 && status.loggedIn === true && (cfg.auth.mode !== "api_key" || status.authMethod === "api_key")
+            authOk =
+              a.code === 0 &&
+              status.loggedIn === true &&
+              (cfg.auth.mode !== "api_key" || status.authMethod === "api_key")
           } catch {}
           return { version: v.stdout.trim().split(" ")[0] ?? v.stdout.trim(), authOk }
         })

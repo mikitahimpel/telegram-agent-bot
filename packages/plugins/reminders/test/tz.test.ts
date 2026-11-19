@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vite-plus/test"
-import { formatIsoLocal, isValidTimeZone, nextRecurrence, parseAt, toInstant, toLocal, tomorrowAt, type Recurrence } from "../src/tz.ts"
+import {
+  formatIsoLocal,
+  isValidTimeZone,
+  nextRecurrence,
+  parseAt,
+  toInstant,
+  toLocal,
+  tomorrowAt,
+  type Recurrence
+} from "../src/tz.ts"
 
-const local = (year: number, month: number, day: number, hour: number, minute = 0) => ({ year, month, day, hour, minute })
+const local = (year: number, month: number, day: number, hour: number, minute = 0) => ({
+  year,
+  month,
+  day,
+  hour,
+  minute
+})
 const iso = (ms: number) => new Date(ms).toISOString()
 
 describe("timezone math", () => {
@@ -62,11 +77,15 @@ describe("repeat rules", () => {
   it("skips weekends for weekdays", () => {
     const friday = local(2026, 11, 20, 8)
     expect(step({ local: friday, anchorDay: 20, repeat: "weekdays" }, "UTC")!.local).toEqual(local(2026, 11, 23, 8))
-    expect(step({ local: local(2026, 11, 18, 8), anchorDay: 18, repeat: "weekdays" }, "UTC")!.local).toEqual(local(2026, 11, 19, 8))
+    expect(step({ local: local(2026, 11, 18, 8), anchorDay: 18, repeat: "weekdays" }, "UTC")!.local).toEqual(
+      local(2026, 11, 19, 8)
+    )
   })
 
   it("adds seven days for weekly, crossing month end", () => {
-    expect(step({ local: local(2026, 12, 28, 8), anchorDay: 28, repeat: "weekly" }, "UTC")!.local).toEqual(local(2027, 1, 4, 8))
+    expect(step({ local: local(2026, 12, 28, 8), anchorDay: 28, repeat: "weekly" }, "UTC")!.local).toEqual(
+      local(2027, 1, 4, 8)
+    )
   })
 
   it("clamps monthly to month length and returns to the anchor day", () => {
@@ -75,7 +94,9 @@ describe("repeat rules", () => {
     expect(feb.local).toEqual(local(2026, 2, 28, 10))
     const mar = step(feb, "UTC")!
     expect(mar.local).toEqual(local(2026, 3, 31, 10))
-    expect(step({ local: local(2026, 12, 15, 10), anchorDay: 15, repeat: "monthly" }, "UTC")!.local).toEqual(local(2027, 1, 15, 10))
+    expect(step({ local: local(2026, 12, 15, 10), anchorDay: 15, repeat: "monthly" }, "UTC")!.local).toEqual(
+      local(2027, 1, 15, 10)
+    )
   })
 
   it("skips occurrences that are already in the past", () => {

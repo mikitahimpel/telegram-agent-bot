@@ -50,7 +50,12 @@ describe("memory tools", () => {
   it("is a core plugin enabled by default with the four tools", () => {
     expect(memoryPlugin.enabledByDefault).toBe(true)
     expect(memoryPlugin.id).toBe("memory")
-    expect(memoryPlugin.tools.map((t) => t.name)).toEqual(["memory_remember", "memory_update", "memory_forget", "memory_list"])
+    expect(memoryPlugin.tools.map((t) => t.name)).toEqual([
+      "memory_remember",
+      "memory_update",
+      "memory_forget",
+      "memory_list"
+    ])
     expect(memoryPlugin.commands.map((c) => c.name)).toEqual(["memory"])
   })
 

@@ -23,7 +23,14 @@ export const fixtureTrips = (now: number = Date.now()): TripVm[] => [
     endedAt: now - 3 * 3600_000 + 41 * min,
     points: 1380,
     distanceKm: 24.6,
-    sync: { _tag: "Waiting", sent: 12, total: 14, nextRetryAt: now + 40_000, lastError: "network", detail: "TypeError: Failed to fetch" },
+    sync: {
+      _tag: "Waiting",
+      sent: 12,
+      total: 14,
+      nextRetryAt: now + 40_000,
+      lastError: "network",
+      detail: "TypeError: Failed to fetch"
+    },
     chunks: chunks([...rep("confirmed", 10), "sent", "sent", "waiting", "waiting"]),
     gaps: [
       { from: now - 3 * 3600_000 + 10 * min, to: now - 3 * 3600_000 + 12 * min, reason: "adapter_disconnected" },
@@ -57,7 +64,13 @@ export const fixtureTrips = (now: number = Date.now()): TripVm[] => [
 
 export const fixtureReading: Reading = { speedKmh: 62, rpm: 2140, coolantC: 88, fuelRateLph: null, voltageV: 13.9 }
 
-export const readyConn: ConnectionVm = { _tag: "Ready", adapterName: "OBDII", sensors: 4, supportedPids: ["0C", "0D", "05", "42"], fuelRateSource: "none" }
+export const readyConn: ConnectionVm = {
+  _tag: "Ready",
+  adapterName: "OBDII",
+  sensors: 4,
+  supportedPids: ["0C", "0D", "05", "42"],
+  fuelRateSource: "none"
+}
 
 export const fixtureDiag = (now: number = Date.now()): DiagEvent[] => [
   { at: now - 5000, kind: "elm", text: "> ATZ\n< ELM327 v1.5" },

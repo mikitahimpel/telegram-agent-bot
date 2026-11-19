@@ -31,7 +31,10 @@ describe("route hash", () => {
   it("parses insight links and ignores pairing", () => {
     expect(parseRouteHash("#overview")).toEqual({ name: "overview" })
     expect(parseRouteHash("#engine")).toEqual({ name: "engine" })
-    expect(parseRouteHash("#trip=20261119T100000Z-ab12cd34")).toEqual({ name: "trip", tripId: "20261119T100000Z-ab12cd34" })
+    expect(parseRouteHash("#trip=20261119T100000Z-ab12cd34")).toEqual({
+      name: "trip",
+      tripId: "20261119T100000Z-ab12cd34"
+    })
     expect(parseRouteHash("#pair=abc")).toBeNull()
     expect(parseRouteHash("")).toBeNull()
   })
@@ -39,7 +42,11 @@ describe("route hash", () => {
 
 describe("fixtures", () => {
   it("trip insight is consistent with its series and keeps gaps", () => {
-    const { insight, series } = buildTripFixture({ tripId: "20261119T100000Z-ab12cd34", startedAt: NOW, durationS: 41 * 60 })
+    const { insight, series } = buildTripFixture({
+      tripId: "20261119T100000Z-ab12cd34",
+      startedAt: NOW,
+      durationS: 41 * 60
+    })
     expect(series.gaps).toHaveLength(1)
     const g = series.gaps[0]!
     expect(series.ts.some((t) => t > g.from && t < g.to)).toBe(false)
@@ -50,7 +57,11 @@ describe("fixtures", () => {
     expect(insight.fuelPer100Km).toBeGreaterThan(3)
   })
   it("a car without fuel data reports null fuel", () => {
-    const { insight, series } = buildTripFixture({ tripId: "20261118T081500Z-ee55aa01", startedAt: NOW, durationS: 22 * 60 })
+    const { insight, series } = buildTripFixture({
+      tripId: "20261118T081500Z-ee55aa01",
+      startedAt: NOW,
+      durationS: 22 * 60
+    })
     expect(insight.fuelL).toBeNull()
     expect(series.columns.fuel_rate_lph!.every((v) => v === null)).toBe(true)
   })
@@ -169,7 +180,8 @@ describe("insight screens", () => {
         expect(w.find('[data-testid="trip-distance"]').text()).toMatch(/km|км/)
         expect(w.find('[data-testid="partial-note"]').exists()).toBe(true)
         expect(w.find('[data-testid="route"]').exists()).toBe(true)
-        for (const id of ["speed", "rpm", "coolant", "fuel", "voltage"]) expect(w.find(`[data-testid="chart-${id}"]`).exists()).toBe(true)
+        for (const id of ["speed", "rpm", "coolant", "fuel", "voltage"])
+          expect(w.find(`[data-testid="chart-${id}"]`).exists()).toBe(true)
         expect(w.findAll('[data-testid="chart-gap"]').length).toBe(5)
         expect(w.findAll('[data-testid="trip-bands"] li').length).toBeGreaterThan(2)
         expect(w.find('[data-testid="transfer"]').attributes("open")).toBeUndefined()
@@ -196,7 +208,11 @@ describe("insight screens", () => {
   it("unpaired phone is asked to connect and can open an example", async () => {
     localStorage.clear()
     const base = createDemoBackend({ static: true })
-    const backend = { ...base, overview: (lang: Lang) => (base.insightsDemo.value ? base.overview(lang) : Promise.reject(new InsightsError("not_paired"))) }
+    const backend = {
+      ...base,
+      overview: (lang: Lang) =>
+        base.insightsDemo.value ? base.overview(lang) : Promise.reject(new InsightsError("not_paired"))
+    }
     base.insightsDemo.value = false
     const ctx = createAppContext({ backend, lang: "en", tickMs: 0 })
     const w = mount(OverviewScreen, { global: { provide: { [AppKey as symbol]: ctx } } })
@@ -214,8 +230,22 @@ describe("auto mode strip", () => {
     const cases = [
       [{ _tag: "WaitingForEngine", adapterName: "OBDII" }, "Всё работает", null],
       [{ _tag: "NeedsTap", reason: "first_use" }, "адаптер", "auto.chooseAdapter"],
-      [{ _tag: "Recording", tripId: "x", startedAt: Date.now() - 5000, adapterName: "OBDII", linkLostSince: null }, "Идёт запись", null],
-      [{ _tag: "Recording", tripId: "x", startedAt: Date.now() - 5000, adapterName: "OBDII", linkLostSince: Date.now() }, "потеряна", null],
+      [
+        { _tag: "Recording", tripId: "x", startedAt: Date.now() - 5000, adapterName: "OBDII", linkLostSince: null },
+        "Идёт запись",
+        null
+      ],
+      [
+        {
+          _tag: "Recording",
+          tripId: "x",
+          startedAt: Date.now() - 5000,
+          adapterName: "OBDII",
+          linkLostSince: Date.now()
+        },
+        "потеряна",
+        null
+      ],
       [{ _tag: "AutoStopped", tripId: "x", startedAt: 1, endedAt: 2 }, "сохранена", "auto.stopped.open"]
     ] as const
     const RecorderStrip = (await import("../src/components/insights/RecorderStrip.vue")).default

@@ -39,5 +39,5 @@ export const statusLabels = {
     car: "Смотрю данные машины…",
     reminder: "Ставлю напоминание…",
     thinking: "Думаю…"
-}
+  }
 } as const

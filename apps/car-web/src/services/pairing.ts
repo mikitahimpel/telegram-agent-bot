@@ -1,6 +1,11 @@
 import type { PairError } from "../model/types.ts"
 import { Effect } from "effect"
-import { clearCredentials, loadCredentials, saveCredentials, type DeviceCredentials } from "@bot/car-recorder/credentials"
+import {
+  clearCredentials,
+  loadCredentials,
+  saveCredentials,
+  type DeviceCredentials
+} from "@bot/car-recorder/credentials"
 
 export type Credential = DeviceCredentials
 
@@ -10,9 +15,30 @@ export const parsePairHash = (hash: string): string | null => {
 }
 
 export const deviceNameFromUA = (ua: string): string => {
-  const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "Browser"
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Chrome\//.test(ua)
+      ? "Chrome"
+      : /Firefox\//.test(ua)
+        ? "Firefox"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : "Browser"
   const android = /Android[^;]*;\s*([^;)]+?)(?:\s+Build|[;)])/.exec(ua)?.[1]?.trim()
-  const model = android && android !== "K" ? android : /iPhone/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Macintosh/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "device"
+  const model =
+    android && android !== "K"
+      ? android
+      : /iPhone/.test(ua)
+        ? "iPhone"
+        : /Android/.test(ua)
+          ? "Android"
+          : /Windows/.test(ua)
+            ? "Windows"
+            : /Macintosh/.test(ua)
+              ? "Mac"
+              : /Linux/.test(ua)
+                ? "Linux"
+                : "device"
   return `${browser} · ${model}`
 }
 
@@ -36,13 +62,15 @@ export const completePair = async (
   }
   if (res.ok) {
     const body = (await res.json()) as Credential
-    return { ok: true, credential: { deviceToken: body.deviceToken, deviceId: body.deviceId, tgId: body.tgId, firstName: body.firstName } }
+    return {
+      ok: true,
+      credential: { deviceToken: body.deviceToken, deviceId: body.deviceId, tgId: body.tgId, firstName: body.firstName }
+    }
   }
   let code2 = ""
   try {
     code2 = ((await res.json()) as { error?: { code?: string } }).error?.code ?? ""
-  } catch {
-  }
+  } catch {}
   if (code2 === "pair_code_invalid") return { ok: false, error: "invalid" }
   if (code2 === "plugin_disabled" || code2 === "forbidden") return { ok: false, error: "blocked" }
   if (res.status >= 500 || res.status === 429) return { ok: false, error: "network" }
@@ -50,7 +78,9 @@ export const completePair = async (
 }
 
 export const credentialStore = {
-  load: async (): Promise<Credential | null> => (await Effect.runPromise(loadCredentials().pipe(Effect.orElseSucceed(() => undefined)))) ?? null,
-  save: (c: Credential): Promise<void> => Effect.runPromise(saveCredentials(c).pipe(Effect.orElseSucceed(() => undefined))),
+  load: async (): Promise<Credential | null> =>
+    (await Effect.runPromise(loadCredentials().pipe(Effect.orElseSucceed(() => undefined)))) ?? null,
+  save: (c: Credential): Promise<void> =>
+    Effect.runPromise(saveCredentials(c).pipe(Effect.orElseSucceed(() => undefined))),
   clear: (): Promise<void> => Effect.runPromise(clearCredentials().pipe(Effect.orElseSucceed(() => undefined)))
 }

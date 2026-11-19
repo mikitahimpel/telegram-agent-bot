@@ -10,7 +10,11 @@ import type { SensorKey } from "../model/types.ts"
 const { backend, t, lang, now } = useApp()
 const rec = computed(() => backend.rec.value)
 const recView = computed(() => describeStatus({ kind: "recorder", state: rec.value }, lang.value, now.value))
-const connView = computed(() => (backend.conn.value._tag === "Lost" || backend.conn.value._tag === "Failed" ? describeStatus({ kind: "connection", state: backend.conn.value }, lang.value, now.value) : null))
+const connView = computed(() =>
+  backend.conn.value._tag === "Lost" || backend.conn.value._tag === "Failed"
+    ? describeStatus({ kind: "connection", state: backend.conn.value }, lang.value, now.value)
+    : null
+)
 
 const sensors: { key: SensorKey; label: "speed" | "rpm" | "coolant" | "fuel" | "voltage"; digits: number }[] = [
   { key: "speedKmh", label: "speed", digits: 0 },
@@ -32,7 +36,9 @@ const quality = computed<"good" | "weak" | "lost" | "idle">(() => {
   if (r.gapOpen || now.value - r.lastSampleAt > 5000) return "weak"
   return "good"
 })
-const lastAgo = computed(() => (rec.value._tag === "Recording" ? fmtDuration(t.value, now.value - rec.value.lastSampleAt) : null))
+const lastAgo = computed(() =>
+  rec.value._tag === "Recording" ? fmtDuration(t.value, now.value - rec.value.lastSampleAt) : null
+)
 const estimate = computed(() => backend.fuelSource.value === "maf_estimate")
 </script>
 
@@ -51,21 +57,34 @@ const estimate = computed(() => backend.fuelSource.value === "maf_estimate")
         </template>
         <template v-else>
           <b class="gauge-value">
-            <template v-if="s.key === 'fuelRateLph' && estimate && backend.reading.value.fuelRateLph !== null">≈ </template>{{ value(s.key, s.digits) }}
+            <template v-if="s.key === 'fuelRateLph' && estimate && backend.reading.value.fuelRateLph !== null"
+              >≈ </template
+            >{{ value(s.key, s.digits) }}
             <small>{{ t(`recording.unit.${s.label}`) }}</small>
           </b>
-          <small v-if="s.key === 'fuelRateLph' && estimate" :title="t('recording.fuel.estimate')">{{ t("estimate") }}. {{ t("recording.fuel.estimate") }}</small>
+          <small v-if="s.key === 'fuelRateLph' && estimate" :title="t('recording.fuel.estimate')"
+            >{{ t("estimate") }}. {{ t("recording.fuel.estimate") }}</small
+          >
         </template>
       </div>
     </div>
 
     <div class="card facts" data-testid="facts">
-      <div><span>{{ t("recording.quality") }}</span><b :class="`q-${quality}`">{{ t(`recording.quality.${quality}`) }}</b></div>
-      <div v-if="rec._tag === 'Recording'" data-testid="distance"><span>{{ t("recording.distance") }}</span><b>{{ t("trips.distance", { km: fmtNumber(lang, rec.distanceKm, 1) }) }}</b></div>
-      <div v-if="rec._tag === 'Recording'"><span>{{ t("recording.points") }}</span><b>{{ fmtNumber(lang, rec.points) }}</b></div>
+      <div>
+        <span>{{ t("recording.quality") }}</span><b :class="`q-${quality}`">{{ t(`recording.quality.${quality}`) }}</b>
+      </div>
+      <div v-if="rec._tag === 'Recording'" data-testid="distance">
+        <span>{{ t("recording.distance") }}</span
+        ><b>{{ t("trips.distance", { km: fmtNumber(lang, rec.distanceKm, 1) }) }}</b>
+      </div>
+      <div v-if="rec._tag === 'Recording'">
+        <span>{{ t("recording.points") }}</span><b>{{ fmtNumber(lang, rec.points) }}</b>
+      </div>
       <div v-if="rec._tag === 'Recording'"><span>{{ t("recording.chunks") }}</span><b>{{ rec.chunks }}</b></div>
       <div v-if="lastAgo"><span>{{ t("recording.lastSample", { ago: lastAgo }) }}</span></div>
-      <div data-testid="wakelock"><span>{{ backend.wakeLock.value ? t("recording.wakelock.on") : t("recording.wakelock.off") }}</span></div>
+      <div data-testid="wakelock">
+        <span>{{ backend.wakeLock.value ? t("recording.wakelock.on") : t("recording.wakelock.off") }}</span>
+      </div>
     </div>
     <p class="muted">{{ t("recording.lock.hint") }}</p>
   </div>

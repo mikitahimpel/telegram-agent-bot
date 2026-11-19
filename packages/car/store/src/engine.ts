@@ -18,7 +18,16 @@ import { TripManifest } from "@bot/car-format/manifest"
 import type { Sample } from "@bot/car-format/sample"
 import { COLUMNS } from "@bot/car-format/sample"
 import type { Lang } from "@bot/core-contracts/lang"
-import { applyFindings, evaluateDtc, evaluateTrip, readAlerts, SEVERITY_RANK, THRESHOLDS, type AlertRow, type Finding } from "./alerts.ts"
+import {
+  applyFindings,
+  evaluateDtc,
+  evaluateTrip,
+  readAlerts,
+  SEVERITY_RANK,
+  THRESHOLDS,
+  type AlertRow,
+  type Finding
+} from "./alerts.ts"
 import { runGuarded, type QueryResult } from "./guard.ts"
 import { compareToUsual, computeTrip, median, withFuelEstimate, type Usual } from "./insight.ts"
 import { renderAlert } from "./render.ts"
@@ -69,10 +78,17 @@ export type CarEngine = {
   readonly tripInsight: (tripId: string) => TripInsight | null
   readonly tripSeries: (tripId: string, points: number, columns: ReadonlyArray<SeriesColumn>) => TripSeries | null
   readonly alerts: (lang: Lang) => ReadonlyArray<Alert>
-  readonly dtcCurrent: (lang: Lang) => { readonly readAt: number | null; readonly milOn: boolean; readonly codes: ReadonlyArray<DtcExplanation> }
+  readonly dtcCurrent: (lang: Lang) => {
+    readonly readAt: number | null
+    readonly milOn: boolean
+    readonly codes: ReadonlyArray<DtcExplanation>
+  }
   readonly query: (text: string) => QueryResult
   readonly pending: (lang: Lang) => PendingNotifications
-  readonly markNotified: (alertIds: ReadonlyArray<string>, codes: ReadonlyArray<{ readonly code: string; readonly kind: DtcKind }>) => void
+  readonly markNotified: (
+    alertIds: ReadonlyArray<string>,
+    codes: ReadonlyArray<{ readonly code: string; readonly kind: DtcKind }>
+  ) => void
   readonly weekly: (lang: Lang) => WeeklyStats
   readonly counts: () => TripCounts
   readonly knownChunks: (tripId: string) => ReadonlyArray<{ readonly seq: number; readonly sha256: string }>
@@ -145,7 +161,11 @@ const periodStats = (period: string, rows: ReadonlyArray<TripAgg>): PeriodStats 
   }
 }
 
-const groupBy = (rows: ReadonlyArray<TripAgg>, key: (ms: number) => string, limit: number): ReadonlyArray<PeriodStats> => {
+const groupBy = (
+  rows: ReadonlyArray<TripAgg>,
+  key: (ms: number) => string,
+  limit: number
+): ReadonlyArray<PeriodStats> => {
   const groups = new Map<string, Array<TripAgg>>()
   for (const r of rows) {
     const k = key(r.startedAt)
@@ -153,12 +173,17 @@ const groupBy = (rows: ReadonlyArray<TripAgg>, key: (ms: number) => string, limi
     if (g === undefined) groups.set(k, [r])
     else g.push(r)
   }
-  return [...groups.keys()].sort().reverse().slice(0, limit).map((k) => periodStats(k, groups.get(k) as Array<TripAgg>))
+  return [...groups.keys()]
+    .sort()
+    .reverse()
+    .slice(0, limit)
+    .map((k) => periodStats(k, groups.get(k) as Array<TripAgg>))
 }
 
 const batteryStatus = (resting: number | null, crank: number | null): "good" | "watch" | "weak" | "unknown" => {
   if (resting === null && crank === null) return "unknown"
-  if ((resting !== null && resting < THRESHOLDS.restingWeakV) || (crank !== null && crank < THRESHOLDS.crankWeakV)) return "weak"
+  if ((resting !== null && resting < THRESHOLDS.restingWeakV) || (crank !== null && crank < THRESHOLDS.crankWeakV))
+    return "weak"
   if (resting !== null && resting < THRESHOLDS.restingWatchV) return "watch"
   return "good"
 }
@@ -169,7 +194,9 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
   const one = (q: string, p: ReadonlyArray<SqlValue> = []): SqlRow | undefined => sql.all(q, p)[0]
 
   const loadSamples = (tripId: string): ReadonlyArray<Sample> =>
-    sql.all(`SELECT ${SAMPLE_COLUMNS.join(", ")} FROM car_samples WHERE trip_id = ? ORDER BY ts, seq, n`, [tripId]).map(rowToSample)
+    sql
+      .all(`SELECT ${SAMPLE_COLUMNS.join(", ")} FROM car_samples WHERE trip_id = ? ORDER BY ts, seq, n`, [tripId])
+      .map(rowToSample)
 
   const manifestOf = (row: SqlRow): TripManifest | undefined => {
     const text = row["manifest_json"]
@@ -190,7 +217,11 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     const similar =
       avgSpeed === null
         ? []
-        : fuel.filter((r) => typeof r["avg_speed_kmh"] === "number" && Math.abs((r["avg_speed_kmh"] as number) - avgSpeed) <= avgSpeed * 0.3)
+        : fuel.filter(
+            (r) =>
+              typeof r["avg_speed_kmh"] === "number" &&
+              Math.abs((r["avg_speed_kmh"] as number) - avgSpeed) <= avgSpeed * 0.3
+          )
     const pool = similar.length >= THRESHOLDS.fuelBaselineMinTrips ? similar : fuel
     const speeds = rows.map((r) => r["avg_speed_kmh"]).filter((v): v is number => typeof v === "number")
     const usual: Usual = {
@@ -205,8 +236,16 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     const samples = loadSamples(tripId)
     const manifest = manifestOf(row)
     const startedAt = Number(row["started_at"])
-    const endedAt = typeof row["ended_at"] === "number" ? row["ended_at"] : (samples[samples.length - 1]?.ts ?? startedAt)
-    const computed = computeTrip({ tripId, startedAt, endedAt, complete, gaps: manifest?.gaps ?? JSON.parse(str(row["gaps_json"]) || "[]"), samples })
+    const endedAt =
+      typeof row["ended_at"] === "number" ? row["ended_at"] : (samples[samples.length - 1]?.ts ?? startedAt)
+    const computed = computeTrip({
+      tripId,
+      startedAt,
+      endedAt,
+      complete,
+      gaps: manifest?.gaps ?? JSON.parse(str(row["gaps_json"]) || "[]"),
+      samples
+    })
     const base = baselineFor(tripId, startedAt, computed.insight.avgSpeedKmh)
     const insight = compareToUsual(withFuelEstimate(computed.insight, str(row["fuel_rate_source"])), base.usual)
     return { insight, extras: computed.extras, baseline: base.fuel }
@@ -253,9 +292,20 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
       )
       sql.run(
         `INSERT OR REPLACE INTO car_battery_events (trip_id, at, resting_v, crank_min_v, charging_avg_v, charging_min_v, charging_max_v) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [tripId, i.startedAt, i.restingVoltageV, i.crankMinV ?? null, i.chargingAvgV ?? null, extras.chargingMinV, extras.chargingMaxV]
+        [
+          tripId,
+          i.startedAt,
+          i.restingVoltageV,
+          i.crankMinV ?? null,
+          i.chargingAvgV ?? null,
+          extras.chargingMinV,
+          extras.chargingMaxV
+        ]
       )
-      const newer = one(`SELECT 1 AS x FROM car_trips WHERE complete = 1 AND computed_at IS NOT NULL AND trip_id != ? AND started_at > ?`, [tripId, i.startedAt])
+      const newer = one(
+        `SELECT 1 AS x FROM car_trips WHERE complete = 1 AND computed_at IS NOT NULL AND trip_id != ? AND started_at > ?`,
+        [tripId, i.startedAt]
+      )
       if (newer === undefined) applyFindings(sql, evaluateTrip(i, extras, baseline), now)
     })
   }
@@ -266,9 +316,15 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     const manifest = manifestOf(row)
     let complete = false
     if (manifest !== undefined && manifest.status === "finished") {
-      const have = new Map(sql.all(`SELECT seq, sha256 FROM car_chunks WHERE trip_id = ?`, [tripId]).map((c) => [Number(c["seq"]), str(c["sha256"])]))
+      const have = new Map(
+        sql
+          .all(`SELECT seq, sha256 FROM car_chunks WHERE trip_id = ?`, [tripId])
+          .map((c) => [Number(c["seq"]), str(c["sha256"])])
+      )
       const expected = new Map(manifest.chunks.map((c) => [c.seq, c.sha256]))
-      complete = Array.from({ length: manifest.chunkCount }, (_, s) => s).every((s) => have.has(s) && have.get(s) === expected.get(s))
+      complete = Array.from({ length: manifest.chunkCount }, (_, s) => s).every(
+        (s) => have.has(s) && have.get(s) === expected.get(s)
+      )
     }
     sql.run(`UPDATE car_trips SET complete = ? WHERE trip_id = ?`, [complete ? 1 : 0, tripId])
     if (complete && row["computed_at"] === null) computeAndStore(tripId)
@@ -281,7 +337,11 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     const changed = existing === undefined || existing["manifest_json"] !== json
     sql.transaction(() => {
       if (existing === undefined) {
-        sql.run(`INSERT INTO car_trips (trip_id, started_at, status) VALUES (?, ?, ?)`, [manifest.tripId, manifest.startedAt, manifest.status])
+        sql.run(`INSERT INTO car_trips (trip_id, started_at, status) VALUES (?, ?, ?)`, [
+          manifest.tripId,
+          manifest.startedAt,
+          manifest.status
+        ])
       }
       sql.run(
         `UPDATE car_trips SET started_at = ?, ended_at = ?, status = ?, chunk_count = ?, fuel_rate_source = ?, vin = ?, gaps_json = ?, manifest_json = ?${changed ? ", computed_at = NULL" : ""} WHERE trip_id = ?`,
@@ -309,17 +369,33 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     const now = clock()
     sql.transaction(() => {
       if (one(`SELECT 1 AS x FROM car_trips WHERE trip_id = ?`, [tripId]) === undefined) {
-        sql.run(`INSERT INTO car_trips (trip_id, started_at, status) VALUES (?, ?, 'recording')`, [tripId, ts.length === 0 ? now : Math.min(...ts)])
+        sql.run(`INSERT INTO car_trips (trip_id, started_at, status) VALUES (?, ?, 'recording')`, [
+          tripId,
+          ts.length === 0 ? now : Math.min(...ts)
+        ])
       }
       sql.run(`DELETE FROM car_samples WHERE trip_id = ? AND seq = ?`, [tripId, seq])
       const placeholders = SAMPLE_COLUMNS.map(() => "?").join(", ")
       const insert = `INSERT INTO car_samples (trip_id, seq, n, ${SAMPLE_COLUMNS.join(", ")}) VALUES (?, ?, ?, ${placeholders})`
       samples.forEach((s, n) => {
-        sql.run(insert, [tripId, seq, n, ...COLUMNS.map(([, key]) => (typeof s[key] === "number" ? (s[key] as number) : null))])
+        sql.run(insert, [
+          tripId,
+          seq,
+          n,
+          ...COLUMNS.map(([, key]) => (typeof s[key] === "number" ? (s[key] as number) : null))
+        ])
       })
       sql.run(
         `INSERT OR REPLACE INTO car_chunks (trip_id, seq, sha256, rows, first_ts, last_ts, received_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [tripId, seq, sha256, samples.length, ts.length === 0 ? 0 : Math.min(...ts), ts.length === 0 ? 0 : Math.max(...ts), now]
+        [
+          tripId,
+          seq,
+          sha256,
+          samples.length,
+          ts.length === 0 ? 0 : Math.min(...ts),
+          ts.length === 0 ? 0 : Math.max(...ts),
+          now
+        ]
       )
       sql.run(`UPDATE car_trips SET computed_at = NULL, complete = 0 WHERE trip_id = ?`, [tripId])
     })
@@ -363,7 +439,10 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
         seen.add(key)
         const prev = one(`SELECT active FROM car_dtc_codes WHERE code = ? AND kind = ?`, [c.code, c.kind])
         if (prev === undefined) {
-          sql.run(`INSERT INTO car_dtc_codes (code, kind, first_seen_at, last_seen_at, reads, active) VALUES (?, ?, ?, ?, 1, 1)`, [c.code, c.kind, report.readAt, report.readAt])
+          sql.run(
+            `INSERT INTO car_dtc_codes (code, kind, first_seen_at, last_seen_at, reads, active) VALUES (?, ?, ?, ?, 1, 1)`,
+            [c.code, c.kind, report.readAt, report.readAt]
+          )
         } else {
           sql.run(
             `UPDATE car_dtc_codes SET last_seen_at = MAX(last_seen_at, ?), reads = reads + 1, active = 1, cleared_at = NULL${prev["active"] === 1 ? "" : ", notified_at = NULL"} WHERE code = ? AND kind = ?`,
@@ -373,7 +452,11 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
       }
       for (const a of sql.all(`SELECT code, kind FROM car_dtc_codes WHERE active = 1`)) {
         if (!seen.has(`${str(a["code"])}|${str(a["kind"])}`)) {
-          sql.run(`UPDATE car_dtc_codes SET active = 0, cleared_at = ? WHERE code = ? AND kind = ?`, [report.readAt, a["code"] ?? null, a["kind"] ?? null])
+          sql.run(`UPDATE car_dtc_codes SET active = 0, cleared_at = ? WHERE code = ? AND kind = ?`, [
+            report.readAt,
+            a["code"] ?? null,
+            a["kind"] ?? null
+          ])
         }
       }
       const explained = report.codes.map((c) => ({ code: c.code, severity: explainDtc(c.code, "en").severity }))
@@ -387,7 +470,12 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
   }
 
   const toAlert = (row: AlertRow, lang: Lang): Alert => {
-    const codes = row.dedupKey === "check_engine" ? activeCodes(lang).map((c) => c.code).join(", ") : ""
+    const codes =
+      row.dedupKey === "check_engine"
+        ? activeCodes(lang)
+            .map((c) => c.code)
+            .join(", ")
+        : ""
     const text = renderAlert(row.dedupKey, row.severity, row.evidence, lang, codes)
     return {
       id: row.id,
@@ -407,9 +495,15 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     sql.all(`SELECT * FROM car_trips WHERE complete = 1 AND computed_at IS NOT NULL ORDER BY started_at`).map(aggOf)
 
   const lastBattery = () => {
-    const r = one(`SELECT resting_v, crank_min_v FROM car_battery_events WHERE resting_v IS NOT NULL OR crank_min_v IS NOT NULL ORDER BY at DESC LIMIT 1`)
-    const lastResting = one(`SELECT resting_v FROM car_battery_events WHERE resting_v IS NOT NULL ORDER BY at DESC LIMIT 1`)
-    const lastCrank = one(`SELECT crank_min_v FROM car_battery_events WHERE crank_min_v IS NOT NULL ORDER BY at DESC LIMIT 1`)
+    const r = one(
+      `SELECT resting_v, crank_min_v FROM car_battery_events WHERE resting_v IS NOT NULL OR crank_min_v IS NOT NULL ORDER BY at DESC LIMIT 1`
+    )
+    const lastResting = one(
+      `SELECT resting_v FROM car_battery_events WHERE resting_v IS NOT NULL ORDER BY at DESC LIMIT 1`
+    )
+    const lastCrank = one(
+      `SELECT crank_min_v FROM car_battery_events WHERE crank_min_v IS NOT NULL ORDER BY at DESC LIMIT 1`
+    )
     return {
       lastRestingV: lastResting === undefined ? null : numOrNull(lastResting["resting_v"]),
       lastCrankMinV: lastCrank === undefined ? null : numOrNull(lastCrank["crank_min_v"]),
@@ -430,7 +524,11 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
       const battery = lastBattery()
       const trend = [...sql.all(`SELECT at, resting_v, crank_min_v FROM car_battery_events ORDER BY at DESC LIMIT 30`)]
         .reverse()
-        .map((r) => ({ at: Number(r["at"]), restingV: numOrNull(r["resting_v"]), crankMinV: numOrNull(r["crank_min_v"]) }))
+        .map((r) => ({
+          at: Number(r["at"]),
+          restingV: numOrNull(r["resting_v"]),
+          crankMinV: numOrNull(r["crank_min_v"])
+        }))
       const lastRead = one(`SELECT read_at, mil_on, vin FROM car_dtc_reads ORDER BY read_at DESC LIMIT 1`)
       const vinRow = one(`SELECT vin FROM car_trips WHERE vin IS NOT NULL ORDER BY started_at DESC LIMIT 1`)
       const lastTrip = one(`SELECT MAX(COALESCE(ended_at, started_at)) AS t FROM car_trips`)
@@ -439,7 +537,12 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
         .map((r) => r.maxCoolantC as number)
       return {
         generatedAt: now,
-        vin: vinRow !== undefined ? str(vinRow["vin"]) : lastRead !== undefined && typeof lastRead["vin"] === "string" ? lastRead["vin"] : null,
+        vin:
+          vinRow !== undefined
+            ? str(vinRow["vin"])
+            : lastRead !== undefined && typeof lastRead["vin"] === "string"
+              ? lastRead["vin"]
+              : null,
         lastTripAt: lastTrip === undefined ? null : numOrNull(lastTrip["t"]),
         totals: periodStats("all", rows),
         byMonth: groupBy(rows, monthKey, 12),
@@ -462,19 +565,28 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     tripInsight: (tripId) => {
       const row = one(`SELECT * FROM car_trips WHERE trip_id = ?`, [tripId])
       if (row === undefined) return null
-      if (row["complete"] === 1 && typeof row["insight_json"] === "string") return JSON.parse(row["insight_json"]) as TripInsight
+      if (row["complete"] === 1 && typeof row["insight_json"] === "string")
+        return JSON.parse(row["insight_json"]) as TripInsight
       return buildInsight(row, row["complete"] === 1).insight
     },
     tripSeries: (tripId, points, columns) => {
       const row = one(`SELECT * FROM car_trips WHERE trip_id = ?`, [tripId])
       if (row === undefined) return null
       const manifest = manifestOf(row)
-      return buildSeries(tripId, loadSamples(tripId), manifest?.gaps ?? [], columns.length === 0 ? DEFAULT_SERIES_COLUMNS : columns, clampPoints(points))
+      return buildSeries(
+        tripId,
+        loadSamples(tripId),
+        manifest?.gaps ?? [],
+        columns.length === 0 ? DEFAULT_SERIES_COLUMNS : columns,
+        clampPoints(points)
+      )
     },
     alerts: (lang) =>
-      readAlerts(sql, `WHERE resolved_at IS NULL OR resolved_at >= ? ORDER BY (resolved_at IS NOT NULL), created_at DESC LIMIT 200`, [clock() - 90 * DAY]).map((a) =>
-        toAlert(a, lang)
-      ),
+      readAlerts(
+        sql,
+        `WHERE resolved_at IS NULL OR resolved_at >= ? ORDER BY (resolved_at IS NOT NULL), created_at DESC LIMIT 200`,
+        [clock() - 90 * DAY]
+      ).map((a) => toAlert(a, lang)),
     dtcCurrent: (lang) => {
       const read = one(`SELECT read_at, mil_on FROM car_dtc_reads ORDER BY read_at DESC LIMIT 1`)
       return {
@@ -485,14 +597,19 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
     },
     query: (text) => runGuarded(sql, text),
     pending: (lang) => ({
-      alerts: readAlerts(sql, `WHERE resolved_at IS NULL AND notified_at IS NULL ORDER BY created_at`).map((a) => toAlert(a, lang)),
-      codes: sql.all(`SELECT * FROM car_dtc_codes WHERE active = 1 AND notified_at IS NULL ORDER BY code`).map((r) => explain(r, lang))
+      alerts: readAlerts(sql, `WHERE resolved_at IS NULL AND notified_at IS NULL ORDER BY created_at`).map((a) =>
+        toAlert(a, lang)
+      ),
+      codes: sql
+        .all(`SELECT * FROM car_dtc_codes WHERE active = 1 AND notified_at IS NULL ORDER BY code`)
+        .map((r) => explain(r, lang))
     }),
     markNotified: (alertIds, codes) => {
       const now = clock()
       sql.transaction(() => {
         for (const id of alertIds) sql.run(`UPDATE car_alerts SET notified_at = ? WHERE id = ?`, [now, id])
-        for (const c of codes) sql.run(`UPDATE car_dtc_codes SET notified_at = ? WHERE code = ? AND kind = ?`, [now, c.code, c.kind])
+        for (const c of codes)
+          sql.run(`UPDATE car_dtc_codes SET notified_at = ? WHERE code = ? AND kind = ?`, [now, c.code, c.kind])
       })
     },
     weekly: (lang) => {
@@ -519,7 +636,9 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
         hardEvents: week.reduce((t, r) => t + r.hard, 0),
         maxCoolantC: coolant.length === 0 ? null : Math.max(...coolant),
         openAlerts: openAlerts(lang),
-        newAlerts: Number(one(`SELECT COUNT(*) AS c FROM car_alerts WHERE created_at >= ?`, [now - 7 * DAY])?.["c"] ?? 0),
+        newAlerts: Number(
+          one(`SELECT COUNT(*) AS c FROM car_alerts WHERE created_at >= ?`, [now - 7 * DAY])?.["c"] ?? 0
+        ),
         activeCodes: activeCodes(lang).length,
         batteryStatus: batteryStatus(battery.lastRestingV, battery.lastCrankMinV),
         lastRestingV: battery.lastRestingV
@@ -530,7 +649,9 @@ export const makeEngine = (sql: CarSql, clock: () => number = Date.now): CarEngi
       complete: Number(one(`SELECT COUNT(*) AS c FROM car_trips WHERE complete = 1`)?.["c"] ?? 0)
     }),
     knownChunks: (tripId) =>
-      sql.all(`SELECT seq, sha256 FROM car_chunks WHERE trip_id = ? ORDER BY seq`, [tripId]).map((r) => ({ seq: Number(r["seq"]), sha256: str(r["sha256"]) })),
+      sql
+        .all(`SELECT seq, sha256 FROM car_chunks WHERE trip_id = ? ORDER BY seq`, [tripId])
+        .map((r) => ({ seq: Number(r["seq"]), sha256: str(r["sha256"]) })),
     getMeta: (key) => {
       const r = one(`SELECT value FROM car_meta WHERE key = ?`, [key])
       return r === undefined ? null : str(r["value"])

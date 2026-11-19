@@ -14,10 +14,14 @@ export const formatMessage = (lang: Lang, template: string, params: Params = {})
     return `${fmtNumber(lang, n)} ${parts[Math.min(idx, parts.length - 1)] ?? ""}`
   })
 
-export const detectLang = (code: string | undefined | null): Lang => (code && code.toLowerCase().startsWith("ru") ? "ru" : "en")
+export const detectLang = (code: string | undefined | null): Lang =>
+  code && code.toLowerCase().startsWith("ru") ? "ru" : "en"
 
 export const fmtNumber = (lang: Lang, n: number, fractionDigits?: number): string =>
-  new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "en-US", fractionDigits === undefined ? {} : { maximumFractionDigits: fractionDigits }).format(n)
+  new Intl.NumberFormat(
+    lang === "ru" ? "ru-RU" : "en-US",
+    fractionDigits === undefined ? {} : { maximumFractionDigits: fractionDigits }
+  ).format(n)
 
 export const fmtClock = (ms: number): string => {
   const s = Math.max(0, Math.floor(ms / 1000))
@@ -36,7 +40,9 @@ export const fmtDateTime = (lang: Lang, ms: number): string =>
   }).format(new Date(ms))
 
 export const fmtTime = (lang: Lang, ms: number): string =>
-  new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(ms))
+  new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", { hour: "2-digit", minute: "2-digit" }).format(
+    new Date(ms)
+  )
 
 export const fmtBytes = (n: number): string => {
   if (n < 1024) return `${n} B`

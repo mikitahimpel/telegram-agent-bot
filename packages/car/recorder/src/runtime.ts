@@ -18,7 +18,13 @@ export type CarRuntimeOptions = {
 
 export const makeCarRuntime = (options: CarRuntimeOptions) => {
   const store = layerIndexedDb(options.dbName ?? "car-recorder")
-  const platform = Layer.mergeAll(geoBrowserLayer, wakeLockBrowserLayer, lifecycleBrowserLayer, adapterMemoryBrowserLayer, connectorBrowserLayer)
+  const platform = Layer.mergeAll(
+    geoBrowserLayer,
+    wakeLockBrowserLayer,
+    lifecycleBrowserLayer,
+    adapterMemoryBrowserLayer,
+    connectorBrowserLayer
+  )
   const api = CarApiModule.layer({ apiBase: options.apiBase, credential: options.credential }).pipe(
     Layer.provide(FetchHttpClient.layer)
   )

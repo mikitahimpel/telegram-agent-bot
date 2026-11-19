@@ -18,7 +18,10 @@ const toBase64Url = (bytes: Uint8Array): string => {
 
 const fromBase64Url = (text: string): Uint8Array | undefined => {
   if (!/^[A-Za-z0-9_-]*$/.test(text)) return undefined
-  const padded = text.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(text.length / 4) * 4, "=")
+  const padded = text
+    .replaceAll("-", "+")
+    .replaceAll("_", "/")
+    .padEnd(Math.ceil(text.length / 4) * 4, "=")
   try {
     return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
   } catch {
@@ -41,18 +44,16 @@ const make = (secret: string): McpToken["Service"] => {
   ])
 
   const sign = (tgId: TgId, ttlSeconds: number) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
-      const payload = toBase64Url(
-        encoder.encode(JSON.stringify({ tgId, exp: Math.floor(now / 1000) + ttlSeconds }))
-      )
+      const payload = toBase64Url(encoder.encode(JSON.stringify({ tgId, exp: Math.floor(now / 1000) + ttlSeconds })))
       const key = yield* Effect.promise(() => keyPromise)
       const sig = yield* Effect.promise(() => crypto.subtle.sign("HMAC", key, encoder.encode(payload)))
       return `${payload}.${toBase64Url(new Uint8Array(sig))}`
     })
 
   const verify = (token: string) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const parts = token.split(".")
       const [payloadText, sigText] = parts
       if (parts.length !== 2 || payloadText === undefined || sigText === undefined) {
@@ -62,7 +63,9 @@ const make = (secret: string): McpToken["Service"] => {
       const payloadBytes = fromBase64Url(payloadText)
       if (sig === undefined || payloadBytes === undefined) return yield* new InvalidMcpToken({ reason: "malformed" })
       const key = yield* Effect.promise(() => keyPromise)
-      const ok = yield* Effect.promise(() => crypto.subtle.verify("HMAC", key, sig as BufferSource, encoder.encode(payloadText)))
+      const ok = yield* Effect.promise(() =>
+        crypto.subtle.verify("HMAC", key, sig as BufferSource, encoder.encode(payloadText))
+      )
       if (!ok) return yield* new InvalidMcpToken({ reason: "signature" })
       const payload = yield* Effect.try({
         try: () => JSON.parse(decoder.decode(payloadBytes)) as unknown,
@@ -83,7 +86,7 @@ export const layerSecret = (secret: string): Layer.Layer<McpToken> => Layer.succ
 
 export const layer = Layer.effect(
   McpToken,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const secret = yield* Config.Redacted("MCP_TOKEN_SECRET")
     return make(Redacted.value(secret))
   })

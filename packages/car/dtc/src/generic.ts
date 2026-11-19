@@ -36,10 +36,8 @@ const DRIVE_EN =
 const DRIVE_RU =
   "Обычно можно аккуратно доехать до сервиса. Остановитесь, если двигатель трясётся, мигают индикаторы, растёт температура или пропадает мощность."
 
-const ADVICE_EN =
-  "Do not clear the code before diagnosis: the stored data helps the mechanic. "
-const ADVICE_RU =
-  "Не стирайте ошибку до диагностики: сохранённые данные помогают мастеру. "
+const ADVICE_EN = "Do not clear the code before diagnosis: the stored data helps the mechanic. "
+const ADVICE_RU = "Не стирайте ошибку до диагностики: сохранённые данные помогают мастеру. "
 
 const MANUFACTURER_EN =
   "The exact meaning of this code depends on the car make: read it with a make-specific scan tool or tell the mechanic the code."
@@ -58,20 +56,60 @@ const texts = (lang: Lang) =>
 
 const CAUSES: Readonly<Record<"p" | "b" | "c" | "u", Record<Lang, ReadonlyArray<string>>>> = {
   p: {
-    en: ["Failing sensor, actuator or valve", "Wiring or connector fault", "Low battery voltage", "Mechanical wear in the affected system"],
-    ru: ["Неисправный датчик, привод или клапан", "Неисправность проводки или разъёма", "Низкое напряжение аккумулятора", "Механический износ в затронутой системе"]
+    en: [
+      "Failing sensor, actuator or valve",
+      "Wiring or connector fault",
+      "Low battery voltage",
+      "Mechanical wear in the affected system"
+    ],
+    ru: [
+      "Неисправный датчик, привод или клапан",
+      "Неисправность проводки или разъёма",
+      "Низкое напряжение аккумулятора",
+      "Механический износ в затронутой системе"
+    ]
   },
   b: {
-    en: ["Failing sensor or switch in the body electronics", "Wiring or connector fault", "Low battery voltage", "Fault in the control module"],
-    ru: ["Неисправный датчик или выключатель кузовной электроники", "Неисправность проводки или разъёма", "Низкое напряжение аккумулятора", "Неисправность блока управления"]
+    en: [
+      "Failing sensor or switch in the body electronics",
+      "Wiring or connector fault",
+      "Low battery voltage",
+      "Fault in the control module"
+    ],
+    ru: [
+      "Неисправный датчик или выключатель кузовной электроники",
+      "Неисправность проводки или разъёма",
+      "Низкое напряжение аккумулятора",
+      "Неисправность блока управления"
+    ]
   },
   c: {
-    en: ["Failing wheel speed or steering sensor", "Wiring or connector fault", "Low battery voltage", "Fault in the brake or suspension control module"],
-    ru: ["Неисправный датчик скорости колеса или руля", "Неисправность проводки или разъёма", "Низкое напряжение аккумулятора", "Неисправность блока тормозной системы или подвески"]
+    en: [
+      "Failing wheel speed or steering sensor",
+      "Wiring or connector fault",
+      "Low battery voltage",
+      "Fault in the brake or suspension control module"
+    ],
+    ru: [
+      "Неисправный датчик скорости колеса или руля",
+      "Неисправность проводки или разъёма",
+      "Низкое напряжение аккумулятора",
+      "Неисправность блока тормозной системы или подвески"
+    ]
   },
   u: {
-    en: ["Low battery voltage", "Damaged network wiring or connector", "A control module that is not answering", "Software mismatch after repair"],
-    ru: ["Низкое напряжение аккумулятора", "Повреждённая проводка или разъём сети", "Блок управления, который не отвечает", "Несовпадение программного обеспечения после ремонта"]
+    en: [
+      "Low battery voltage",
+      "Damaged network wiring or connector",
+      "A control module that is not answering",
+      "Software mismatch after repair"
+    ],
+    ru: [
+      "Низкое напряжение аккумулятора",
+      "Повреждённая проводка или разъём сети",
+      "Блок управления, который не отвечает",
+      "Несовпадение программного обеспечения после ремонта"
+    ]
   }
 }
 
@@ -119,7 +157,12 @@ export const genericGroupText = (code: string, lang: Lang): GenericInfo => {
       severity: "watch",
       canDrive: t.drive,
       commonCauses: CAUSES.b[lang],
-      whatToDo: t.advice + (lang === "ru" ? "Если код связан с подушками безопасности, не откладывайте проверку. " : "If it concerns airbags, do not postpone the check. ") + t.manufacturer
+      whatToDo:
+        t.advice +
+        (lang === "ru"
+          ? "Если код связан с подушками безопасности, не откладывайте проверку. "
+          : "If it concerns airbags, do not postpone the check. ") +
+        t.manufacturer
     }
   }
   if (letter === "C") {
@@ -132,15 +175,23 @@ export const genericGroupText = (code: string, lang: Lang): GenericInfo => {
       severity: "watch",
       canDrive: t.drive,
       commonCauses: CAUSES.c[lang],
-      whatToDo: t.advice + (lang === "ru" ? "Если тормоза ведут себя странно, не продолжайте движение. " : "If the brakes feel odd, do not keep driving. ") + t.manufacturer
+      whatToDo:
+        t.advice +
+        (lang === "ru"
+          ? "Если тормоза ведут себя странно, не продолжайте движение. "
+          : "If the brakes feel odd, do not keep driving. ") +
+        t.manufacturer
     }
   }
   if (letter === "U") {
     return {
-      title:
-        manufacturer
-          ? lang === "ru" ? `Код сети производителя ${code}` : `Manufacturer-specific network code ${code}`
-          : lang === "ru" ? `Код сети связи ${code}` : `Network communication code ${code}`,
+      title: manufacturer
+        ? lang === "ru"
+          ? `Код сети производителя ${code}`
+          : `Manufacturer-specific network code ${code}`
+        : lang === "ru"
+          ? `Код сети связи ${code}`
+          : `Network communication code ${code}`,
       meaning:
         lang === "ru"
           ? `Код ${code} относится к связи между блоками управления автомобиля.`

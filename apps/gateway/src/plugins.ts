@@ -6,12 +6,13 @@ import { makePluginRegistry } from "@bot/plugins-registry/registry"
 
 export const pluginRegistry = makePluginRegistry([carPlugin, remindersPlugin, memoryPlugin])
 
-export type PluginR = ReturnType<(typeof pluginRegistry)["commands"][number]["handler"]> extends Effect.Effect<
-  // oxlint-disable-next-line typescript/no-explicit-any
-  any,
-  // oxlint-disable-next-line typescript/no-explicit-any
-  any,
-  infer R
->
-  ? R
-  : never
+export type PluginR =
+  ReturnType<(typeof pluginRegistry)["commands"][number]["handler"]> extends Effect.Effect<
+    // oxlint-disable-next-line typescript/no-explicit-any
+    any,
+    // oxlint-disable-next-line typescript/no-explicit-any
+    any,
+    infer R
+  >
+    ? R
+    : never

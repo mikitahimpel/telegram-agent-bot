@@ -24,7 +24,14 @@ import {
   protocolName
 } from "./pids.ts"
 import { ConnectionState } from "./state.ts"
-import { bleOpenDevice, bleOpenRemembered, bleTransport, type ObdTransport, serialTransport, simulatorTransport } from "./transport.ts"
+import {
+  bleOpenDevice,
+  bleOpenRemembered,
+  bleTransport,
+  type ObdTransport,
+  serialTransport,
+  simulatorTransport
+} from "./transport.ts"
 import type { SimCar, SimulatorScenario } from "./transport.ts"
 
 export type SessionInfo = {
@@ -90,7 +97,7 @@ export const connect = (
   kind: "ble" | "serial" | "simulator",
   options: ConnectOptions = {}
 ): Effect.Effect<ObdSession, ObdError, Scope.Scope> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const sessionScope = yield* Effect.scope
     const state = yield* SubscriptionRef.make<ConnectionState>(ConnectionState.Idle())
     const setState = (s: ConnectionState) =>
@@ -106,9 +113,9 @@ export const connect = (
     }
 
     const openLink = (open: Effect.Effect<ObdTransport, ObdError, Scope.Scope>): Effect.Effect<Link, ObdError> =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const scope = yield* Scope.fork(sessionScope)
-        return yield* Effect.gen(function*() {
+        return yield* Effect.gen(function* () {
           const transport = yield* open
           const elm = yield* makeElm327(transport)
           return { scope, transport, elm } satisfies Link
@@ -118,38 +125,39 @@ export const connect = (
         )
       })
 
-    const body = Effect.gen(function*() {
+    const body = Effect.gen(function* () {
       yield* setState(ConnectionState.RequestingDevice())
       const open: Effect.Effect<ObdTransport, ObdError, Scope.Scope> =
         options.open !== undefined
           ? options.open
           : options.remembered !== undefined
-          ? bleOpenRemembered(
-            options.remembered.deviceId,
-            options.remembered.advertisementWaitMs !== undefined
-              ? { advertisementWaitMs: options.remembered.advertisementWaitMs }
-              : {}
-          )
-          : options.device !== undefined
-          ? bleOpenDevice(options.device)
-          : kind === "ble"
-          ? bleTransport(options.namePrefix !== undefined ? { namePrefix: options.namePrefix } : undefined)
-          : kind === "serial"
-          ? serialTransport(options.baudRate !== undefined ? { baudRate: options.baudRate } : undefined)
-          : simulatorTransport(options.scenario ?? "normal", {
-            unsupported: options.unsupported ?? [],
-            ...(options.car !== undefined ? { car: options.car } : {})
-          })
+            ? bleOpenRemembered(
+                options.remembered.deviceId,
+                options.remembered.advertisementWaitMs !== undefined
+                  ? { advertisementWaitMs: options.remembered.advertisementWaitMs }
+                  : {}
+              )
+            : options.device !== undefined
+              ? bleOpenDevice(options.device)
+              : kind === "ble"
+                ? bleTransport(options.namePrefix !== undefined ? { namePrefix: options.namePrefix } : undefined)
+                : kind === "serial"
+                  ? serialTransport(options.baudRate !== undefined ? { baudRate: options.baudRate } : undefined)
+                  : simulatorTransport(options.scenario ?? "normal", {
+                      unsupported: options.unsupported ?? [],
+                      ...(options.car !== undefined ? { car: options.car } : {})
+                    })
       let link = yield* openLink(open)
       yield* setState(ConnectionState.Connecting({ deviceName: link.transport.name }))
 
       const init = yield* initAdapter(link.elm, (step, total, label) =>
-        setState(ConnectionState.InitializingAdapter({ step, total, label })))
+        setState(ConnectionState.InitializingAdapter({ step, total, label }))
+      )
       yield* setState(ConnectionState.WaitingForEcu())
 
       let dpn = ""
       const identify = (ecu: { readonly attempts?: number; readonly timeoutMs?: number }) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const first = yield* connectEcu(link.elm, ecu)
           const supportedPids = yield* readSupportedPids(link.elm, first)
           dpn = yield* link.elm.send("ATDPN").pipe(
@@ -201,7 +209,10 @@ export const connect = (
       })
 
       const lockProtocol = Effect.suspend(() => {
-        const code = dpn.trim().toUpperCase().replace(/^A(?=[0-9A-C]$)/, "")
+        const code = dpn
+          .trim()
+          .toUpperCase()
+          .replace(/^A(?=[0-9A-C]$)/, "")
         return /^[1-9A-C]$/.test(code)
           ? link.elm.send(`ATSP${code}`, { timeoutMs: 2000 }).pipe(Effect.ignore)
           : Effect.void
@@ -209,10 +220,10 @@ export const connect = (
 
       const wireStyle = (): DtcWireStyle => (dpn === "" ? "auto" : isCanProtocol(dpn) ? "can" : "legacy")
 
-      const reconnectOnce = Effect.gen(function*() {
+      const reconnectOnce = Effect.gen(function* () {
         yield* Scope.close(link.scope, Exit.void)
         const next = yield* openLink(link.transport.reopen)
-        yield* Effect.gen(function*() {
+        yield* Effect.gen(function* () {
           yield* initAdapter(next.elm)
           if (options.waitForEcu !== true) yield* connectEcu(next.elm)
         }).pipe(Effect.onError(() => Scope.close(next.scope, Exit.void)))
@@ -227,7 +238,7 @@ export const connect = (
       type Emit = (e: ObdEvent) => Effect.Effect<unknown>
 
       const recover = (emit: Emit): Effect.Effect<void, ObdError> =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const since = yield* Clock.currentTimeMillis
           yield* emit(ObdEvent.GapStarted({ at: since, reason: "adapter_disconnected" }))
           let attempt = 0
@@ -237,7 +248,10 @@ export const connect = (
             const delay = Math.min(maxDelay, baseDelay * 2 ** (attempt - 1))
             yield* setState(ConnectionState.Lost({ since, attempt, nextRetryAt: now + delay }))
             yield* Effect.sleep(delay)
-            const outcome = yield* reconnectOnce.pipe(Effect.map(() => true), Effect.orElseSucceed(() => false))
+            const outcome = yield* reconnectOnce.pipe(
+              Effect.map(() => true),
+              Effect.orElseSucceed(() => false)
+            )
             const after = yield* Clock.currentTimeMillis
             if (outcome) {
               yield* setState(ConnectionState.Ready({ info }))
@@ -253,7 +267,7 @@ export const connect = (
         })
 
       const poll = (queue: Queue.Queue<ObdEvent, ObdError | Cause.Done>, baseInterval: number) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           yield* ensureIdentified
           const emit: Emit = (e) => Queue.offer(queue, e)
           const supported = new Set(info.supportedPids)
@@ -271,11 +285,11 @@ export const connect = (
             const targets = slowTick ? polled : fast
             const sample: Record<string, number> = {}
             let answered = 0
-            const lost = yield* Effect.gen(function*() {
+            const lost = yield* Effect.gen(function* () {
               for (const p of targets) {
-                const bytes = yield* link.elm.mode01(p.pid).pipe(
-                  Effect.catch((e) => (e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)))
-                )
+                const bytes = yield* link.elm
+                  .mode01(p.pid)
+                  .pipe(Effect.catch((e) => (e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined))))
                 if (bytes !== undefined && bytes.length >= p.bytes) {
                   sample[p.key] = p.decode(bytes)
                   answered++
@@ -326,14 +340,14 @@ export const connect = (
         })
 
       const watchLoop = (queue: Queue.Queue<WatchTick, ObdError | Cause.Done>, opts: WatchOptions) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const interval = opts.intervalMs ?? 500
           const burst = opts.voltageBurst ?? 3
           const none: Emit = () => Effect.void
           let locked = false
           while (true) {
             const t0 = yield* Clock.currentTimeMillis
-            const step = Effect.gen(function*() {
+            const step = Effect.gen(function* () {
               if (!identified) {
                 const attempt = yield* Effect.result(ensureIdentified)
                 if (attempt._tag === "Failure" && attempt.failure._tag === "Disconnected") return yield* attempt.failure
@@ -343,17 +357,18 @@ export const connect = (
                 locked = true
               }
               const voltages: Array<{ ts: number; volts: number }> = []
-              const readV = Effect.gen(function*() {
+              const readV = Effect.gen(function* () {
                 const v = yield* readVoltage(link.elm)
                 if (v !== undefined) voltages.push({ ts: yield* Clock.currentTimeMillis, volts: v })
               })
               yield* readV
               let rpm: number | undefined
               if (identified) {
-                const bytes = yield* link.elm.mode01("0C", { timeoutMs: 2000 }).pipe(
-                  Effect.catch((e) => (e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)))
-                )
-                if (bytes !== undefined && bytes.length >= 2) rpm = ((bytes[0] as number) * 256 + (bytes[1] as number)) / 4
+                const bytes = yield* link.elm
+                  .mode01("0C", { timeoutMs: 2000 })
+                  .pipe(Effect.catch((e) => (e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined))))
+                if (bytes !== undefined && bytes.length >= 2)
+                  rpm = ((bytes[0] as number) * 256 + (bytes[1] as number)) / 4
               }
               for (let i = 1; i < burst; i++) yield* readV
               return { ts: t0, rpm, ecuResponding: rpm !== undefined, voltages } satisfies WatchTick

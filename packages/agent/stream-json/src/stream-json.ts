@@ -238,19 +238,13 @@ const step = (s: State, p: Parsed): readonly [State, ReadonlyArray<Item>] => {
     }
     case "Assistant": {
       const events = p.error === "rate_limit" ? [] : p.events
-      return [
-        p.error !== undefined ? { ...s, assistantError: p.error } : s,
-        events.map((event) => ({ event }))
-      ]
+      return [p.error !== undefined ? { ...s, assistantError: p.error } : s, events.map((event) => ({ event }))]
     }
     case "Result": {
       if (p.isError && CREDITS_TEXT.test(p.text)) return [s, [{ limit: new ApiCreditsExhausted() }]]
       if (p.isError) {
         const limited =
-          s.assistantError === "rate_limit" ||
-          p.apiErrorStatus === 429 ||
-          s.rejected ||
-          LIMIT_TEXT.test(p.text)
+          s.assistantError === "rate_limit" || p.apiErrorStatus === 429 || s.rejected || LIMIT_TEXT.test(p.text)
         if (limited) return [s, [{ limit: limitError(parseResetFromText(p.text) ?? s.lastResetsAt) }]]
       }
       return [s, [{ event: completed(p) }]]

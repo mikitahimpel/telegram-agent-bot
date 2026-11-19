@@ -17,7 +17,13 @@ export type WriteResult =
   | { readonly ok: true; readonly fact: Fact; readonly usedTokens: number; readonly budgetTokens: number }
   | { readonly ok: false; readonly reason: "empty" }
   | { readonly ok: false; readonly reason: "not_found" }
-  | { readonly ok: false; readonly reason: "over_budget"; readonly usedTokens: number; readonly budgetTokens: number; readonly neededTokens: number }
+  | {
+      readonly ok: false
+      readonly reason: "over_budget"
+      readonly usedTokens: number
+      readonly budgetTokens: number
+      readonly neededTokens: number
+    }
 
 export type MemoryStore = {
   readonly list: Effect.Effect<ReadonlyArray<Fact>, StorageError>
@@ -88,12 +94,7 @@ export const makeMemoryStore = (sql: MemorySql, budget: number = BUDGET_TOKENS):
       const now = yield* Clock.currentTimeMillis
       const rows = yield* attempt("memory.remember", () =>
         sql
-          .exec(
-            "INSERT INTO memory_facts (text, created_at, updated_at) VALUES (?, ?, ?) RETURNING id",
-            text,
-            now,
-            now
-          )
+          .exec("INSERT INTO memory_facts (text, created_at, updated_at) VALUES (?, ?, ?) RETURNING id", text, now, now)
           .toArray()
       )
       const fact: Fact = { id: Number(rows[0]?.["id"]), text, createdAt: now, updatedAt: now }
@@ -111,8 +112,9 @@ export const makeMemoryStore = (sql: MemorySql, budget: number = BUDGET_TOKENS):
       const needed = estimateTokens(text)
       if (others + needed > budget) return overBudget(totalTokens(facts), needed)
       const now = yield* Clock.currentTimeMillis
-      yield* attempt("memory.update", () =>
-        void sql.exec("UPDATE memory_facts SET text = ?, updated_at = ? WHERE id = ?", text, now, id).toArray()
+      yield* attempt(
+        "memory.update",
+        () => void sql.exec("UPDATE memory_facts SET text = ?, updated_at = ? WHERE id = ?", text, now, id).toArray()
       )
       const fact: Fact = { ...current, text, updatedAt: now }
       return { ok: true, fact, usedTokens: others + needed, budgetTokens: budget } as WriteResult
@@ -132,5 +134,12 @@ export const makeMemoryStore = (sql: MemorySql, budget: number = BUDGET_TOKENS):
     return facts.length
   })
 
-  return { list, remember, update, forget, forgetAll, render: list.pipe(Effect.map((facts) => renderBlock(facts, budget))) }
+  return {
+    list,
+    remember,
+    update,
+    forget,
+    forgetAll,
+    render: list.pipe(Effect.map((facts) => renderBlock(facts, budget)))
+  }
 }

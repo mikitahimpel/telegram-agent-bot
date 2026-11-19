@@ -27,11 +27,25 @@ const { backend, route, go, back, canGoBack, t, lang, localMode, hashRouted } = 
 const unsupported = computed(
   () =>
     describeStatus(
-      { kind: "env", caps: backend.caps, platform: backend.platform, telegramWebview: isTelegramWebview(typeof navigator === "undefined" ? "" : navigator.userAgent) },
+      {
+        kind: "env",
+        caps: backend.caps,
+        platform: backend.platform,
+        telegramWebview: isTelegramWebview(typeof navigator === "undefined" ? "" : navigator.userAgent)
+      },
       lang.value
     ) !== null
 )
-const gate = computed<"unsupported" | "pair" | "app">(() => (unsupported.value ? "unsupported" : backend.pairing.value === "paired" || localMode.value || backend.conn.value._tag !== "Idle" || backend.rec.value._tag !== "Idle" ? "app" : "pair"))
+const gate = computed<"unsupported" | "pair" | "app">(() =>
+  unsupported.value
+    ? "unsupported"
+    : backend.pairing.value === "paired" ||
+        localMode.value ||
+        backend.conn.value._tag !== "Idle" ||
+        backend.rec.value._tag !== "Idle"
+      ? "app"
+      : "pair"
+)
 const recording = computed(() => backend.rec.value._tag === "Recording")
 const titleKey = computed(() => {
   const n = route.value.name
@@ -88,7 +102,16 @@ watch(recording, (on) => on && route.value.name !== "recording" && go({ name: "r
   <PairScreen v-else-if="gate === 'pair'" :retry="props.retryPairing" />
   <div v-else class="shell">
     <header class="top">
-      <button v-if="canGoBack" class="icon-btn" type="button" :aria-label="t('common.back')" data-testid="back" @click="back">‹</button>
+      <button
+        v-if="canGoBack"
+        class="icon-btn"
+        type="button"
+        :aria-label="t('common.back')"
+        data-testid="back"
+        @click="back"
+      >
+        ‹
+      </button>
       <h1>{{ t(titleKey) }}</h1>
     </header>
     <main>
@@ -108,10 +131,31 @@ watch(recording, (on) => on && route.value.name !== "recording" && go({ name: "r
     </main>
     <PrimaryBar />
     <nav class="tabs" aria-label="Main">
-      <button type="button" :class="{ on: overviewTabs.includes(route.name) }" data-testid="tab-overview" @click="go({ name: 'overview' })">{{ t("nav.overview") }}</button>
-      <button type="button" :class="{ on: route.name === 'trips' || route.name === 'trip' }" @click="go({ name: 'trips' })">{{ t("nav.trips") }}</button>
-      <button type="button" :class="{ on: route.name === 'home' || route.name === 'connect' || route.name === 'recording' }" @click="go({ name: 'home' })">{{ t("nav.home") }}</button>
-      <button type="button" :class="{ on: route.name === 'settings' }" @click="go({ name: 'settings' })">{{ t("nav.settings") }}</button>
+      <button
+        type="button"
+        :class="{ on: overviewTabs.includes(route.name) }"
+        data-testid="tab-overview"
+        @click="go({ name: 'overview' })"
+      >
+        {{ t("nav.overview") }}
+      </button>
+      <button
+        type="button"
+        :class="{ on: route.name === 'trips' || route.name === 'trip' }"
+        @click="go({ name: 'trips' })"
+      >
+        {{ t("nav.trips") }}
+      </button>
+      <button
+        type="button"
+        :class="{ on: route.name === 'home' || route.name === 'connect' || route.name === 'recording' }"
+        @click="go({ name: 'home' })"
+      >
+        {{ t("nav.home") }}
+      </button>
+      <button type="button" :class="{ on: route.name === 'settings' }" @click="go({ name: 'settings' })">
+        {{ t("nav.settings") }}
+      </button>
     </nav>
     <InterruptedDialog />
   </div>

@@ -57,13 +57,7 @@ export type SyncGlobalVm =
   | { _tag: "Blocked"; code: ApiBlockCode }
   | { _tag: "Paused" }
 
-export type SyncErrorCode =
-  | "network"
-  | "rate_limited"
-  | "server"
-  | "checksum_mismatch"
-  | "unauthorized"
-  | "unknown"
+export type SyncErrorCode = "network" | "rate_limited" | "server" | "checksum_mismatch" | "unauthorized" | "unknown"
 
 export type TripSyncVm =
   | { _tag: "Recording" }

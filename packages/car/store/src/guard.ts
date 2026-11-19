@@ -31,11 +31,14 @@ const FORBIDDEN_WORDS = new Set([
   "randomblob"
 ])
 
-export type GuardResult =
-  | { readonly ok: true; readonly sql: string }
-  | { readonly ok: false; readonly reason: string }
+export type GuardResult = { readonly ok: true; readonly sql: string } | { readonly ok: false; readonly reason: string }
 
-type Scan = { readonly clean: string; readonly words: ReadonlyArray<string>; readonly semicolons: ReadonlyArray<number>; readonly error: string | undefined }
+type Scan = {
+  readonly clean: string
+  readonly words: ReadonlyArray<string>
+  readonly semicolons: ReadonlyArray<number>
+  readonly error: string | undefined
+}
 
 const scan = (query: string): Scan => {
   let clean = ""
@@ -120,7 +123,12 @@ export const guardQuery = (query: string, forbiddenTables: ReadonlyArray<string>
 }
 
 export type QueryResult =
-  | { readonly ok: true; readonly columns: ReadonlyArray<string>; readonly rows: ReadonlyArray<ReadonlyArray<SqlValue>>; readonly truncated: boolean }
+  | {
+      readonly ok: true
+      readonly columns: ReadonlyArray<string>
+      readonly rows: ReadonlyArray<ReadonlyArray<SqlValue>>
+      readonly truncated: boolean
+    }
   | { readonly ok: false; readonly error: string }
 
 export const runGuarded = (sql: CarSql, query: string): QueryResult => {
@@ -145,4 +153,5 @@ export const runGuarded = (sql: CarSql, query: string): QueryResult => {
   }
 }
 
-const cap = (v: SqlValue): SqlValue => (typeof v === "string" && v.length > MAX_CELL_CHARS ? v.slice(0, MAX_CELL_CHARS) : v)
+const cap = (v: SqlValue): SqlValue =>
+  typeof v === "string" && v.length > MAX_CELL_CHARS ? v.slice(0, MAX_CELL_CHARS) : v

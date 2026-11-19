@@ -65,7 +65,14 @@ export const TripInsight = Schema.Struct({
   chargingAvgV: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   startCoolantC: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   endFuelLevelPct: Schema.optionalKey(Schema.NullOr(Schema.Number)),
-  speedBands: Schema.Array(Schema.Struct({ fromKmh: Schema.Number, toKmh: Schema.Number, seconds: Schema.Number, fuelPer100Km: Schema.NullOr(Schema.Number) })),
+  speedBands: Schema.Array(
+    Schema.Struct({
+      fromKmh: Schema.Number,
+      toKmh: Schema.Number,
+      seconds: Schema.Number,
+      fuelPer100Km: Schema.NullOr(Schema.Number)
+    })
+  ),
   route: Schema.Struct({
     startLat: Schema.NullOr(Schema.Number),
     startLon: Schema.NullOr(Schema.Number),
@@ -150,7 +157,13 @@ export const CarOverview = Schema.Struct({
     status: Schema.Literals(["good", "watch", "weak", "unknown"]),
     lastRestingV: Schema.NullOr(Schema.Number),
     lastCrankMinV: Schema.NullOr(Schema.Number),
-    trend: Schema.Array(Schema.Struct({ at: Schema.Number, restingV: Schema.NullOr(Schema.Number), crankMinV: Schema.NullOr(Schema.Number) }))
+    trend: Schema.Array(
+      Schema.Struct({
+        at: Schema.Number,
+        restingV: Schema.NullOr(Schema.Number),
+        crankMinV: Schema.NullOr(Schema.Number)
+      })
+    )
   }),
   engine: Schema.Struct({
     milOn: Schema.Boolean,
@@ -166,7 +179,8 @@ export const InsightsApi = {
   putDtc: "PUT /car/api/dtc  body DtcReport → { ok: true, explanations: DtcExplanation[] }",
   overview: "GET /car/api/overview → CarOverview",
   tripInsight: "GET /car/api/trips/:tripId/insight → TripInsight",
-  tripSeries: "GET /car/api/trips/:tripId/series?points=600&columns=speed_kmh,rpm → TripSeries (downsampled, gaps kept)",
+  tripSeries:
+    "GET /car/api/trips/:tripId/series?points=600&columns=speed_kmh,rpm → TripSeries (downsampled, gaps kept)",
   alerts: "GET /car/api/alerts → { alerts: Alert[] }"
 } as const
 

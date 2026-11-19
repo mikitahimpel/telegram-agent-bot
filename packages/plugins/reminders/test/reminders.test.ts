@@ -37,7 +37,10 @@ const setup = (lang: Lang | null = "ru") => {
     telegram,
     layerLocal(tg, store.service),
     layerKv(makeMemoryKv()),
-    Layer.succeed(UserPrefs, { timeZone: () => Effect.succeed(undefined), lang: () => Effect.succeed(lang ?? undefined) })
+    Layer.succeed(UserPrefs, {
+      timeZone: () => Effect.succeed(undefined),
+      lang: () => Effect.succeed(lang ?? undefined)
+    })
   )
   return { store, alarms, sent, edits, answers, env }
 }
@@ -78,7 +81,11 @@ describe("reminders tools", () => {
       expect(alarms.at(-1)).toBe(stored.at)
       const listed = (yield* call("reminder_list", {})) as any
       expect(listed.reminders).toHaveLength(1)
-      expect(listed.reminders[0]).toMatchObject({ text: "позвонить врачу", nextLocal: "2026-11-20T09:00", repeat: "none" })
+      expect(listed.reminders[0]).toMatchObject({
+        text: "позвонить врачу",
+        nextLocal: "2026-11-20T09:00",
+        repeat: "none"
+      })
       expect(((yield* call("reminder_cancel", { id: created.id })) as any).ok).toBe(true)
       expect(((yield* call("reminder_cancel", { id: created.id })) as any).ok).toBe(false)
       expect(alarms.at(-1)).toBeNull()
@@ -113,7 +120,8 @@ describe("reminder firing", () => {
       expect(yield* fire("en", "позвонить врачу")).toEqual(["✅ Done", "⏰ In an hour", "📅 Tomorrow"])
       expect(yield* fire("ru", "call the doctor")).toEqual(["✅ Готово", "⏰ Через час", "📅 Завтра"])
       expect(yield* fire(null, "позвонить врачу")).toEqual(["✅ Done", "⏰ In an hour", "📅 Tomorrow"])
-    }))
+    })
+  )
 
   it.effect("sends the text with buttons and keeps a fired record for one-off reminders", () => {
     const { env, store, sent } = setup()
@@ -136,7 +144,11 @@ describe("reminder firing", () => {
     return Effect.gen(function* () {
       yield* TestClock.setTime(Date.UTC(2026, 2, 27, 12, 0))
       yield* call("user_set_timezone", { tz: "Europe/Warsaw" })
-      const created = (yield* call("reminder_create", { text: "water", at: "2026-03-28T09:00", repeat: "daily" })) as any
+      const created = (yield* call("reminder_create", {
+        text: "water",
+        at: "2026-03-28T09:00",
+        repeat: "daily"
+      })) as any
       yield* TestClock.setTime(Date.UTC(2026, 2, 28, 8, 5))
       yield* store.runDue([job], tg)
       const next = (yield* store.service.get(created.id))!

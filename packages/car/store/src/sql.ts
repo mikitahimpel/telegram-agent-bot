@@ -12,4 +12,5 @@ export const num = (v: SqlValue | undefined): number | undefined => (typeof v ==
 
 export const numOrNull = (v: SqlValue | undefined): number | null => (typeof v === "number" ? v : null)
 
-export const str = (v: SqlValue | undefined): string => (typeof v === "string" ? v : v === null || v === undefined ? "" : String(v))
+export const str = (v: SqlValue | undefined): string =>
+  typeof v === "string" ? v : v === null || v === undefined ? "" : String(v)

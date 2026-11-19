@@ -11,18 +11,23 @@ export type ConnectTarget =
   | { readonly _tag: "Picked"; readonly picked: PickedAdapter }
   | { readonly _tag: "Remembered"; readonly adapter: RememberedAdapter }
 
-export class ObdConnector extends Context.Service<ObdConnector, {
-  readonly support: Effect.Effect<BleSupport>
-  readonly pick: Effect.Effect<PickedAdapter, ObdError>
-  readonly connect: (
-    target: ConnectTarget,
-    options?: Pick<ConnectOptions, "onState" | "reconnect">
-  ) => Effect.Effect<ObdSession, ObdError, Scope.Scope>
-}>()("@bot/car-recorder/ObdConnector") {}
+export class ObdConnector extends Context.Service<
+  ObdConnector,
+  {
+    readonly support: Effect.Effect<BleSupport>
+    readonly pick: Effect.Effect<PickedAdapter, ObdError>
+    readonly connect: (
+      target: ConnectTarget,
+      options?: Pick<ConnectOptions, "onState" | "reconnect">
+    ) => Effect.Effect<ObdSession, ObdError, Scope.Scope>
+  }
+>()("@bot/car-recorder/ObdConnector") {}
 
 export const connectorBrowserLayer: Layer.Layer<ObdConnector> = Layer.succeed(ObdConnector, {
   support: Effect.sync(bleSupport),
-  pick: bleRequestDevice().pipe(Effect.map((d): PickedAdapter => ({ id: d.id, name: d.name ?? "Bluetooth OBD adapter", handle: d }))),
+  pick: bleRequestDevice().pipe(
+    Effect.map((d): PickedAdapter => ({ id: d.id, name: d.name ?? "Bluetooth OBD adapter", handle: d }))
+  ),
   connect: (target, options = {}) =>
     target._tag === "Picked"
       ? connect("ble", { ...options, waitForEcu: true, device: target.picked.handle as BluetoothDevice })

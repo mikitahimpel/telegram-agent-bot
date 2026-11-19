@@ -15,8 +15,10 @@ export type MemoryR = Telegram | UserMemory
 export const CALLBACK_PREFIX = "mem"
 const BUTTON_TEXT_LIMIT = 24
 
-const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
-  ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
+const target = (ctx: {
+  readonly chatId: SendTarget["chatId"]
+  readonly threadId: SendTarget["threadId"] | undefined
+}): SendTarget => (ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId })
 
 const callbackData = (action: string) => `${CALLBACK_PREFIX}:${action}`
 
@@ -104,17 +106,26 @@ const memoryCallback: CallbackDef<MemoryR> = {
 }
 
 const RememberInput = Schema.Struct({
-  text: Schema.String.annotate({ description: "One short fact about the user, e.g. \"Drives a Skoda Octavia 2018\"" })
+  text: Schema.String.annotate({ description: 'One short fact about the user, e.g. "Drives a Skoda Octavia 2018"' })
 })
 const UpdateInput = Schema.Struct({
   id: Schema.Number.annotate({ description: "Fact id from memory_list or the MEMORY block" }),
   text: Schema.String.annotate({ description: "The new, complete text of the fact" })
 })
-const ForgetInput = Schema.Struct({ id: Schema.Number.annotate({ description: "Fact id from memory_list or the MEMORY block" }) })
+const ForgetInput = Schema.Struct({
+  id: Schema.Number.annotate({ description: "Fact id from memory_list or the MEMORY block" })
+})
 const NoInput = Schema.Struct({})
 
 const writeOutcome = (result: WriteResult) => {
-  if (result.ok) return { ok: true, id: result.fact.id, text: result.fact.text, usedTokens: result.usedTokens, budgetTokens: result.budgetTokens }
+  if (result.ok)
+    return {
+      ok: true,
+      id: result.fact.id,
+      text: result.fact.text,
+      usedTokens: result.usedTokens,
+      budgetTokens: result.budgetTokens
+    }
   switch (result.reason) {
     case "empty":
       return { ok: false, error: "text is empty" }
@@ -142,7 +153,8 @@ const tools: ReadonlyArray<AgentTool<MemoryR>> = [
   },
   {
     name: "memory_update",
-    description: "Replace the text of an existing fact by id, for example to correct it or to merge several facts into one.",
+    description:
+      "Replace the text of an existing fact by id, for example to correct it or to merge several facts into one.",
     input: UpdateInput,
     handler: (raw, ctx) =>
       Effect.gen(function* () {
@@ -180,7 +192,12 @@ const tools: ReadonlyArray<AgentTool<MemoryR>> = [
 const systemPrompt = `Memory plugin. Tools: memory_remember {text}, memory_update {id, text}, memory_forget {id}, memory_list {}. The MEMORY block in your instructions shows what is stored. Save stable personal facts the user shares (name, family, health, preferences, car model, city) as short facts, update instead of duplicating, and merge or forget facts when memory is full. Never mention these tools to the user.`
 
 const pass = <I, S>(tag: import("effect").Context.Service<I, S>): Layer.Layer<I, never, I> =>
-  Layer.effect(tag, Effect.gen(function* () { return yield* tag }) as Effect.Effect<S, never, I>)
+  Layer.effect(
+    tag,
+    Effect.gen(function* () {
+      return yield* tag
+    }) as Effect.Effect<S, never, I>
+  )
 
 export const layer: Layer.Layer<MemoryR, never, MemoryR> = Layer.mergeAll(pass(Telegram), pass(UserMemory))
 

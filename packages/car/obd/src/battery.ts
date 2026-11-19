@@ -11,21 +11,21 @@ const OFF_RING_MAX = 120
 export type BatteryEvent =
   | { readonly _tag: "Resting"; readonly at: number; readonly volts: number; readonly samples: number }
   | {
-    readonly _tag: "Cranking"
-    readonly at: number
-    readonly minV: number
-    readonly restingV: number
-    readonly durationMs: number
-    readonly samples: number
-  }
+      readonly _tag: "Cranking"
+      readonly at: number
+      readonly minV: number
+      readonly restingV: number
+      readonly durationMs: number
+      readonly samples: number
+    }
   | {
-    readonly _tag: "Charging"
-    readonly at: number
-    readonly volts: number
-    readonly minV: number
-    readonly maxV: number
-    readonly samples: number
-  }
+      readonly _tag: "Charging"
+      readonly at: number
+      readonly volts: number
+      readonly minV: number
+      readonly maxV: number
+      readonly samples: number
+    }
 
 type VoltageSample = { readonly ts: number; readonly v: number }
 
@@ -61,7 +61,14 @@ export const makeBatteryTracker = (): BatteryTracker => {
     const volts = round(median(vs))
     const minV = round(Math.min(...vs))
     const maxV = round(Math.max(...vs))
-    events = { ...events, chargingV: volts, chargingMinV: minV, chargingMaxV: maxV, chargingSamples: vs.length, chargingAt: at }
+    events = {
+      ...events,
+      chargingV: volts,
+      chargingMinV: minV,
+      chargingMaxV: maxV,
+      chargingSamples: vs.length,
+      chargingAt: at
+    }
     return { _tag: "Charging", at, volts, minV, maxV, samples: vs.length }
   }
 
@@ -85,7 +92,13 @@ export const makeBatteryTracker = (): BatteryTracker => {
             const dipStart = inWindow.find((s) => restingV - s.v >= CRANK_MIN_DIP_V) ?? low
             const durationMs = ts - dipStart.ts
             const minV = round(low.v)
-            events = { ...events, crankMinV: minV, crankAt: low.ts, crankDurationMs: durationMs, crankSamples: inWindow.length }
+            events = {
+              ...events,
+              crankMinV: minV,
+              crankAt: low.ts,
+              crankDurationMs: durationMs,
+              crankSamples: inWindow.length
+            }
             out.push({ _tag: "Cranking", at: low.ts, minV, restingV, durationMs, samples: inWindow.length })
           }
         }

@@ -133,7 +133,9 @@ const makeRuntime = (
             Effect.flatMap((tools) =>
               tools.length === 0 || origin() === ""
                 ? Effect.succeed(undefined)
-                : tokens.sign(id, MCP_TOKEN_TTL_SECONDS).pipe(Effect.map((token) => ({ url: `${origin()}/mcp`, token })))
+                : tokens
+                    .sign(id, MCP_TOKEN_TTL_SECONDS)
+                    .pipe(Effect.map((token) => ({ url: `${origin()}/mcp`, token })))
             ),
             Effect.catch(() => Effect.succeed(undefined))
           )
@@ -141,12 +143,10 @@ const makeRuntime = (
     })
   )
 
-  const derived = Layer.mergeAll(
-    adminNotifierLayer(),
-    agentDirectoryLayer(env),
-    mcpAccess,
-    helpRegistryLayer
-  ).pipe(Layer.provideMerge(base), Layer.provide(configLayer(env, origin())))
+  const derived = Layer.mergeAll(adminNotifierLayer(), agentDirectoryLayer(env), mcpAccess, helpRegistryLayer).pipe(
+    Layer.provideMerge(base),
+    Layer.provide(configLayer(env, origin()))
+  )
 
   return ManagedRuntime.make(derived)
 }

@@ -31,7 +31,7 @@ export const makePluginRegistry = <const Ps extends ReadonlyArray<AnyPlugin>>(
   const admin = makePluginAdmin(plugins)
 
   const enabled = (tgId: TgId) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const flags = yield* PluginFlags
       const result: Array<AnyPlugin> = []
       for (const p of plugins) {

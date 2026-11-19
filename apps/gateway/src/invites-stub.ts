@@ -5,7 +5,11 @@ import { InviteInvalid, Invites, type Invite, type RedemptionRecord } from "@bot
 import type { Env } from "./env.ts"
 import type { InviteDto, RedemptionDto } from "./user-agent.ts"
 
-const toInvite = (dto: InviteDto): Invite => ({ ...dto, createdBy: TgId.make(dto.createdBy), note: dto.note ?? undefined })
+const toInvite = (dto: InviteDto): Invite => ({
+  ...dto,
+  createdBy: TgId.make(dto.createdBy),
+  note: dto.note ?? undefined
+})
 
 const toRedemption = (dto: RedemptionDto): RedemptionRecord => ({
   ...dto,
@@ -22,9 +26,9 @@ export const invitesStubLayer = (env: Env): Layer.Layer<Invites> => {
 
   return Layer.succeed(Invites, {
     create: (input) =>
-      call("invites.create", () => stub().createInvite({ ...input, note: input.note ?? null, plugins: [...input.plugins] })).pipe(
-        Effect.map(toInvite)
-      ),
+      call("invites.create", () =>
+        stub().createInvite({ ...input, note: input.note ?? null, plugins: [...input.plugins] })
+      ).pipe(Effect.map(toInvite)),
     list: call("invites.list", () => stub().listInvites()).pipe(Effect.map((xs) => xs.map(toInvite))),
     recentRedemptions: (limit) =>
       call("invites.redemptions", () => stub().recentRedemptions(limit)).pipe(Effect.map((xs) => xs.map(toRedemption))),

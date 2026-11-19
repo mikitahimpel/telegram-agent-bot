@@ -37,7 +37,15 @@ export const parseRouteHash = (hash: string): Route | null => {
   }
 }
 
-export const insightRoutes: ReadonlyArray<Route["name"]> = ["overview", "engine", "battery", "stats", "alerts", "trip", "onboarding"]
+export const insightRoutes: ReadonlyArray<Route["name"]> = [
+  "overview",
+  "engine",
+  "battery",
+  "stats",
+  "alerts",
+  "trip",
+  "onboarding"
+]
 
 export type AppContext = {
   backend: CarBackend
@@ -91,20 +99,17 @@ export const createAppContext = (opts: {
     try {
       if (on) localStorage.setItem(LOCAL_KEY, "1")
       else localStorage.removeItem(LOCAL_KEY)
-    } catch {
-    }
+    } catch {}
   })
   const DEMO_KEY = "car-demo-insights"
   try {
     if (localStorage.getItem(DEMO_KEY) === "1") backend.insightsDemo.value = true
-  } catch {
-  }
+  } catch {}
   watch(backend.insightsDemo, (on) => {
     try {
       if (on) localStorage.setItem(DEMO_KEY, "1")
       else localStorage.removeItem(DEMO_KEY)
-    } catch {
-    }
+    } catch {}
   })
   const dismissed = ref<string[]>([])
   const installPrompt = ref<{ prompt(): Promise<void> } | null>(null)

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "@effect/vitest"
-import { fuelLphFromMaf, fuelRateSourceFor, parseSupportedMask, parseVoltage, pidByCode, protocolName } from "../src/pids.ts"
+import {
+  fuelLphFromMaf,
+  fuelRateSourceFor,
+  parseSupportedMask,
+  parseVoltage,
+  pidByCode,
+  protocolName
+} from "../src/pids.ts"
 
 const dec = (pid: string, bytes: number[]) => pidByCode(pid)!.decode(bytes)
 
@@ -19,7 +26,24 @@ describe("pid decoders", () => {
   })
   it("parses support masks", () => {
     expect(parseSupportedMask(0, [0xbe, 0x3f, 0xa8, 0x13])).toEqual([
-      "01", "03", "04", "05", "06", "07", "0B", "0C", "0D", "0E", "0F", "10", "11", "13", "15", "1C", "1F", "20"
+      "01",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "0B",
+      "0C",
+      "0D",
+      "0E",
+      "0F",
+      "10",
+      "11",
+      "13",
+      "15",
+      "1C",
+      "1F",
+      "20"
     ])
     expect(parseSupportedMask(0x20, [0x80, 0, 0, 0x01])).toEqual(["21", "40"])
   })

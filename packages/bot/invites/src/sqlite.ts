@@ -89,7 +89,8 @@ export const makeSqlite = (sql: SqlLike, now: () => number = Date.now): Invites[
 
   const recentFailures = (tgId: number, at: number) =>
     Number(
-      rows("SELECT COUNT(*) AS n FROM invite_failures WHERE tg_id = ? AND at > ?", tgId, at - FAILURE_WINDOW_MS)[0]?.n ?? 0
+      rows("SELECT COUNT(*) AS n FROM invite_failures WHERE tg_id = ? AND at > ?", tgId, at - FAILURE_WINDOW_MS)[0]
+        ?.n ?? 0
     )
 
   return {
@@ -111,9 +112,10 @@ export const makeSqlite = (sql: SqlLike, now: () => number = Date.now): Invites[
         return toInvite(rows("SELECT * FROM invites WHERE code = ?", code)[0]!)
       }),
     list: run("invites.list", () =>
-      rows("SELECT * FROM invites WHERE revoked = 0 AND uses_left > 0 AND expires_at > ? ORDER BY created_at DESC", now()).map(
-        toInvite
-      )
+      rows(
+        "SELECT * FROM invites WHERE revoked = 0 AND uses_left > 0 AND expires_at > ? ORDER BY created_at DESC",
+        now()
+      ).map(toInvite)
     ),
     recentRedemptions: (limit) =>
       run("invites.redemptions", () =>
@@ -121,19 +123,20 @@ export const makeSqlite = (sql: SqlLike, now: () => number = Date.now): Invites[
           `SELECT r.code AS code, r.tg_id AS tg_id, r.name AS name, r.username AS username, r.at AS at, i.note AS note
            FROM redemptions r LEFT JOIN invites i ON i.code = r.code ORDER BY r.id DESC LIMIT ?`,
           limit
-        ).map(
-          (row): RedemptionRecord => ({
-            code: String(row.code),
-            tgId: TgId.make(Number(row.tg_id)),
-            name: row.name === null ? undefined : String(row.name),
-            username: row.username === null ? undefined : String(row.username),
-            note: row.note === null || row.note === undefined ? undefined : String(row.note),
-            at: Number(row.at)
-          })
-        )
+        ).map((row): RedemptionRecord => ({
+          code: String(row.code),
+          tgId: TgId.make(Number(row.tg_id)),
+          name: row.name === null ? undefined : String(row.name),
+          username: row.username === null ? undefined : String(row.username),
+          note: row.note === null || row.note === undefined ? undefined : String(row.note),
+          at: Number(row.at)
+        }))
       ),
     revoke: (code) =>
-      run("invites.revoke", () => rows("UPDATE invites SET revoked = 1 WHERE code = ? AND revoked = 0 RETURNING code", code).length > 0),
+      run(
+        "invites.revoke",
+        () => rows("UPDATE invites SET revoked = 1 WHERE code = ? AND revoked = 0 RETURNING code", code).length > 0
+      ),
     redeem: (code, tgId, who) =>
       Effect.suspend(() => {
         const at = now()
@@ -168,9 +171,7 @@ export const makeSqlite = (sql: SqlLike, now: () => number = Date.now): Invites[
           plugins: invite.plugins,
           redeemedAt: at
         })
-      }).pipe(
-        Effect.catchDefect((cause) => Effect.fail(new StorageError({ operation: "invites.redeem", cause })))
-      )
+      }).pipe(Effect.catchDefect((cause) => Effect.fail(new StorageError({ operation: "invites.redeem", cause }))))
   }
 }
 

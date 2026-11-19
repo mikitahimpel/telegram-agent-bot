@@ -62,7 +62,8 @@ const yRange = computed(() => {
   const pad = (hi - lo) * 0.08
   return { lo: props.zeroBased ? lo : lo - pad, hi: hi + pad }
 })
-const y = (v: number) => PAD.top + plotH.value - ((v - yRange.value.lo) / (yRange.value.hi - yRange.value.lo)) * plotH.value
+const y = (v: number) =>
+  PAD.top + plotH.value - ((v - yRange.value.lo) / (yRange.value.hi - yRange.value.lo)) * plotH.value
 
 const stepMs = computed(() => {
   const d: number[] = []
@@ -96,7 +97,8 @@ const segments = computed<Segment[]>(() => {
   return out
 })
 
-const line = (s: Segment) => s.points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("")
+const line = (s: Segment) =>
+  s.points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("")
 const areaPath = (s: Segment) => {
   const base = PAD.top + plotH.value
   const first = s.points[0]!
@@ -123,10 +125,20 @@ const gridLines = computed(() => {
 })
 
 const bandRects = computed(() =>
-  props.bands.map((b) => ({ y: y(Math.min(b.to, yRange.value.hi)), h: Math.max(0, y(Math.max(b.from, yRange.value.lo)) - y(Math.min(b.to, yRange.value.hi))), tone: b.tone }))
+  props.bands.map((b) => ({
+    y: y(Math.min(b.to, yRange.value.hi)),
+    h: Math.max(0, y(Math.max(b.from, yRange.value.lo)) - y(Math.min(b.to, yRange.value.hi))),
+    tone: b.tone
+  }))
 )
 
-const xTicks = computed(() => [0, 0.5, 1].map((f, i) => ({ x: PAD.left + plotW.value * f, label: props.xFormat(t0.value + (t1.value - t0.value) * f), anchor: i === 0 ? "start" : i === 2 ? "end" : "middle" })))
+const xTicks = computed(() =>
+  [0, 0.5, 1].map((f, i) => ({
+    x: PAD.left + plotW.value * f,
+    label: props.xFormat(t0.value + (t1.value - t0.value) * f),
+    anchor: i === 0 ? "start" : i === 2 ? "end" : "middle"
+  }))
+)
 
 const nearest = (time: number): number | null => {
   const n = props.ts.length
@@ -152,7 +164,8 @@ const hoverState = computed(() => {
 
 const summary = computed(() => {
   if (known.value.length === 0) return t.value("chart.noData")
-  if (hoverState.value) return hoverState.value.value === null ? t.value("chart.noDataHere") : props.format(hoverState.value.value)
+  if (hoverState.value)
+    return hoverState.value.value === null ? t.value("chart.noDataHere") : props.format(hoverState.value.value)
   return `${t.value("chart.max")} ${props.format(Math.max(...known.value))}`
 })
 
@@ -174,7 +187,9 @@ const onKey = (e: KeyboardEvent) => {
   e.preventDefault()
 }
 const aria = computed(() =>
-  known.value.length === 0 ? `${props.label}: ${t.value("chart.noData")}` : `${props.label}: ${props.format(Math.min(...known.value))} – ${props.format(Math.max(...known.value))}`
+  known.value.length === 0
+    ? `${props.label}: ${t.value("chart.noData")}`
+    : `${props.label}: ${props.format(Math.min(...known.value))} – ${props.format(Math.max(...known.value))}`
 )
 </script>
 
@@ -199,19 +214,43 @@ const aria = computed(() =>
         @keydown="onKey"
       >
         <defs>
-          <pattern :id="`gap-${testid}`" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <pattern
+            :id="`gap-${testid}`"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
             <rect width="6" height="6" class="gap-bg" />
             <line x1="0" y1="0" x2="0" y2="6" class="gap-hatch" />
           </pattern>
         </defs>
-        <rect v-for="(b, i) in bandRects" :key="`b${i}`" :x="PAD.left" :y="b.y" :width="plotW" :height="b.h" :class="`band band-${b.tone}`" />
+        <rect
+          v-for="(b, i) in bandRects"
+          :key="`b${i}`"
+          :x="PAD.left"
+          :y="b.y"
+          :width="plotW"
+          :height="b.h"
+          :class="`band band-${b.tone}`"
+        />
         <g class="grid">
           <template v-for="(g, i) in gridLines" :key="`g${i}`">
             <line :x1="PAD.left" :x2="width - PAD.right" :y1="g.y" :y2="g.y" />
             <text :x="PAD.left + 2" :y="g.y - 3">{{ g.label }}</text>
           </template>
         </g>
-        <rect v-for="(g, i) in gapRects" :key="`gap${i}`" :x="g.x" :y="PAD.top" :width="g.w" :height="plotH" :fill="`url(#gap-${testid})`" class="gap-rect" data-testid="chart-gap" />
+        <rect
+          v-for="(g, i) in gapRects"
+          :key="`gap${i}`"
+          :x="g.x"
+          :y="PAD.top"
+          :width="g.w"
+          :height="plotH"
+          :fill="`url(#gap-${testid})`"
+          class="gap-rect"
+          data-testid="chart-gap"
+        />
         <template v-for="(s, i) in segments" :key="`s${i}`">
           <path v-if="area && s.points.length > 1 && !dots" :d="areaPath(s)" class="area" />
           <path v-if="s.points.length > 1" :d="line(s)" class="stroke" />
@@ -224,7 +263,9 @@ const aria = computed(() =>
           <circle v-if="hoverState.y !== null" :cx="hoverState.x" :cy="hoverState.y" r="5" />
         </g>
         <g class="xaxis">
-          <text v-for="(tk, i) in xTicks" :key="i" :x="tk.x" :y="height - 6" :text-anchor="tk.anchor">{{ tk.label }}</text>
+          <text v-for="(tk, i) in xTicks" :key="i" :x="tk.x" :y="height - 6" :text-anchor="tk.anchor">
+            {{ tk.label }}
+          </text>
         </g>
       </svg>
     </div>

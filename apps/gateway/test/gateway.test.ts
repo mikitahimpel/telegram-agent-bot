@@ -50,7 +50,12 @@ describe("configRecord", () => {
       })
     } as unknown as Env
     const rec = configRecord(env)
-    expect(rec).toMatchObject({ ADMIN_TG_ID: "1", R2_ACCOUNT_ID: "acct123", R2_ACCESS_KEY_ID: "AK", CAR_BUCKET_NAME: "data" })
+    expect(rec).toMatchObject({
+      ADMIN_TG_ID: "1",
+      R2_ACCOUNT_ID: "acct123",
+      R2_ACCESS_KEY_ID: "AK",
+      CAR_BUCKET_NAME: "data"
+    })
   })
 })
 
@@ -59,7 +64,12 @@ describe("screenWebhook invites", () => {
     ({
       TELEGRAM_WEBHOOK_SECRET: "s3cret",
       ADMIN_TG_ID: "1",
-      KV: { get: async () => null, put: async () => {}, delete: async () => {}, list: async () => ({ keys: [], list_complete: true }) }
+      KV: {
+        get: async () => null,
+        put: async () => {},
+        delete: async () => {},
+        list: async () => ({ keys: [], list_complete: true })
+      }
     }) as unknown as Env
 
   const post = (text: string, chatType = "private") =>

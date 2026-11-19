@@ -23,7 +23,11 @@ export const parseCommand = (
   const m = /^\/([A-Za-z0-9_]{1,64})(?:@([A-Za-z0-9_]+))?$/.exec(token)
   if (m === null) return undefined
   const target = m[2]
-  if (target !== undefined && botUsername !== undefined && target.toLowerCase() !== botUsername.replace(/^@/, "").toLowerCase()) {
+  if (
+    target !== undefined &&
+    botUsername !== undefined &&
+    target.toLowerCase() !== botUsername.replace(/^@/, "").toLowerCase()
+  ) {
     return undefined
   }
   return { name: m[1]!.toLowerCase(), args: text.slice(token.length).trim() }

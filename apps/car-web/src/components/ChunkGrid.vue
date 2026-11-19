@@ -34,11 +34,14 @@ const present = computed(() => states.filter((s) => props.chunks.some((c) => c.s
       </li>
     </ul>
     <div v-if="chosen" class="card chunk-info" data-testid="chunk-info">
-      <strong>{{ t("trip.chunk.title", { n: chosen.seq + 1 }) }}</strong> · {{ t("trip.chunk.rows", { n: chosen.rows }) }}
+      <strong>{{ t("trip.chunk.title", { n: chosen.seq + 1 }) }}</strong> ·
+      {{ t("trip.chunk.rows", { n: chosen.rows }) }}
       <p>{{ t(`trip.chunk.reason.${chosen.state}`) }}</p>
       <p class="muted">
         {{ t("trip.chunk.attempts", { n: chosen.attempts }) }}
-        <template v-if="chosen.nextRetryAt"> · {{ t("trip.chunk.next", { next: fmtDuration(t, chosen.nextRetryAt - now) }) }}</template>
+        <template v-if="chosen.nextRetryAt">
+          · {{ t("trip.chunk.next", { next: fmtDuration(t, chosen.nextRetryAt - now) }) }}</template
+        >
         <template v-if="chosen.lastError"> · {{ chosen.lastError }}</template>
       </p>
     </div>

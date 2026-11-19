@@ -8,7 +8,7 @@ import { seedTrip } from "./helpers.ts"
 
 describe("TripStore", () => {
   it.effect("memory layer seals pending rows into a chunk atomically", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const id = yield* seedTrip(2, { finished: false })
       const store = yield* TripStore
       const chunks = yield* store.listChunks(id)
@@ -16,11 +16,12 @@ describe("TripStore", () => {
       expect(chunks[0]!.csv.startsWith("ts,")).toBe(true)
       expect(yield* store.readPending(id)).toEqual([])
       expect((yield* store.getTrip(id))!.manifest.chunks).toHaveLength(2)
-    }).pipe(Effect.provide(layerMemory)))
+    }).pipe(Effect.provide(layerMemory))
+  )
 
   it.effect("indexeddb data survives a new store instance", () => {
     const factory = new IDBFactory()
-    return Effect.gen(function*() {
+    return Effect.gen(function* () {
       const id = yield* Effect.provide(seedTrip(1), layerIndexedDb("d", factory))
       const again = yield* TripStore.use((s) => s.listChunks(id)).pipe(Effect.provide(layerIndexedDb("d", factory)))
       expect(again).toHaveLength(1)
@@ -35,7 +36,7 @@ describe("TripStore", () => {
         throw new DOMException("full", "QuotaExceededError")
       }
     }
-    return Effect.gen(function*() {
+    return Effect.gen(function* () {
       const store = yield* TripStore
       const exit = yield* Effect.exit(store.appendPending("x", [{ ts: 1 }]))
       expect(Exit.isFailure(exit)).toBe(true)
@@ -47,7 +48,7 @@ describe("TripStore", () => {
 
   it.effect("credentials round-trip", () => {
     const factory = new IDBFactory()
-    return Effect.gen(function*() {
+    return Effect.gen(function* () {
       expect(yield* loadCredentials({ factory })).toBeUndefined()
       yield* saveCredentials({ deviceToken: "t", deviceId: "d", tgId: 5 }, { factory })
       expect((yield* loadCredentials({ factory }))?.deviceToken).toBe("t")
@@ -57,7 +58,7 @@ describe("TripStore", () => {
   })
 
   it.effect("storageHealth reports low space and persistence", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const h = yield* TripStore.use((s) => s.storageHealth)
       expect(h).toMatchObject({ supported: true, persisted: false, low: true })
       expect(yield* TripStore.use((s) => s.requestPersistence)).toBe(true)
@@ -69,5 +70,6 @@ describe("TripStore", () => {
           persist: async () => true
         })
       )
-    ))
+    )
+  )
 })

@@ -35,7 +35,12 @@ export type StatusInput =
   | { kind: "recorder"; state: RecorderVm }
   | { kind: "sync"; state: SyncGlobalVm }
   | { kind: "trip"; state: TripSyncVm; localCopyLost?: boolean; sync?: SyncGlobalVm }
-  | { kind: "env"; caps: Pick<Capabilities, "ble" | "serial" | "secureContext">; platform: Platform; telegramWebview: boolean }
+  | {
+      kind: "env"
+      caps: Pick<Capabilities, "ble" | "serial" | "secureContext">
+      platform: Platform
+      telegramWebview: boolean
+    }
   | { kind: "storage"; level: "low" | "notPersistent"; usedPct?: number }
   | { kind: "clock"; offsetMs: number }
   | { kind: "pair"; state: "unpaired" | "localOnly" | "progress" | "done" | PairError }
@@ -56,14 +61,33 @@ const listParts = (seqs: number[]): string => {
 
 const act = (t: TFn, id: ActionId): StatusAction => ({ id, label: t(`action.${id}` as MessageKey) })
 
-const errorView = (t: TFn, code: ObdErrorCode, step: string | undefined, detail: string | undefined, reason?: string): StatusView => {
+const errorView = (
+  t: TFn,
+  code: ObdErrorCode,
+  step: string | undefined,
+  detail: string | undefined,
+  reason?: string
+): StatusView => {
   if (code === "BluetoothUnavailable" && reason === "insecure_context")
-    return { tone: "error", icon: "⛔", title: t("env.insecure.title"), text: t("env.insecure.text"), action: act(t, "tryDemo"), details: detail ?? `${code}:${reason}` }
+    return {
+      tone: "error",
+      icon: "⛔",
+      title: t("env.insecure.title"),
+      text: t("env.insecure.text"),
+      action: act(t, "tryDemo"),
+      details: detail ?? `${code}:${reason}`
+    }
   if (code === "BluetoothUnavailable" && reason === "unsupported")
-    return { tone: "error", icon: "⛔", title: t("env.noble.title"), text: t("env.noble.text"), action: act(t, "tryDemo"), details: detail ?? `${code}:${reason}` }
+    return {
+      tone: "error",
+      icon: "⛔",
+      title: t("env.noble.title"),
+      text: t("env.noble.text"),
+      action: act(t, "tryDemo"),
+      details: detail ?? `${code}:${reason}`
+    }
   const tone: Tone = code === "CommandTimeout" || code === "CommandRejected" ? "warn" : "error"
-  const actionId: ActionId =
-    code === "BluetoothUnavailable" || code === "SerialUnavailable" ? "tryDemo" : "retry"
+  const actionId: ActionId = code === "BluetoothUnavailable" || code === "SerialUnavailable" ? "tryDemo" : "retry"
   return {
     tone,
     icon: tone === "warn" ? "⚠️" : "⛔",
@@ -77,7 +101,13 @@ const errorView = (t: TFn, code: ObdErrorCode, step: string | undefined, detail:
 const connectionView = (t: TFn, s: ConnectionVm, now: number): StatusView => {
   switch (s._tag) {
     case "Idle":
-      return { tone: "info", icon: "🔌", title: t("conn.idle.title"), text: t("conn.idle.text"), action: act(t, "connect") }
+      return {
+        tone: "info",
+        icon: "🔌",
+        title: t("conn.idle.title"),
+        text: t("conn.idle.text"),
+        action: act(t, "connect")
+      }
     case "RequestingDevice":
       return { tone: "progress", icon: "🔎", title: t("conn.requesting.title"), text: t("conn.requesting.text") }
     case "Connecting":
@@ -118,9 +148,22 @@ const recorderView = (t: TFn, lang: Lang, s: RecorderVm, now: number): StatusVie
       return { tone: "info", icon: "⏺", title: t("rec.idle.title"), text: t("rec.idle.text") }
     case "Recording":
       if (s.storageError)
-        return { tone: "error", icon: "💾", title: t("rec.storage.title"), text: t("rec.storage.text"), action: act(t, "stop"), details: `storage: ${s.storageError}` }
+        return {
+          tone: "error",
+          icon: "💾",
+          title: t("rec.storage.title"),
+          text: t("rec.storage.text"),
+          action: act(t, "stop"),
+          details: `storage: ${s.storageError}`
+        }
       if (s.sourceEnded)
-        return { tone: "warn", icon: "🔌", title: t("rec.sourceEnded.title"), text: t("rec.sourceEnded.text"), action: act(t, "stop") }
+        return {
+          tone: "warn",
+          icon: "🔌",
+          title: t("rec.sourceEnded.title"),
+          text: t("rec.sourceEnded.text"),
+          action: act(t, "stop")
+        }
       if (s.gapOpen)
         return {
           tone: "warn",
@@ -197,7 +240,14 @@ const blockerKey = (g: SyncGlobalVm | undefined): string | null => {
   }
 }
 
-const tripView = (t: TFn, lang: Lang, s: TripSyncVm, now: number, localCopyLost: boolean, global?: SyncGlobalVm): StatusView => {
+const tripView = (
+  t: TFn,
+  lang: Lang,
+  s: TripSyncVm,
+  now: number,
+  localCopyLost: boolean,
+  global?: SyncGlobalVm
+): StatusView => {
   const blocker = blockerKey(global)
   if (blocker && (s._tag === "Queued" || s._tag === "Uploading" || s._tag === "Waiting")) {
     const k = `trip.blocked.${blocker}`
@@ -207,7 +257,9 @@ const tripView = (t: TFn, lang: Lang, s: TripSyncVm, now: number, localCopyLost:
       title: t(`${k}.title` as MessageKey),
       text: t(`${k}.text` as MessageKey),
       summary: t(`${k}.summary` as MessageKey),
-      ...(blocker === "unpaired" || blocker === "revoked" ? { action: { id: "howToPair" as ActionId, label: t("banner.connectLink") } } : {})
+      ...(blocker === "unpaired" || blocker === "revoked"
+        ? { action: { id: "howToPair" as ActionId, label: t("banner.connectLink") } }
+        : {})
     }
   }
   const v = (k: string, p?: Record<string, string | number>): { title: string; text: string; summary: string } => ({
@@ -221,7 +273,11 @@ const tripView = (t: TFn, lang: Lang, s: TripSyncVm, now: number, localCopyLost:
     case "Queued":
       return { tone: "info", icon: "🕓", ...v("queued") }
     case "Uploading":
-      return { tone: "progress", icon: "⬆️", ...v("uploading", { sent: s.sent, total: s.total, confirmed: s.confirmed }) }
+      return {
+        tone: "progress",
+        icon: "⬆️",
+        ...v("uploading", { sent: s.sent, total: s.total, confirmed: s.confirmed })
+      }
     case "Waiting": {
       const p = {
         sent: s.sent,
@@ -305,19 +361,43 @@ const pairView = (t: TFn, state: Extract<StatusInput, { kind: "pair" }>["state"]
     case "unpaired":
       return { tone: "info", icon: "📲", title: t("pair.unpaired.title"), text: t("pair.unpaired.text") }
     case "localOnly":
-      return { tone: "warn", icon: "📱", title: t("pair.local.title"), text: t("pair.local.text"), action: act(t, "howToPair") }
+      return {
+        tone: "warn",
+        icon: "📱",
+        title: t("pair.local.title"),
+        text: t("pair.local.text"),
+        action: act(t, "howToPair")
+      }
     case "progress":
       return { tone: "progress", icon: "🔗", title: t("pair.progress.title"), text: t("pair.progress.text") }
     case "done":
       return { tone: "ok", icon: "✅", title: t("pair.done.title"), text: t("pair.done.text") }
     case "invalid":
-      return { tone: "error", icon: "⏱", title: t("pair.invalid.title"), text: t("pair.invalid.text"), action: act(t, "howToPair") }
+      return {
+        tone: "error",
+        icon: "⏱",
+        title: t("pair.invalid.title"),
+        text: t("pair.invalid.text"),
+        action: act(t, "howToPair")
+      }
     case "network":
-      return { tone: "warn", icon: "📴", title: t("pair.network.title"), text: t("pair.network.text"), action: act(t, "retry") }
+      return {
+        tone: "warn",
+        icon: "📴",
+        title: t("pair.network.title"),
+        text: t("pair.network.text"),
+        action: act(t, "retry")
+      }
     case "blocked":
       return { tone: "error", icon: "🚫", title: t("sync.plugin_disabled.title"), text: t("sync.plugin_disabled.text") }
     case "unknown":
-      return { tone: "error", icon: "⛔", title: t("pair.unknown.title"), text: t("pair.unknown.text"), action: act(t, "howToPair") }
+      return {
+        tone: "error",
+        icon: "⛔",
+        title: t("pair.unknown.title"),
+        text: t("pair.unknown.text"),
+        action: act(t, "howToPair")
+      }
   }
 }
 

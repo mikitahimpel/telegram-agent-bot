@@ -55,7 +55,10 @@ export const parseInviteArgs = (args: string, knownPlugins: ReadonlyArray<string
         if (parsed === undefined) return { ok: false, error: { kind: "ttl", value } }
         ttlMs = parsed
       } else {
-        const ids = value.split(",").map((x) => x.trim().toLowerCase()).filter((x) => x !== "")
+        const ids = value
+          .split(",")
+          .map((x) => x.trim().toLowerCase())
+          .filter((x) => x !== "")
         const unknown = ids.find((id) => !knownPlugins.includes(id))
         if (unknown !== undefined) return { ok: false, error: { kind: "plugin", value: unknown } }
         plugins = [...new Set(ids)]

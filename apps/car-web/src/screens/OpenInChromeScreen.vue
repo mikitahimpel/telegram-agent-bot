@@ -11,9 +11,15 @@ const href = typeof window === "undefined" ? "" : window.location.href
 const view = computed(
   () =>
     describeStatus(
-      { kind: "env", caps: backend.caps, platform: backend.platform, telegramWebview: isTelegramWebview(typeof navigator === "undefined" ? "" : navigator.userAgent) },
+      {
+        kind: "env",
+        caps: backend.caps,
+        platform: backend.platform,
+        telegramWebview: isTelegramWebview(typeof navigator === "undefined" ? "" : navigator.userAgent)
+      },
       lang.value
-    ) ?? describeStatus({ kind: "env", caps: backend.caps, platform: backend.platform, telegramWebview: false }, lang.value)
+    ) ??
+    describeStatus({ kind: "env", caps: backend.caps, platform: backend.platform, telegramWebview: false }, lang.value)
 )
 const canIntent = computed(() => backend.platform === "android")
 const copy = async () => {
@@ -33,8 +39,16 @@ const copy = async () => {
       <section class="card">
         <h3>{{ t("chrome.fallback") }}</h3>
         <pre class="steps">{{ t("chrome.steps") }}</pre>
-        <input class="link-box" readonly :value="href" aria-label="URL" @focus="($event.target as HTMLInputElement).select()" />
-        <button class="btn" type="button" @click="copy">{{ copied ? t("chrome.linkCopied") : t("chrome.copyLink") }}</button>
+        <input
+          class="link-box"
+          readonly
+          :value="href"
+          aria-label="URL"
+          @focus="($event.target as HTMLInputElement).select()"
+        />
+        <button class="btn" type="button" @click="copy">
+          {{ copied ? t("chrome.linkCopied") : t("chrome.copyLink") }}
+        </button>
       </section>
     </template>
   </div>

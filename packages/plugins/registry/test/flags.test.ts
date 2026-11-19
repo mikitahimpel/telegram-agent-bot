@@ -7,8 +7,13 @@ import type { KvLike } from "../src/flags.ts"
 import { makePluginRegistry } from "../src/registry.ts"
 
 const p: BotPlugin = {
-  id: "car", title: { en: "Car", ru: "Авто" }, commands: [], callbacks: [], tools: [],
-  layer: Layer.empty, enabledByDefault: true
+  id: "car",
+  title: { en: "Car", ru: "Авто" },
+  commands: [],
+  callbacks: [],
+  tools: [],
+  layer: Layer.empty,
+  enabledByDefault: true
 }
 
 const memKv = (): KvLike & { data: Map<string, string> } => {
@@ -23,10 +28,10 @@ const memKv = (): KvLike & { data: Map<string, string> } => {
 
 describe("flags", () => {
   it.effect("kv default and override", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const kv = memKv()
       const tg = TgId.make(7)
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const f = yield* PluginFlags
         expect(yield* f.isEnabled("car", tg)).toBe(true)
         expect(yield* f.isEnabled("nope", tg)).toBe(false)

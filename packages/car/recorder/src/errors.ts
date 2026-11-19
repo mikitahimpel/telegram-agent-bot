@@ -27,12 +27,18 @@ export class ExportFailure extends Data.TaggedError("ExportFailure")<{
 }> {}
 
 export const classifyStorageError = (cause: unknown): StorageFailure => {
-  const name = typeof cause === "object" && cause !== null && "name" in cause ? String((cause as { name: unknown }).name) : ""
+  const name =
+    typeof cause === "object" && cause !== null && "name" in cause ? String((cause as { name: unknown }).name) : ""
   const message = cause instanceof Error ? cause.message : String(cause)
   if (name === "QuotaExceededError" || /quota/i.test(message)) {
     return new StorageFailure({ reason: "quota", message: "Not enough storage space on this phone", cause })
   }
-  if (name === "InvalidStateError" || name === "SecurityError" || name === "UnknownError" || /indexeddb is not available/i.test(message)) {
+  if (
+    name === "InvalidStateError" ||
+    name === "SecurityError" ||
+    name === "UnknownError" ||
+    /indexeddb is not available/i.test(message)
+  ) {
     return new StorageFailure({ reason: "unavailable", message: "Browser storage is unavailable", cause })
   }
   return new StorageFailure({ reason: "unknown", message, cause })

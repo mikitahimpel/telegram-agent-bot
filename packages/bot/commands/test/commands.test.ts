@@ -1,7 +1,14 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 import type { CallbackDef, CommandDef } from "@bot/core-contracts/commands"
-import { AgentBusy, ContainerDown, DailyLimitReached, StorageError, SubscriptionLimitReached, Unauthorized } from "@bot/core-contracts/errors"
+import {
+  AgentBusy,
+  ContainerDown,
+  DailyLimitReached,
+  StorageError,
+  SubscriptionLimitReached,
+  Unauthorized
+} from "@bot/core-contracts/errors"
 import { ChatId, TgId } from "@bot/core-contracts/ids"
 import { renderHelp } from "../src/help.ts"
 import { errorMessage, formatClock, formatDateTime, isNewTopicText, messages } from "../src/messages.ts"
@@ -60,10 +67,11 @@ describe("registry", () => {
     expect(menus[0]?.commands.map((c) => c.command)).toEqual(["start", "lang"])
     expect(menus[3]?.commands.map((c) => c.command)).toEqual(["start", "lang", "kill", "allow"])
     expect(menus[1]?.commands[0]?.description).toBe("start делает вещи")
-    for (const m of menus) for (const c of m.commands) {
-      expect(c.description.length).toBeGreaterThanOrEqual(3)
-      expect(c.description.length).toBeLessThanOrEqual(256)
-    }
+    for (const m of menus)
+      for (const c of m.commands) {
+        expect(c.description.length).toBeGreaterThanOrEqual(3)
+        expect(c.description.length).toBeLessThanOrEqual(256)
+      }
   })
 
   it("clamps descriptions", () => {

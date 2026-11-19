@@ -18,16 +18,26 @@ export type SendOptions = {
 
 export type Elm327 = {
   readonly transport: ObdTransport
-  readonly send: (command: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected>
-  readonly query: (command: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected | CommandRejected>
-  readonly mode01: (pid: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<number>, CommandTimeout | Disconnected | CommandRejected>
+  readonly send: (
+    command: string,
+    options?: SendOptions
+  ) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected>
+  readonly query: (
+    command: string,
+    options?: SendOptions
+  ) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected | CommandRejected>
+  readonly mode01: (
+    pid: string,
+    options?: SendOptions
+  ) => Effect.Effect<ReadonlyArray<number>, CommandTimeout | Disconnected | CommandRejected>
 }
 
 export const DEFAULT_TIMEOUT_MS = 2000
 
 const norm = (s: string): string => s.replace(/\s/g, "").toUpperCase()
 
-const ERROR_TOKEN = /^(NODATA|UNABLETOCONNECT|CANERROR|BUFFERFULL|STOPPED|\?|ERR\d+|BUSBUSY|BUSERROR|DATAERROR|FBERROR|RXERROR|ACTALERT|LVRESET)$/
+const ERROR_TOKEN =
+  /^(NODATA|UNABLETOCONNECT|CANERROR|BUFFERFULL|STOPPED|\?|ERR\d+|BUSBUSY|BUSERROR|DATAERROR|FBERROR|RXERROR|ACTALERT|LVRESET)$/
 
 export const findErrorToken = (lines: ReadonlyArray<string>): string | undefined => {
   for (const line of lines) {
@@ -80,7 +90,7 @@ export const parseVin = (lines: ReadonlyArray<string>): string | undefined => {
 }
 
 export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never, Scope.Scope> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const gate = yield* Semaphore.make(1)
     let buffer = ""
     let pending: Deferred.Deferred<string, Disconnected> | undefined
@@ -108,19 +118,26 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
             }
             end = buffer.indexOf(">")
           }
-        })).pipe(Effect.catch(() => Effect.void), Effect.andThen(markDead))
+        })
+      ).pipe(
+        Effect.catch(() => Effect.void),
+        Effect.andThen(markDead)
+      )
     )
 
     const awaitPrompts = (need: number, ms: number) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const done = yield* Deferred.make<void>()
         buffer = ""
         pending = undefined
         resyncState = { need, count: 0, done }
-        return yield* Deferred.await(done).pipe(Effect.timeoutOption(ms), Effect.map((o) => o._tag === "Some"))
+        return yield* Deferred.await(done).pipe(
+          Effect.timeoutOption(ms),
+          Effect.map((o) => o._tag === "Some")
+        )
       })
 
-    const resync = Effect.gen(function*() {
+    const resync = Effect.gen(function* () {
       const waiting = yield* Effect.forkChild(awaitPrompts(2, 1500))
       yield* Effect.yieldNow
       yield* transport.write("")
@@ -142,7 +159,7 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
 
     const send: Elm327["send"] = (command, options) =>
       gate.withPermit(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           if (dead) return yield* new Disconnected()
           const reply = yield* Deferred.make<string, Disconnected>()
           buffer = ""
@@ -190,19 +207,17 @@ export const INIT_TOTAL = INIT_STEPS.length
 const requiredSteps = new Set<string>(["ATE0", "ATSP0"])
 
 const resetAdapter = (elm: Elm327): Effect.Effect<string, AdapterNotResponding | Disconnected> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const prefixes: ReadonlyArray<string | undefined> = [undefined, "ATWS", "ATD"]
     let last = ""
     for (const prefix of prefixes) {
       if (prefix !== undefined) {
         yield* Effect.sleep("500 millis")
-        yield* elm.send(prefix, { timeoutMs: 3000 }).pipe(
-          Effect.catchTag("CommandTimeout", () => Effect.void)
-        )
+        yield* elm.send(prefix, { timeoutMs: 3000 }).pipe(Effect.catchTag("CommandTimeout", () => Effect.void))
       }
-      const lines = yield* elm.send("ATZ", { timeoutMs: 4000 }).pipe(
-        Effect.catchTag("CommandTimeout", () => Effect.succeed([] as ReadonlyArray<string>))
-      )
+      const lines = yield* elm
+        .send("ATZ", { timeoutMs: 4000 })
+        .pipe(Effect.catchTag("CommandTimeout", () => Effect.succeed([] as ReadonlyArray<string>)))
       last = lines.join(" ")
       if (lines.length > 0 && !isGarbage(lines) && findErrorToken(lines) === undefined) {
         return lines.find((l) => /ELM|ELS|OBD/i.test(l)) ?? (lines[0] as string)
@@ -215,7 +230,7 @@ export const initAdapter = (
   elm: Elm327,
   report: (step: number, total: number, label: string) => Effect.Effect<void> = () => Effect.void
 ): Effect.Effect<AdapterInit, AdapterNotResponding | Disconnected> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     let elmVersion = ""
     for (let i = 0; i < INIT_STEPS.length; i++) {
       const step = INIT_STEPS[i] as string
@@ -227,9 +242,7 @@ export const initAdapter = (
       const result = yield* elm.query(step, { timeoutMs: 3000 }).pipe(
         Effect.map(() => undefined),
         Effect.catch((e: CommandTimeout | Disconnected | CommandRejected) =>
-          e._tag === "Disconnected"
-            ? Effect.fail(e)
-            : Effect.succeed(e._tag === "CommandTimeout" ? "timeout" : e.token)
+          e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(e._tag === "CommandTimeout" ? "timeout" : e.token)
         )
       )
       if (result !== undefined && requiredSteps.has(step)) {
@@ -248,18 +261,24 @@ export const connectEcu = (
   elm: Elm327,
   options: ConnectEcuOptions = {}
 ): Effect.Effect<ReadonlyArray<string>, EcuNotResponding | AdapterNotResponding | Disconnected> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     let last = ""
     for (let attempt = 1; attempt <= (options.attempts ?? ECU_ATTEMPTS); attempt++) {
       if (attempt > 1) yield* Effect.sleep("1 second")
-      const outcome: { bytes?: ReadonlyArray<number>; token?: string } = yield* elm.mode01("00", { timeoutMs: options.timeoutMs ?? 10_000 }).pipe(
-        Effect.map((bytes): { bytes?: ReadonlyArray<number>; token?: string } => ({ bytes })),
-        Effect.catch((e: CommandTimeout | Disconnected | CommandRejected): Effect.Effect<{ bytes?: ReadonlyArray<number>; token?: string }, Disconnected> => {
-          if (e._tag === "Disconnected") return Effect.fail(e)
-          if (e._tag === "CommandTimeout") return Effect.succeed({ token: "TIMEOUT" })
-          return Effect.succeed({ token: e.token })
-        })
-      )
+      const outcome: { bytes?: ReadonlyArray<number>; token?: string } = yield* elm
+        .mode01("00", { timeoutMs: options.timeoutMs ?? 10_000 })
+        .pipe(
+          Effect.map((bytes): { bytes?: ReadonlyArray<number>; token?: string } => ({ bytes })),
+          Effect.catch(
+            (
+              e: CommandTimeout | Disconnected | CommandRejected
+            ): Effect.Effect<{ bytes?: ReadonlyArray<number>; token?: string }, Disconnected> => {
+              if (e._tag === "Disconnected") return Effect.fail(e)
+              if (e._tag === "CommandTimeout") return Effect.succeed({ token: "TIMEOUT" })
+              return Effect.succeed({ token: e.token })
+            }
+          )
+        )
       if (outcome.bytes !== undefined) return parseSupportedMask(0x00, outcome.bytes)
       last = outcome.token ?? ""
       if (last === "?") return yield* new AdapterNotResponding({ step: "0100", lastResponse: last })
@@ -271,16 +290,18 @@ export const connectEcu = (
   })
 
 export const readSupportedPids = (elm: Elm327, first: ReadonlyArray<string>): Effect.Effect<string[], Disconnected> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const all = [...first]
     let next = first.includes("20") ? 0x20 : undefined
     while (next !== undefined && next <= 0xc0) {
       const pid = next.toString(16).toUpperCase().padStart(2, "0")
-      const bytes = yield* elm.mode01(pid, { timeoutMs: 3000 }).pipe(
-        Effect.catch((e: CommandTimeout | Disconnected | CommandRejected) =>
-          e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)
+      const bytes = yield* elm
+        .mode01(pid, { timeoutMs: 3000 })
+        .pipe(
+          Effect.catch((e: CommandTimeout | Disconnected | CommandRejected) =>
+            e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)
+          )
         )
-      )
       if (bytes === undefined) break
       const range = parseSupportedMask(next, bytes)
       all.push(...range)

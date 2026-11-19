@@ -17,7 +17,13 @@ export const SERIES_COLUMNS: ReadonlyArray<SeriesColumn> = [
   "lon"
 ]
 
-export const DEFAULT_SERIES_COLUMNS: ReadonlyArray<SeriesColumn> = ["speed_kmh", "rpm", "coolant_c", "fuel_rate_lph", "voltage_v"]
+export const DEFAULT_SERIES_COLUMNS: ReadonlyArray<SeriesColumn> = [
+  "speed_kmh",
+  "rpm",
+  "coolant_c",
+  "fuel_rate_lph",
+  "voltage_v"
+]
 export const MIN_POINTS = 20
 export const MAX_POINTS = 5000
 export const DEFAULT_POINTS = 600
@@ -38,7 +44,10 @@ const KEY: Record<SeriesColumn, keyof Sample> = {
 
 export const parseColumns = (raw: string | null | undefined): ReadonlyArray<SeriesColumn> | undefined => {
   if (raw === undefined || raw === null || raw.trim() === "") return DEFAULT_SERIES_COLUMNS
-  const names = raw.split(",").map((s) => s.trim()).filter((s) => s !== "")
+  const names = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s !== "")
   const valid = names.filter((n): n is SeriesColumn => (SERIES_COLUMNS as ReadonlyArray<string>).includes(n))
   return valid.length === names.length && valid.length > 0 ? [...new Set(valid)] : undefined
 }
@@ -46,7 +55,10 @@ export const parseColumns = (raw: string | null | undefined): ReadonlyArray<Seri
 export const clampPoints = (raw: number): number =>
   Number.isFinite(raw) ? Math.min(MAX_POINTS, Math.max(MIN_POINTS, Math.round(raw))) : DEFAULT_POINTS
 
-const detectGaps = (samples: ReadonlyArray<Sample>, manifestGaps: ReadonlyArray<Gap>): Array<{ from: number; to: number }> => {
+const detectGaps = (
+  samples: ReadonlyArray<Sample>,
+  manifestGaps: ReadonlyArray<Gap>
+): Array<{ from: number; to: number }> => {
   const out: Array<{ from: number; to: number }> = manifestGaps.map((g) => ({ from: g.from, to: g.to }))
   for (let i = 1; i < samples.length; i++) {
     const a = (samples[i - 1] as Sample).ts
@@ -56,7 +68,12 @@ const detectGaps = (samples: ReadonlyArray<Sample>, manifestGaps: ReadonlyArray<
   return out.sort((x, y) => x.from - y.from)
 }
 
-const select = (samples: ReadonlyArray<Sample>, columns: ReadonlyArray<SeriesColumn>, buckets: number, boundaries: ReadonlySet<number>) => {
+const select = (
+  samples: ReadonlyArray<Sample>,
+  columns: ReadonlyArray<SeriesColumn>,
+  buckets: number,
+  boundaries: ReadonlySet<number>
+) => {
   const picked = new Set<number>(boundaries)
   const size = samples.length / buckets
   const valueColumns = columns.filter((c) => c !== "lat" && c !== "lon")

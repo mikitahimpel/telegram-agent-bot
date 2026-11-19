@@ -19,7 +19,10 @@ describe("telegram-webhook helpers", () => {
     const calls: Array<{ url: string; body: string }> = []
     const fake = (async (url: string, init: { body: string }) => {
       calls.push({ url, body: init.body })
-      return { status: 200, json: async () => (url.endsWith("bad") ? { ok: false, description: "nope" } : { ok: true }) }
+      return {
+        status: 200,
+        json: async () => (url.endsWith("bad") ? { ok: false, description: "nope" } : { ok: true })
+      }
     }) as unknown as typeof fetch
     const token = Redacted.make("T")
     await Effect.runPromise(callTelegram(token, "setWebhook", { url: "u" }, fake))

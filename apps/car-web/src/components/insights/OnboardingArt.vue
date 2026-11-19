@@ -4,7 +4,17 @@ defineProps<{ id: ArtId }>()
 </script>
 
 <template>
-  <svg class="art" viewBox="0 0 240 150" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <svg
+    class="art"
+    viewBox="0 0 240 150"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
     <template v-if="id === 'adapter'">
       <rect x="64" y="42" width="112" height="56" rx="12" class="fill-soft" />
       <rect x="84" y="98" width="72" height="22" rx="4" />

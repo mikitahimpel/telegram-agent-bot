@@ -19,7 +19,8 @@ const botUsername = (tg: Telegram["Service"]) =>
     const cached = usernameCache.get(tg)
     if (cached !== undefined) return cached
     const result = yield* tg.call("getMe", {}).pipe(Effect.option)
-    const value = result._tag === "Some" ? (result.value as { readonly username?: unknown } | null)?.username : undefined
+    const value =
+      result._tag === "Some" ? (result.value as { readonly username?: unknown } | null)?.username : undefined
     if (typeof value !== "string" || value === "") return undefined
     usernameCache.set(tg, value)
     return value
@@ -27,8 +28,10 @@ const botUsername = (tg: Telegram["Service"]) =>
 
 export const inviteLink = (username: string, code: string) => `https://t.me/${username}?start=inv_${code}`
 
-const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
-  ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
+const target = (ctx: {
+  readonly chatId: SendTarget["chatId"]
+  readonly threadId: SendTarget["threadId"] | undefined
+}): SendTarget => (ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId })
 
 const reply = (ctx: CommandContext, html: string, keyboard?: InlineKeyboard) =>
   Effect.gen(function* () {
@@ -44,8 +47,11 @@ const revokeButton = (text: string, code: string) => ({
 
 const label = (invite: Invite) => invite.note ?? invite.code.slice(0, 6)
 
-const redeemerLabel = (r: { readonly name: string | undefined; readonly username: string | undefined; readonly tgId: number }) =>
-  `${r.name ?? String(r.tgId)}${r.username === undefined ? "" : ` (@${r.username})`}`
+const redeemerLabel = (r: {
+  readonly name: string | undefined
+  readonly username: string | undefined
+  readonly tgId: number
+}) => `${r.name ?? String(r.tgId)}${r.username === undefined ? "" : ` (@${r.username})`}`
 
 export const makeInviteCommands = (
   knownPlugins: ReadonlyArray<string>
@@ -56,8 +62,11 @@ export const makeInviteCommands = (
   const invite: CommandDef<InviteR> = {
     name: "invite",
     role: "admin",
-    description: { en: "Create an invite link for a new user", ru: "Создать ссылку-приглашение для нового пользователя" },
-    usage: { en: "[uses=N] [ttl=7d] [plugins=car] [\"note\"]", ru: "[uses=N] [ttl=7d] [plugins=car] [\"заметка\"]" },
+    description: {
+      en: "Create an invite link for a new user",
+      ru: "Создать ссылку-приглашение для нового пользователя"
+    },
+    usage: { en: '[uses=N] [ttl=7d] [plugins=car] ["note"]', ru: '[uses=N] [ttl=7d] [plugins=car] ["заметка"]' },
     handler: (ctx) =>
       Effect.gen(function* () {
         const tg = yield* Telegram
@@ -67,9 +76,11 @@ export const makeInviteCommands = (
         if (!parsed.ok) {
           const { error } = parsed
           const text =
-            error.kind === "uses" ? m.badUses(error.value)
-            : error.kind === "ttl" ? m.badTtl(error.value)
-            : m.badPlugin(error.value, knownPlugins.join(", "))
+            error.kind === "uses"
+              ? m.badUses(error.value)
+              : error.kind === "ttl"
+                ? m.badTtl(error.value)
+                : m.badPlugin(error.value, knownPlugins.join(", "))
           return yield* reply(ctx, `${text}\n\n${m.inviteUsage}`)
         }
         const username = yield* botUsername(tg)
@@ -116,7 +127,9 @@ export const makeInviteCommands = (
             formatDateTime(i.createdAt, ctx.lang)
           )
         )
-        const redLines = redemptions.map((r) => m.redemptionLine(redeemerLabel(r), r.note, formatDateTime(r.at, ctx.lang)))
+        const redLines = redemptions.map((r) =>
+          m.redemptionLine(redeemerLabel(r), r.note, formatDateTime(r.at, ctx.lang))
+        )
         const text = [
           active.length === 0 ? m.invitesNone : [m.invitesHeader, ...lines].join("\n"),
           redemptions.length === 0 ? m.redemptionsNone : [m.redemptionsHeader, ...redLines].join("\n")
@@ -140,9 +153,9 @@ export const makeInviteCommands = (
         if (ctx.role !== "admin" || !/^[A-Za-z0-9]{16,48}$/.test(ctx.payload)) {
           return yield* tg.answerCallbackQuery(ctx.callbackId)
         }
-        const revoked = yield* invites.revoke(ctx.payload).pipe(
-          Effect.tapError(() => Effect.ignore(tg.answerCallbackQuery(ctx.callbackId)))
-        )
+        const revoked = yield* invites
+          .revoke(ctx.payload)
+          .pipe(Effect.tapError(() => Effect.ignore(tg.answerCallbackQuery(ctx.callbackId))))
         const text = revoked ? m.inviteRevoked : m.inviteNotFound
         yield* tg.answerCallbackQuery(ctx.callbackId, text)
         if (ctx.messageId !== 0) {

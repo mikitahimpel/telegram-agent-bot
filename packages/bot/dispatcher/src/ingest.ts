@@ -27,7 +27,13 @@ export type IngestedInput = {
 
 export type Media =
   | { readonly kind: "audio"; readonly fileId: string; readonly fileSize: number | undefined }
-  | { readonly kind: "file"; readonly fileId: string; readonly fileSize: number | undefined; readonly fileName: string; readonly mimeType: string }
+  | {
+      readonly kind: "file"
+      readonly fileId: string
+      readonly fileSize: number | undefined
+      readonly fileName: string
+      readonly mimeType: string
+    }
 
 export const largestPhoto = (sizes: ReadonlyArray<PhotoSize>): PhotoSize | undefined =>
   sizes.reduce<PhotoSize | undefined>((best, p) => {
@@ -38,14 +44,22 @@ export const largestPhoto = (sizes: ReadonlyArray<PhotoSize>): PhotoSize | undef
 
 export const mediaOf = (message: Message): ReadonlyArray<Media> => {
   const out: Array<Media> = []
-  if (message.voice !== undefined) out.push({ kind: "audio", fileId: message.voice.file_id, fileSize: message.voice.file_size })
-  if (message.audio !== undefined) out.push({ kind: "audio", fileId: message.audio.file_id, fileSize: message.audio.file_size })
+  if (message.voice !== undefined)
+    out.push({ kind: "audio", fileId: message.voice.file_id, fileSize: message.voice.file_size })
+  if (message.audio !== undefined)
+    out.push({ kind: "audio", fileId: message.audio.file_id, fileSize: message.audio.file_size })
   if (message.video_note !== undefined) {
     out.push({ kind: "audio", fileId: message.video_note.file_id, fileSize: message.video_note.file_size })
   }
   const photo = message.photo === undefined ? undefined : largestPhoto(message.photo)
   if (photo !== undefined) {
-    out.push({ kind: "file", fileId: photo.file_id, fileSize: photo.file_size, fileName: `photo-${photo.file_unique_id}.jpg`, mimeType: "image/jpeg" })
+    out.push({
+      kind: "file",
+      fileId: photo.file_id,
+      fileSize: photo.file_size,
+      fileName: `photo-${photo.file_unique_id}.jpg`,
+      mimeType: "image/jpeg"
+    })
   }
   if (message.document !== undefined) {
     const d = message.document
@@ -62,12 +76,13 @@ export const mediaOf = (message: Message): ReadonlyArray<Media> => {
 
 export const hasMedia = (message: Message): boolean => mediaOf(message).length > 0
 
-export const truncateQuote = (text: string, max = 300): string => (text.length <= max ? text : `${text.slice(0, max - 1)}…`)
+export const truncateQuote = (text: string, max = 300): string =>
+  text.length <= max ? text : `${text.slice(0, max - 1)}…`
 
 export const quoteOf = (heard: string): string => `🎙 «${truncateQuote(heard)}»`
 
 const download = (media: Media) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     if (media.fileSize !== undefined && media.fileSize > MAX_DOWNLOAD_BYTES) return undefined
     const info = yield* tg.getFile(media.fileId)
@@ -80,7 +95,7 @@ export const ingest = (
   lang: Lang,
   to: SendTarget
 ): Effect.Effect<IngestedInput | undefined, TelegramError, Telegram | Speech> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     const m = ingestMessages[lang]
     const attachments: Array<Attachment> = []
@@ -109,9 +124,6 @@ export const ingest = (
     const caption = parts.map((p) => p.caption?.trim() ?? "").find((c) => c !== "")
     const spoken = heard.join(" ")
     const prompt =
-      spoken !== ""
-        ? caption === undefined ? spoken : `${spoken}\n\n${caption}`
-        : caption ?? m.defaultFilePrompt
+      spoken !== "" ? (caption === undefined ? spoken : `${spoken}\n\n${caption}`) : (caption ?? m.defaultFilePrompt)
     return { prompt, attachments, heard: spoken === "" ? undefined : spoken }
   })
-

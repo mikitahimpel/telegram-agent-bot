@@ -21,7 +21,13 @@ export const notifyMessages = defineMessages({
     openStats: "Open statistics",
     openOverview: "Open overview",
     severity: (s: "info" | "watch" | "soon" | "urgent"): string =>
-      s === "urgent" ? "🚨 <b>URGENT</b>" : s === "soon" ? "⚠️ <b>Needs attention soon</b>" : s === "watch" ? "🔎 <b>Keep an eye on it</b>" : "ℹ️",
+      s === "urgent"
+        ? "🚨 <b>URGENT</b>"
+        : s === "soon"
+          ? "⚠️ <b>Needs attention soon</b>"
+          : s === "watch"
+            ? "🔎 <b>Keep an eye on it</b>"
+            : "ℹ️",
     alertBody: (sev: string, title: string, details: string, todo: string) =>
       `${sev}\n<b>${title}</b>\n${details}\n\n<b>What to do:</b> ${todo}`,
     newCodes: (n: number) => (n === 1 ? "New fault code from the car" : `New fault codes from the car: ${n}`),
@@ -30,7 +36,8 @@ export const notifyMessages = defineMessages({
     moreCodes: (n: number) => `And ${n} more, see the Engine section.`,
     weeklyHeader: "📊 <b>Your car this week</b>",
     weeklyNoTrips: "No trips recorded in the last 7 days.",
-    weeklyTrips: (n: number, prev: number, km: string, prevKm: string) => `Trips: <b>${n}</b> (week before: ${prev}), distance <b>${km}</b> (week before: ${prevKm})`,
+    weeklyTrips: (n: number, prev: number, km: string, prevKm: string) =>
+      `Trips: <b>${n}</b> (week before: ${prev}), distance <b>${km}</b> (week before: ${prevKm})`,
     weeklyFuel: (per100: string, prev: string) => `Fuel: <b>${per100} L/100 km</b> (week before: ${prev})`,
     weeklyIdle: (pct: number) => `Idling: ${pct}% of driving time`,
     weeklyHard: (n: number) => `Hard accelerations and brakings: ${n}`,
@@ -39,13 +46,15 @@ export const notifyMessages = defineMessages({
       status === "unknown"
         ? "Battery: no reading yet"
         : `Battery: ${status === "good" ? "good" : status === "watch" ? "getting weak" : "weak"}${v === "" ? "" : `, ${v} V at rest`}`,
-    weeklyCodes: (n: number) => (n === 0 ? "Engine: no fault codes" : `Engine: ${n} active fault code${n === 1 ? "" : "s"}`),
+    weeklyCodes: (n: number) =>
+      n === 0 ? "Engine: no fault codes" : `Engine: ${n} active fault code${n === 1 ? "" : "s"}`,
     weeklyAlerts: "Open alerts:",
     weeklyNone: "no open alerts",
     none: "-"
   },
   ru: {
-    tripHeader: (date: string, duration: string, km: string) => `🚗 <b>Поездка завершена</b>: ${date}, ${duration}, ${km}`,
+    tripHeader: (date: string, duration: string, km: string) =>
+      `🚗 <b>Поездка завершена</b>: ${date}, ${duration}, ${km}`,
     speed: (avg: string, max: string) => `Средняя скорость ${avg} км/ч, максимальная ${max} км/ч.`,
     fuel: (per100: string, estimate: boolean) => `⛽ Расход: <b>${per100} л/100 км</b>${estimate ? " (оценка)" : ""}`,
     fuelUsual: (usual: string, deltaPct: number) =>
@@ -64,15 +73,23 @@ export const notifyMessages = defineMessages({
     openStats: "Открыть статистику",
     openOverview: "Открыть обзор",
     severity: (s: "info" | "watch" | "soon" | "urgent"): string =>
-      s === "urgent" ? "🚨 <b>СРОЧНО</b>" : s === "soon" ? "⚠️ <b>Нужно разобраться в ближайшее время</b>" : s === "watch" ? "🔎 <b>Понаблюдайте</b>" : "ℹ️",
-    alertBody: (sev: string, title: string, details: string, todo: string) => `${sev}\n<b>${title}</b>\n${details}\n\n<b>Что делать:</b> ${todo}`,
+      s === "urgent"
+        ? "🚨 <b>СРОЧНО</b>"
+        : s === "soon"
+          ? "⚠️ <b>Нужно разобраться в ближайшее время</b>"
+          : s === "watch"
+            ? "🔎 <b>Понаблюдайте</b>"
+            : "ℹ️",
+    alertBody: (sev: string, title: string, details: string, todo: string) =>
+      `${sev}\n<b>${title}</b>\n${details}\n\n<b>Что делать:</b> ${todo}`,
     newCodes: (n: number) => (n === 1 ? "Новый код ошибки от автомобиля" : `Новые коды ошибок от автомобиля: ${n}`),
     codeBlock: (code: string, title: string, meaning: string, canDrive: string, todo: string) =>
       `<b>${code}</b>: ${title}\n${meaning}\n<b>Можно ли ехать?</b> ${canDrive}\n<b>Что делать:</b> ${todo}`,
     moreCodes: (n: number) => `И ещё ${n}, смотрите раздел «Двигатель».`,
     weeklyHeader: "📊 <b>Ваша машина за неделю</b>",
     weeklyNoTrips: "За последние 7 дней поездок не записано.",
-    weeklyTrips: (n: number, prev: number, km: string, prevKm: string) => `Поездок: <b>${n}</b> (неделей раньше: ${prev}), путь <b>${km}</b> (неделей раньше: ${prevKm})`,
+    weeklyTrips: (n: number, prev: number, km: string, prevKm: string) =>
+      `Поездок: <b>${n}</b> (неделей раньше: ${prev}), путь <b>${km}</b> (неделей раньше: ${prevKm})`,
     weeklyFuel: (per100: string, prev: string) => `Расход: <b>${per100} л/100 км</b> (неделей раньше: ${prev})`,
     weeklyIdle: (pct: number) => `Простой: ${pct}% времени в пути`,
     weeklyHard: (n: number) => `Резких разгонов и торможений: ${n}`,

@@ -10,7 +10,7 @@ export const sendRichMessage = (
   html: string,
   keyboard?: InlineKeyboard
 ): Effect.Effect<SentMessage, TelegramError, Telegram> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const telegram = yield* Telegram
     const result = yield* telegram.call("sendRichMessage", {
       chat_id: to.chatId,
@@ -19,7 +19,9 @@ export const sendRichMessage = (
       ...(keyboard !== undefined ? { reply_markup: inlineKeyboardToMarkup(keyboard) } : {})
     })
     const m = yield* Schema.decodeUnknownEffect(Sent)(result).pipe(
-      Effect.mapError(() => new TelegramError({ method: "sendRichMessage", errorCode: 0, description: "unexpected result shape" }))
+      Effect.mapError(
+        () => new TelegramError({ method: "sendRichMessage", errorCode: 0, description: "unexpected result shape" })
+      )
     )
     return { messageId: m.message_id }
   })

@@ -40,7 +40,10 @@ export const layerTest = (handler: (call: MockHttpCall) => MockHttpReply) => {
       const reply = handler(call)
       return HttpClientResponse.fromWeb(
         request,
-        new Response(JSON.stringify(reply.body), { status: reply.status ?? 200, headers: { "content-type": "application/json" } })
+        new Response(JSON.stringify(reply.body), {
+          status: reply.status ?? 200,
+          headers: { "content-type": "application/json" }
+        })
       )
     })
   )
@@ -72,7 +75,8 @@ export const recordingTelegram = (options: RecordingOptions = {}) => {
   const layer = Layer.succeed(
     Telegram,
     Telegram.of({
-      call: (method, params) => run(method, [params], () => (method === "sendRichMessage" ? { message_id: nextId++ } : true)),
+      call: (method, params) =>
+        run(method, [params], () => (method === "sendRichMessage" ? { message_id: nextId++ } : true)),
       sendMessage: (...args) => run("sendMessage", args, () => ({ messageId: nextId++ })),
       editMessageText: (...args) => run("editMessageText", args, () => undefined),
       sendMessageDraft: (...args) => run("sendMessageDraft", args, () => undefined),

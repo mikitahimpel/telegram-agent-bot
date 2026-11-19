@@ -8,7 +8,12 @@ const primary = computed<{ id: "connect" | "start" | "stop"; text: string; disab
   if (r._tag === "Finishing") return { id: "stop", text: t.value("rec.finishing.title"), disabled: true }
   if (r._tag === "Recording") return { id: "stop", text: t.value("action.stop"), disabled: false }
   const n = route.value.name
-  if (["connect", "settings", "pair", "trip", "overview", "engine", "battery", "stats", "alerts", "onboarding"].includes(n)) return null
+  if (
+    ["connect", "settings", "pair", "trip", "overview", "engine", "battery", "stats", "alerts", "onboarding"].includes(
+      n
+    )
+  )
+    return null
   if (backend.conn.value._tag === "Ready") return { id: "start", text: t.value("action.start"), disabled: false }
   return { id: "connect", text: t.value("action.connect"), disabled: false }
 })
@@ -22,7 +27,14 @@ const onClick = () => {
 
 <template>
   <div v-if="primary" class="primary-bar">
-    <button class="btn btn-primary btn-big" type="button" :disabled="primary.disabled" data-testid="primary" :class="{ danger: primary.id === 'stop' }" @click="onClick">
+    <button
+      class="btn btn-primary btn-big"
+      type="button"
+      :disabled="primary.disabled"
+      data-testid="primary"
+      :class="{ danger: primary.id === 'stop' }"
+      @click="onClick"
+    >
       {{ primary.text }}
     </button>
   </div>

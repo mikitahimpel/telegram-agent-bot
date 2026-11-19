@@ -6,21 +6,27 @@ import { sha256Hex } from "../src/checksum.ts"
 
 describe("csv", () => {
   it.effect("round-trips samples and keeps missing values missing", () =>
-    Effect.gen(function*() {
-      const samples = [{ ts: 1, speedKmh: 50.5, rpm: 2000 }, { ts: 2, lat: 52.1, lon: 21.0 }]
+    Effect.gen(function* () {
+      const samples = [
+        { ts: 1, speedKmh: 50.5, rpm: 2000 },
+        { ts: 2, lat: 52.1, lon: 21.0 }
+      ]
       const parsed = yield* parseCsv(encodeCsv(samples))
       expect(parsed).toEqual(samples)
-    }))
+    })
+  )
   it.effect("tolerates CRLF, BOM, unknown columns and missing columns", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const parsed = yield* parseCsv("﻿ts,extra,rpm\r\n10,x,900\r\n11,,\r\n")
       expect(parsed).toEqual([{ ts: 10, rpm: 900 }, { ts: 11 }])
-    }))
+    })
+  )
   it.effect("fails on garbage", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const err = yield* Effect.flip(parseCsv("ts,rpm\n1,abc\n"))
       expect(err.line).toBe(2)
-    }))
+    })
+  )
 })
 
 describe("trip id", () => {

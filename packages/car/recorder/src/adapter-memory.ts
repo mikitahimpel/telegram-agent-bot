@@ -6,11 +6,14 @@ export type RememberedAdapter = {
   readonly rememberedAt: number
 }
 
-export class AdapterMemory extends Context.Service<AdapterMemory, {
-  readonly get: Effect.Effect<RememberedAdapter | undefined>
-  readonly set: (adapter: RememberedAdapter) => Effect.Effect<void>
-  readonly clear: Effect.Effect<void>
-}>()("@bot/car-recorder/AdapterMemory") {}
+export class AdapterMemory extends Context.Service<
+  AdapterMemory,
+  {
+    readonly get: Effect.Effect<RememberedAdapter | undefined>
+    readonly set: (adapter: RememberedAdapter) => Effect.Effect<void>
+    readonly clear: Effect.Effect<void>
+  }
+>()("@bot/car-recorder/AdapterMemory") {}
 
 const KEY = "car-recorder.adapter"
 
@@ -36,14 +39,12 @@ export const adapterMemoryBrowserLayer: Layer.Layer<AdapterMemory> = Layer.succe
     Effect.sync(() => {
       try {
         globalThis.localStorage?.setItem(KEY, JSON.stringify(adapter))
-      } catch {
-      }
+      } catch {}
     }),
   clear: Effect.sync(() => {
     try {
       globalThis.localStorage?.removeItem(KEY)
-    } catch {
-    }
+    } catch {}
   })
 })
 

@@ -26,7 +26,9 @@ export const renderMessages = defineMessages({
     chargingHighTitle: "The charging voltage is too high",
     chargingDetails: (e: Ev) =>
       `Average voltage while driving was ${v(e["chargingAvgV"])} V` +
-      (e["chargingMinV"] !== undefined && e["chargingMaxV"] !== undefined ? ` (from ${v(e["chargingMinV"])} to ${v(e["chargingMaxV"])} V)` : "") +
+      (e["chargingMinV"] !== undefined && e["chargingMaxV"] !== undefined
+        ? ` (from ${v(e["chargingMinV"])} to ${v(e["chargingMaxV"])} V)`
+        : "") +
       `. Normal is about 13.8 to 14.5 V.`,
     chargingLowTodo:
       "The alternator, its belt or the wiring may be at fault. Do not wait: have it checked this week, because the battery will drain and the car can stop. Turn off heating, seat heating and music to save power until then.",
@@ -51,7 +53,8 @@ export const renderMessages = defineMessages({
     lowFuelTitle: "The fuel level is low",
     lowFuelDetails: (e: Ev) => `The tank was at about ${v(e["fuelLevelPct"], 0)}% at the end of the trip.`,
     lowFuelTodo: "Refuel soon. Running the tank nearly empty can damage the fuel pump.",
-    checkTitle: (sev: Severity): string => (sev === "urgent" ? "Check engine: serious fault" : "Check engine light or fault codes"),
+    checkTitle: (sev: Severity): string =>
+      sev === "urgent" ? "Check engine: serious fault" : "Check engine light or fault codes",
     checkDetails: (e: Ev, codes: string) =>
       (e["milOn"] === 1 ? "The check engine light is on. " : "") +
       (e["codes"] ? `Fault codes: ${codes || e["codes"]}.` : "The car reports no specific codes."),
@@ -104,7 +107,8 @@ export const renderMessages = defineMessages({
     lowFuelTitle: "Мало топлива",
     lowFuelDetails: (e: Ev) => `В конце поездки в баке было около ${v(e["fuelLevelPct"], 0)}%.`,
     lowFuelTodo: "Заправьтесь в ближайшее время. Езда на почти пустом баке может повредить топливный насос.",
-    checkTitle: (sev: Severity): string => (sev === "urgent" ? "Check engine: серьёзная неисправность" : "Горит Check engine или есть коды ошибок"),
+    checkTitle: (sev: Severity): string =>
+      sev === "urgent" ? "Check engine: серьёзная неисправность" : "Горит Check engine или есть коды ошибок",
     checkDetails: (e: Ev, codes: string) =>
       (e["milOn"] === 1 ? "Горит лампа Check engine. " : "") +
       (e["codes"] ? `Коды ошибок: ${codes || e["codes"]}.` : "Автомобиль не сообщает конкретных кодов."),

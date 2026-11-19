@@ -53,15 +53,13 @@ export type TripFilter = {
 }
 
 export const listTrips = (tgId: TgId, filter: TripFilter = {}) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bucket = yield* CarBucket
     const prefix = prefixOf(tgId)
     const all: Array<R2ObjectLike> = []
     let cursor: string | undefined
     for (let page = 0; page < MAX_PAGES; page++) {
-      const res = yield* storage("car.list", () =>
-        bucket.list({ prefix, ...(cursor === undefined ? {} : { cursor }) })
-      )
+      const res = yield* storage("car.list", () => bucket.list({ prefix, ...(cursor === undefined ? {} : { cursor }) }))
       all.push(...res.objects.filter((o) => o.key.startsWith(prefix)))
       if (!res.truncated || res.cursor === undefined) break
       cursor = res.cursor
@@ -76,7 +74,7 @@ export const listTrips = (tgId: TgId, filter: TripFilter = {}) =>
   })
 
 export const headTrip = (tgId: TgId, key: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     yield* validateKey(tgId, key)
     const bucket = yield* CarBucket
     const o = yield* storage("car.head", () => bucket.head(key))
@@ -84,7 +82,7 @@ export const headTrip = (tgId: TgId, key: string) =>
   })
 
 export const readTripBytes = (tgId: TgId, key: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     yield* validateKey(tgId, key)
     const bucket = yield* CarBucket
     const o = yield* storage("car.get", () => bucket.get(key))

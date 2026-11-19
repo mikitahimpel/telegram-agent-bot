@@ -15,7 +15,13 @@ export const formatDateTime = (ms: number, lang: Lang): string => {
     : `${MONTHS_EN[d.getUTCMonth()]} ${day}, ${time}`
 }
 
-type ClockParts = { readonly year: number; readonly month: number; readonly day: number; readonly hour: number; readonly minute: number }
+type ClockParts = {
+  readonly year: number
+  readonly month: number
+  readonly day: number
+  readonly hour: number
+  readonly minute: number
+}
 
 const partsIn = (ms: number, tz: string): ClockParts | undefined => {
   try {

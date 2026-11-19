@@ -58,8 +58,10 @@ const encodePayload = (p: Payload) => JSON.stringify(p)
 
 const newId = () => `rem_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`
 
-const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
-  ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
+const target = (ctx: {
+  readonly chatId: SendTarget["chatId"]
+  readonly threadId: SendTarget["threadId"] | undefined
+}): SendTarget => (ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId })
 
 const callbackData = (action: string, id: string) => `${CALLBACK_PREFIX}:${action}:${id}`
 
@@ -94,7 +96,8 @@ const fireJob: JobHandler<RemindersR> = {
       const payload = payloadOf(job)
       if (payload === undefined) return
       const tg = yield* Telegram
-      const lang = (yield* (yield* UserPrefs).lang(ctx.tgId).pipe(Effect.catch(() => Effect.succeed(undefined)))) ?? defaultLang
+      const lang =
+        (yield* (yield* UserPrefs).lang(ctx.tgId).pipe(Effect.catch(() => Effect.succeed(undefined)))) ?? defaultLang
       yield* tg.sendMessage({ chatId: ChatId.make(ctx.tgId) }, messages[lang].fired(escapeHtml(payload.text)), {
         keyboard: firedKeyboard(job.id, lang)
       })
@@ -162,7 +165,14 @@ const remindersCommand: CommandDef<RemindersR> = {
     })
 }
 
-const removeKeyboard = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined; readonly messageId: number }, html: string) =>
+const removeKeyboard = (
+  ctx: {
+    readonly chatId: SendTarget["chatId"]
+    readonly threadId: SendTarget["threadId"] | undefined
+    readonly messageId: number
+  },
+  html: string
+) =>
   Effect.gen(function* () {
     const tg = yield* Telegram
     yield* tg.editMessageText({ ...target(ctx), messageId: ctx.messageId }, html, { keyboard: [] }).pipe(Effect.ignore)
@@ -223,11 +233,15 @@ const reminderCallback: CallbackDef<RemindersR> = {
 }
 
 const CreateInput = Schema.Struct({
-  text: Schema.String.annotate({ description: "What to remind about, in the user's language, phrased as the message the user will see" }),
+  text: Schema.String.annotate({
+    description: "What to remind about, in the user's language, phrased as the message the user will see"
+  }),
   at: Schema.String.annotate({
     description: "Local date and time in the user's timezone, ISO format without offset, e.g. 2026-11-20T09:00"
   }),
-  repeat: Schema.optionalKey(Schema.Literals(REPEATS).annotate({ description: "none (default), daily, weekdays, weekly or monthly" }))
+  repeat: Schema.optionalKey(
+    Schema.Literals(REPEATS).annotate({ description: "none (default), daily, weekdays, weekly or monthly" })
+  )
 })
 const CancelInput = Schema.Struct({ id: Schema.String })
 const SetTzInput = Schema.Struct({
@@ -262,7 +276,8 @@ const tools: ReadonlyArray<AgentTool<RemindersR>> = [
         if (tz === undefined) return needsTimezone
         const now = yield* Clock.currentTimeMillis
         const parsed = parseAt(input.at)
-        if (parsed === undefined) return { ok: false, error: "Invalid `at`. Use local ISO time like 2026-11-20T09:00", ...nowInfo(now, tz) }
+        if (parsed === undefined)
+          return { ok: false, error: "Invalid `at`. Use local ISO time like 2026-11-20T09:00", ...nowInfo(now, tz) }
         const at = parsed._tag === "Instant" ? parsed.ms : toInstant(parsed.local, tz)
         if (at <= now) return { ok: false, error: "That time is already in the past", ...nowInfo(now, tz) }
         const text = input.text.trim()
@@ -313,7 +328,8 @@ const tools: ReadonlyArray<AgentTool<RemindersR>> = [
         const { id } = raw as typeof CancelInput.Type
         const scheduler = (yield* UserScheduler).forUser(ctx.tgId)
         const job = yield* scheduler.get(id)
-        if (job === undefined || job.kind !== REMINDER_KIND) return { ok: false, error: "No active reminder with that id" }
+        if (job === undefined || job.kind !== REMINDER_KIND)
+          return { ok: false, error: "No active reminder with that id" }
         yield* scheduler.cancel(id)
         return { ok: true }
       })
@@ -354,7 +370,12 @@ const systemPrompt = `Reminders plugin. The user is a non-technical person who s
 Delivery happens by itself through the bot with Done / In an hour / Tomorrow buttons; you are not involved when it fires. After creating, confirm in plain words in the user's language with day and time, for example "Хорошо, напомню завтра в 9:00 позвонить врачу" or "Ок, каждый понедельник в 8:00 напомню вынести мусор". Never show ids, ISO strings or tool names to the user.`
 
 const pass = <I, S>(tag: import("effect").Context.Service<I, S>): Layer.Layer<I, never, I> =>
-  Layer.effect(tag, Effect.gen(function* () { return yield* tag }) as Effect.Effect<S, never, I>)
+  Layer.effect(
+    tag,
+    Effect.gen(function* () {
+      return yield* tag
+    }) as Effect.Effect<S, never, I>
+  )
 
 export const layer: Layer.Layer<RemindersR, never, RemindersR> = Layer.mergeAll(
   pass(Telegram),

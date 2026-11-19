@@ -72,7 +72,8 @@ export const toLocal = (ms: number, tz: string): LocalDateTime => {
   return local
 }
 
-export const weekdayOf = (local: LocalDateTime): number => new Date(Date.UTC(local.year, local.month - 1, local.day)).getUTCDay()
+export const weekdayOf = (local: LocalDateTime): number =>
+  new Date(Date.UTC(local.year, local.month - 1, local.day)).getUTCDay()
 
 const sameLocal = (a: LocalDateTime, b: LocalDateTime): boolean =>
   a.year === b.year && a.month === b.month && a.day === b.day && a.hour === b.hour && a.minute === b.minute

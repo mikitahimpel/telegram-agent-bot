@@ -40,5 +40,11 @@ export const messages = defineMessages({
 
 export const repeatSuffix: { readonly [L in Lang]: Record<Repeat, string> } = {
   en: { none: "", daily: ", every day", weekdays: ", on weekdays", weekly: ", every week", monthly: ", every month" },
-  ru: { none: "", daily: ", каждый день", weekdays: ", по будням", weekly: ", каждую неделю", monthly: ", каждый месяц" }
+  ru: {
+    none: "",
+    daily: ", каждый день",
+    weekdays: ", по будням",
+    weekly: ", каждую неделю",
+    monthly: ", каждый месяц"
+  }
 }

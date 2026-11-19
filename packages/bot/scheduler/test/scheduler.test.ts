@@ -33,7 +33,8 @@ describe("scheduler", () => {
       yield* store.service.cancel("a")
       yield* store.service.cancel("c")
       expect(alarms.at(-1)).toBeNull()
-    }))
+    })
+  )
 
   it.effect("upserts, gets and lists by kind", () =>
     Effect.gen(function* () {
@@ -44,7 +45,8 @@ describe("scheduler", () => {
       expect(yield* store.service.get("a")).toEqual({ id: "a", kind: "k", at: 1, payload: "y" })
       expect(yield* store.service.get("zzz")).toBeUndefined()
       expect((yield* store.service.list("k")).map((j) => j.id)).toEqual(["a"])
-    }))
+    })
+  )
 
   it.effect("runs only due jobs by kind, deletes them and re-arms", () =>
     Effect.gen(function* () {
@@ -60,7 +62,8 @@ describe("scheduler", () => {
       expect(seen).toEqual(["due:7"])
       expect(yield* store.service.get("due")).toBeUndefined()
       expect(alarms.at(-1)).toBe(10_000)
-    }))
+    })
+  )
 
   it.effect("drops unknown kinds", () =>
     Effect.gen(function* () {
@@ -69,7 +72,8 @@ describe("scheduler", () => {
       yield* TestClock.setTime(10)
       yield* store.runDue<never>([], tg)
       expect(yield* store.service.get("u")).toBeUndefined()
-    }))
+    })
+  )
 
   it.effect("lets a handler reschedule its own job", () =>
     Effect.gen(function* () {
@@ -81,7 +85,8 @@ describe("scheduler", () => {
       yield* TestClock.setTime(200)
       yield* store.runDue(handlers, tg)
       expect((yield* store.service.get("r"))?.at).toBe(1100)
-    }))
+    })
+  )
 
   it.effect("retries with backoff, isolates failures and drops after the limit", () =>
     Effect.gen(function* () {
@@ -90,7 +95,10 @@ describe("scheduler", () => {
       const handlers: ReadonlyArray<JobHandler> = [
         {
           kind: "bad",
-          run: (job) => Effect.sync(() => void ran.push(job.id)).pipe(Effect.andThen(Effect.fail(new StorageError({ operation: "boom" }))))
+          run: (job) =>
+            Effect.sync(() => void ran.push(job.id)).pipe(
+              Effect.andThen(Effect.fail(new StorageError({ operation: "boom" })))
+            )
         },
         { kind: "good", run: (job) => Effect.sync(() => void ran.push(job.id)) }
       ]
@@ -114,7 +122,8 @@ describe("scheduler", () => {
       yield* store.runDue(handlers, tg)
       expect(yield* store.service.get("b")).toBeUndefined()
       expect(alarms.at(-1)).toBeNull()
-    }))
+    })
+  )
 
   it.effect("survives a defect in a handler", () =>
     Effect.gen(function* () {
@@ -124,5 +133,6 @@ describe("scheduler", () => {
       yield* TestClock.setTime(5)
       yield* store.runDue(handlers, tg)
       expect((yield* store.service.get("d"))?.at).toBeGreaterThan(5)
-    }))
+    })
+  )
 })

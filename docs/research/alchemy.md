@@ -6,6 +6,7 @@ packages' `src/` and `lib/*.d.ts`. Snippets marked (tsc) were type-checked again
 in `/private/tmp/claude-501/alchemy-research`.
 
 Key mental-model differences from v1 and from wrangler:
+
 - Cloudflare resources live in a SEPARATE package: `@alchemy.run/cloudflare` (import `* as Cloudflare`).
 - A Worker is an Effect program: construction phase (outer `Effect.gen`) binds resources and reads Config;
   runtime phase (inner handlers) serves requests.
@@ -28,26 +29,26 @@ for your runtime; docs install both); `@alchemy.run/cloudflare` peers `alchemy` 
 `alchemy.run.ts` (tsc):
 
 ```ts
-import * as Alchemy from "alchemy";
-import * as Cloudflare from "@alchemy.run/cloudflare";
-import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
-import * as Telegram from "./src/TelegramWebhook.ts";   // custom provider (section 5)
-import Worker from "./src/worker.ts";
+import * as Alchemy from "alchemy"
+import * as Cloudflare from "@alchemy.run/cloudflare"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
+import * as Telegram from "./src/TelegramWebhook.ts" // custom provider (section 5)
+import Worker from "./src/worker.ts"
 
 export default Alchemy.Stack(
   "TelegramAgentBot",
   {
     providers: Layer.mergeAll(Cloudflare.providers(), Telegram.providers()),
-    state: Cloudflare.state(),            // remote state in a DO-backed Worker (see section 8)
+    state: Cloudflare.state() // remote state in a DO-backed Worker (see section 8)
     // secrets: Alchemy.Secrets.DotEnv()  // optional, see section 6
   },
   Effect.gen(function* () {
-    const stack = yield* Alchemy.Stack;   // stack.stage, stack.name
-    const worker = yield* Worker;
-    return { url: worker.url, stage: stack.stage };
-  }),
-);
+    const stack = yield* Alchemy.Stack // stack.stage, stack.name
+    const worker = yield* Worker
+    return { url: worker.url, stage: stack.stage }
+  })
+)
 ```
 
 Auth: `alchemy profile edit --add Cloudflare` (OAuth or API token, stored in `~/.alchemy/profiles.json`).
@@ -65,6 +66,7 @@ bunx alchemy dev                           # local workerd, hot reload (stage de
 bunx alchemy logs                          # tail logs
 bunx alchemy state list --backend cloudflare
 ```
+
 Other flags: `--config/-c <file>`, `--profile <name>` (or `$ALCHEMY_PROFILE`), `--env-file <path>`
 (refused when the stack declares `secrets`).
 
@@ -77,54 +79,56 @@ Worker file; default export is the Worker. Resources declared at module scope (t
 
 ```ts
 // src/worker.ts
-import * as Cloudflare from "@alchemy.run/cloudflare";
-import * as Config from "effect/Config";
-import * as Effect from "effect/Effect";
-import * as Redacted from "effect/Redacted";
-import { HttpServerRequest } from "effect/http/HttpServerRequest";
-import * as HttpServerResponse from "effect/http/HttpServerResponse";
-import Agent from "./agent.ts";                       // a Durable Object class (section 3)
+import * as Cloudflare from "@alchemy.run/cloudflare"
+import * as Config from "effect/Config"
+import * as Effect from "effect/Effect"
+import * as Redacted from "effect/Redacted"
+import { HttpServerRequest } from "effect/http/HttpServerRequest"
+import * as HttpServerResponse from "effect/http/HttpServerResponse"
+import Agent from "./agent.ts" // a Durable Object class (section 3)
 
-export const Files = Cloudflare.R2.Bucket("Files");
-export const Cache = Cloudflare.KV.Namespace("Cache");
+export const Files = Cloudflare.R2.Bucket("Files")
+export const Cache = Cloudflare.KV.Namespace("Cache")
 
 export default Cloudflare.Worker(
   "Bot",
   {
-    main: import.meta.url,                            // bundles this file (rolldown)
+    main: import.meta.url, // bundles this file (rolldown)
     compatibility: { flags: ["nodejs_compat"], date: "2026-08-31" },
-    observability: {                                  // Workers Logs are ON by default; tune here
-      logs: { enabled: true, invocationLogs: true, persist: true },
-    },
+    observability: {
+      // Workers Logs are ON by default; tune here
+      logs: { enabled: true, invocationLogs: true, persist: true }
+    }
     // domain: "bot.example.com", workersDev: true, assets: "./public", crons, limits, placement, tags ...
   },
   Effect.gen(function* () {
     // ---- Construction phase: bind everything here ----
-    const token = yield* Config.Redacted("TELEGRAM_BOT_TOKEN");       // auto-bound as secret_text
-    const agents = yield* Agent;                                       // DO namespace binding
-    const bucket = yield* Cloudflare.R2.ReadWriteBucket(Files);
-    const kv = yield* Cloudflare.KV.ReadWriteNamespace(Cache);
-    const presignPut = yield* Cloudflare.R2.PresignPutObject(Files);
+    const token = yield* Config.Redacted("TELEGRAM_BOT_TOKEN") // auto-bound as secret_text
+    const agents = yield* Agent // DO namespace binding
+    const bucket = yield* Cloudflare.R2.ReadWriteBucket(Files)
+    const kv = yield* Cloudflare.KV.ReadWriteNamespace(Cache)
+    const presignPut = yield* Cloudflare.R2.PresignPutObject(Files)
 
     return {
       // ---- Runtime phase ----
       fetch: Effect.gen(function* () {
-        const req = yield* HttpServerRequest;
-        const n = yield* agents.getByName("chat-123").inc();           // typed DO RPC
-        const url = yield* presignPut({ key: "a.txt", expiresIn: 300 });
-        return HttpServerResponse.text(`${n} ${url}`);
-      }).pipe(Effect.orDie),
-    };
+        const req = yield* HttpServerRequest
+        const n = yield* agents.getByName("chat-123").inc() // typed DO RPC
+        const url = yield* presignPut({ key: "a.txt", expiresIn: 300 })
+        return HttpServerResponse.text(`${n} ${url}`)
+      }).pipe(Effect.orDie)
+    }
   }).pipe(
     // Layers decide how each binding is implemented (native bindings here)
     Effect.provide(Cloudflare.R2.ReadWriteBucketBinding),
     Effect.provide(Cloudflare.KV.ReadWriteNamespaceBinding),
-    Effect.provide(Cloudflare.R2.PresignPutObjectToken),
-  ),
-);
+    Effect.provide(Cloudflare.R2.PresignPutObjectToken)
+  )
+)
 ```
 
 Typed access to bindings:
+
 - Effect Workers: `yield*` the resource/binding service in the construction phase; the client is typed and its
   errors (`R2Error`, `NamespaceError`) live in the Effect error channel. Access levels:
   `ReadBucket | WriteBucket | ReadWriteBucket` (+ `...Binding` layer); same for KV
@@ -135,9 +139,9 @@ Typed access to bindings:
 // alchemy.run.ts
 export const Worker = Cloudflare.Worker("Worker", {
   main: "./src/worker.ts",
-  env: { Files, Cache, API_KEY: Config.Redacted("API_KEY"), HOST: Config.String("HOST") },
-});
-export type WorkerEnv = Cloudflare.InferEnv<typeof Worker>;   // R2Bucket, KVNamespace, string, ...
+  env: { Files, Cache, API_KEY: Config.Redacted("API_KEY"), HOST: Config.String("HOST") }
+})
+export type WorkerEnv = Cloudflare.InferEnv<typeof Worker> // R2Bucket, KVNamespace, string, ...
 // src/worker.ts: export default { async fetch(req: Request, env: WorkerEnv) { ... } }
 ```
 
@@ -156,25 +160,32 @@ Class rename: `renamedFrom` / `className` option; cross-worker move: `transferre
 
 ```ts
 // src/agent.ts (tsc)
-import * as Cloudflare from "@alchemy.run/cloudflare";
-import * as Effect from "effect/Effect";
+import * as Cloudflare from "@alchemy.run/cloudflare"
+import * as Effect from "effect/Effect"
 
 export default class Agent extends Cloudflare.DurableObject<Agent>()(
   "Agent",
   Effect.gen(function* () {
-    const state = yield* Cloudflare.DurableObjectState;            // storage, setAlarm, acceptWebSocket ...
+    const state = yield* Cloudflare.DurableObjectState // storage, setAlarm, acceptWebSocket ...
     // SQL schema migrations (drizzle-style folder), applied on each object's activation:
     // const migrations = yield* Cloudflare.SqlMigrations("./drizzle");
     return Effect.gen(function* () {
       // yield* migrations.apply().pipe(Effect.orDie);
-      let n = (yield* state.storage.get<number>("n")) ?? 0;
-      return {                                                     // every Effect-returning member = typed RPC
-        inc: () => Effect.gen(function* () { n++; yield* state.storage.put("n", n); return n; }),
-      };
-    });
-  }),
+      let n = (yield* state.storage.get<number>("n")) ?? 0
+      return {
+        // every Effect-returning member = typed RPC
+        inc: () =>
+          Effect.gen(function* () {
+            n++
+            yield* state.storage.put("n", n)
+            return n
+          })
+      }
+    })
+  })
 ) {}
 ```
+
 `yield* Agent` in the Worker construction registers binding + class and returns a namespace;
 `agents.getByName("x")` gives the typed stub. Durable callbacks (`Alchemy.makeCallback`) persist jobs in SQLite
 and use native alarms. Busy DOs keep old code up to 5 min after a deploy (`codeUpdateStrategy`).
@@ -198,26 +209,29 @@ export const Worker = Cloudflare.Worker("Worker", {
   main: "./src/worker.ts",
   compatibility: { flags: ["nodejs_compat"] },
   env: {
-    Sandbox: Cloudflare.Container<Sandbox>("Sandbox", {   // type param = class exported by worker.ts
-      context: `${import.meta.dirname}/sandbox`,          // dir containing Dockerfile (default <context>/Dockerfile)
+    Sandbox: Cloudflare.Container<Sandbox>("Sandbox", {
+      // type param = class exported by worker.ts
+      context: `${import.meta.dirname}/sandbox`, // dir containing Dockerfile (default <context>/Dockerfile)
       // dockerfile: "./Dockerfile",                       // path relative to context, or Dockerfile.inline`...`
       // className: "Sandbox",                             // defaults to the env key
-      instanceType: "standard-1",                          // see list below
-      maxInstances: 5,                                     // default 20; instances default 0 (scale from zero)
+      instanceType: "standard-1", // see list below
+      maxInstances: 5, // default 20; instances default 0 (scale from zero)
       // observability, env: {FOO: "x", SECRET: Redacted.make(...)}, ports, rollout, vcpu/memoryMib/disk
-      build: { cache: true },                              // registry layer cache (useful in CI)
+      build: { cache: true } // registry layer cache (useful in CI)
       // publish: { repository: "agent-sandbox" },         // share image across stages
-    }),
-  },
-});
-export type WorkerEnv = Cloudflare.InferEnv<typeof Worker>;   // env.Sandbox: DurableObjectNamespace<Sandbox>
+    })
+  }
+})
+export type WorkerEnv = Cloudflare.InferEnv<typeof Worker> // env.Sandbox: DurableObjectNamespace<Sandbox>
 ```
+
 ```ts
 // src/worker.ts
-import { getSandbox } from "@cloudflare/sandbox";
-export { Sandbox } from "@cloudflare/sandbox";
-import type { Sandbox } from "@cloudflare/sandbox";   // type used by alchemy.run.ts
+import { getSandbox } from "@cloudflare/sandbox"
+export { Sandbox } from "@cloudflare/sandbox"
+import type { Sandbox } from "@cloudflare/sandbox" // type used by alchemy.run.ts
 ```
+
 ```dockerfile
 # sandbox/Dockerfile  (match the tag to the @cloudflare/sandbox npm version; pin it)
 FROM docker.io/cloudflare/sandbox:0.9.0
@@ -226,6 +240,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 python3
 RUN pip3 install --no-cache-dir --break-system-packages duckdb
 RUN npm install -g @anthropic-ai/claude-code
 ```
+
 (`FROM`/package choices above are the user's requirement; the tag `0.9.0` is a placeholder, not verified.)
 Inline alternative (tsc: `import { Dockerfile } from "@alchemy.run/docker"`, installed transitively by
 the cloudflare package): `dockerfile: Dockerfile.inline\`FROM docker.io/cloudflare/sandbox:...\``.
@@ -260,22 +275,25 @@ is `string | undefined`, so the prop type must allow undefined.
 
 ```ts
 // src/TelegramWebhook.ts
-import { Resource } from "alchemy";
-import * as Provider from "alchemy/Provider";
-import * as Data from "effect/Data";
-import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
-import * as Redacted from "effect/Redacted";
+import { Resource } from "alchemy"
+import * as Provider from "alchemy/Provider"
+import * as Data from "effect/Data"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
+import * as Redacted from "effect/Redacted"
 
 export interface TelegramWebhookProps {
-  botToken: Redacted.Redacted<string>;
-  secretToken: Redacted.Redacted<string>;
-  url: string | undefined;
-  commands?: { command: string; description: string }[];
+  botToken: Redacted.Redacted<string>
+  secretToken: Redacted.Redacted<string>
+  url: string | undefined
+  commands?: { command: string; description: string }[]
 }
-export interface TelegramWebhookAttributes { url: string; commandsHash: string }
-export type TelegramWebhook = Resource<"Telegram.Webhook", TelegramWebhookProps, TelegramWebhookAttributes>;
-export const TelegramWebhook = Resource<TelegramWebhook>("Telegram.Webhook");
+export interface TelegramWebhookAttributes {
+  url: string
+  commandsHash: string
+}
+export type TelegramWebhook = Resource<"Telegram.Webhook", TelegramWebhookProps, TelegramWebhookAttributes>
+export const TelegramWebhook = Resource<TelegramWebhook>("Telegram.Webhook")
 
 export class TelegramError extends Data.TaggedError("TelegramError")<{ message: string }> {}
 
@@ -283,46 +301,50 @@ const call = (token: Redacted.Redacted<string>, method: string, body: unknown) =
   Effect.tryPromise({
     try: async () => {
       const res = await fetch(`https://api.telegram.org/bot${Redacted.value(token)}/${method}`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
-      });
-      const json = (await res.json()) as { ok: boolean; description?: string };
-      if (!json.ok) throw new Error(`${method}: ${json.description}`);
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      const json = (await res.json()) as { ok: boolean; description?: string }
+      if (!json.ok) throw new Error(`${method}: ${json.description}`)
     },
-    catch: (e) => new TelegramError({ message: String(e) }),
-  });
+    catch: (e) => new TelegramError({ message: String(e) })
+  })
 
 export const TelegramWebhookProvider = () =>
   Provider.succeed(
     TelegramWebhook,
     TelegramWebhook.Provider.of({
       reconcile: Effect.fn(function* ({ news }) {
-        if (!news.url) return yield* new TelegramError({ message: "worker has no public url" });
+        if (!news.url) return yield* new TelegramError({ message: "worker has no public url" })
         yield* call(news.botToken, "setWebhook", {
-          url: news.url, secret_token: Redacted.value(news.secretToken),
-          allowed_updates: ["message", "callback_query"],
-        });
-        yield* call(news.botToken, "setMyCommands", { commands: news.commands ?? [] });
-        return { url: news.url, commandsHash: JSON.stringify(news.commands ?? []) };
+          url: news.url,
+          secret_token: Redacted.value(news.secretToken),
+          allowed_updates: ["message", "callback_query"]
+        })
+        yield* call(news.botToken, "setMyCommands", { commands: news.commands ?? [] })
+        return { url: news.url, commandsHash: JSON.stringify(news.commands ?? []) }
       }),
       delete: Effect.fn(function* ({ olds }) {
-        yield* call(olds.botToken, "deleteWebhook", { drop_pending_updates: false }).pipe(Effect.ignore);
+        yield* call(olds.botToken, "deleteWebhook", { drop_pending_updates: false }).pipe(Effect.ignore)
       }),
-      list: () => Effect.succeed([]),
-    }),
-  );
+      list: () => Effect.succeed([])
+    })
+  )
 
 export class Providers extends Provider.ProviderCollection<Providers>()("Telegram") {}
 export const providers = () =>
-  Layer.effect(Providers, Provider.collection([TelegramWebhook])).pipe(
-    Layer.provide(TelegramWebhookProvider()),
-  );
+  Layer.effect(Providers, Provider.collection([TelegramWebhook])).pipe(Layer.provide(TelegramWebhookProvider()))
 ```
+
 Use in the stack (tsc):
+
 ```ts
 const botToken = yield* Config.Redacted("TELEGRAM_BOT_TOKEN");
 const secretToken = yield* Config.Redacted("TELEGRAM_WEBHOOK_SECRET");
 yield* Telegram.TelegramWebhook("Webhook", { botToken, secretToken, url: worker.url, commands: [...] });
 ```
+
 Notes: `reconcile` runs on every apply that changes props (plan skips when props equal). Because the resource is a
 dependency of `worker.url`, it runs after the Worker deploys. Add `diff` returning `{ action: "noop" }` /
 `"update"` to control planning (guard with `isResolved(news)` from `alchemy/Diff`). Tip: append `/<random-path>` or
@@ -346,6 +368,7 @@ The `Redacted` props are persisted in (encrypted by Cloudflare.state) state.
 ## 7. R2 presigned URLs
 
 Alchemy DOES support it, and it creates the credentials for you:
+
 - `Cloudflare.R2.PresignPutObject(bucket)` / `Cloudflare.R2.PresignGetObject(bucket)` return
   `(request) => Effect<string, PresignError, RuntimeContext>`; provide layer `Cloudflare.R2.PresignPutObjectToken`
   / `PresignGetObjectToken` (tsc for Put). Request: `{ key, expiresIn? (default 900s, max 7d), contentType? }`.
@@ -376,7 +399,7 @@ name: Deploy
 on:
   push: { branches: [main] }
   pull_request: { types: [opened, reopened, synchronize, closed] }
-concurrency: { group: deploy-${{ github.ref }}, cancel-in-progress: false }
+concurrency: { group: deploy-$, { { github.ref } }, cancel-in-progress: false }
 env:
   STAGE: >-
     ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number)
@@ -389,7 +412,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - uses: docker/setup-buildx-action@v3          # container image build + build.cache
+      - uses: docker/setup-buildx-action@v3 # container image build + build.cache
       - run: bun install --frozen-lockfile
       - run: bun alchemy deploy --stage ${{ env.STAGE }} --yes
         env:
@@ -412,7 +435,9 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
 ```
+
 Notes:
+
 - `destroy` evaluates the stack program, so every `Config` it reads must be set in the cleanup job too.
 - Preview PR stages each get their own Worker, DO, R2, KV, Container app and own Telegram webhook. A Telegram bot has
   ONE webhook: a PR stage would override prod's. Use a separate preview bot token (different secrets per stage) or skip

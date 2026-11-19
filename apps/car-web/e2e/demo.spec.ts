@@ -68,7 +68,10 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   await expect(grid).toBeVisible()
   await expect(page.getByTestId("primary")).toHaveCount(0)
   const box = (await grid.boundingBox())!
-  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("nav.tabs, .primary-bar") !== null, { x: box.x + box.width / 2, y: box.y + box.height / 2 })
+  const hit = await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.closest("nav.tabs, .primary-bar") !== null,
+    { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  )
   expect(hit).toBe(false)
   await page.screenshot({ path: `${SHOTS}/06-trip.png` })
 
@@ -113,7 +116,8 @@ test.describe("WebView", () => {
   test("no Web Bluetooth: a single Open in Chrome button", async ({ page }) => {
     const errors = trackErrors(page)
     await page.addInitScript(() => {
-      for (const k of ["bluetooth", "serial"]) Object.defineProperty(Navigator.prototype, k, { value: undefined, configurable: true })
+      for (const k of ["bluetooth", "serial"])
+        Object.defineProperty(Navigator.prototype, k, { value: undefined, configurable: true })
     })
     await page.goto("/car/")
     await expect(page.getByTestId("open-in-chrome")).toBeVisible()

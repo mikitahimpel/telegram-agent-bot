@@ -21,7 +21,7 @@ export class Presigner extends Context.Service<
 
 const make = (config: PresignerConfig): Presigner["Service"] => {
   const sign = (method: "GET" | "PUT", key: string, ttl: number) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
       return yield* Effect.promise(() =>
         presignUrl({
@@ -47,7 +47,7 @@ export const layerWith = (config: PresignerConfig): Layer.Layer<Presigner> => La
 
 export const layerConfig = Layer.effect(
   Presigner,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const accountId = yield* Config.String("R2_ACCOUNT_ID")
     const accessKeyId = yield* Config.String("R2_ACCESS_KEY_ID")
     const secret = yield* Config.Redacted("R2_SECRET_ACCESS_KEY")

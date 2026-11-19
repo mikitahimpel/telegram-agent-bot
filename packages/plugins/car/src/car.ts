@@ -26,8 +26,10 @@ export { CarWebUrl }
 
 export type CarR = CarBucket | Presigner | Telegram | CarKv | CarWebUrl | CarBackend
 
-const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
-  ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
+const target = (ctx: {
+  readonly chatId: SendTarget["chatId"]
+  readonly threadId: SendTarget["threadId"] | undefined
+}): SendTarget => (ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId })
 
 const fail = (operation: string, message: string) => new StorageError({ operation, cause: new Error(message) })
 
@@ -43,7 +45,7 @@ const mapKeyError = (operation: string) =>
   )
 
 const uploadLink = (tgId: TgId, ext: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const presigner = yield* Presigner
     const now = yield* Clock.currentTimeMillis
     const key = newUploadKey(tgId, new Date(now), ext)
@@ -67,7 +69,7 @@ const REPORT_TRIPS = 30
 const num1 = (v: number | undefined, digits = 1) => (v === undefined ? "-" : v.toFixed(digits))
 
 const sendApp = (ctx: CommandContext) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     const m = messages[ctx.lang]
     const webUrl = yield* CarWebUrl
@@ -79,7 +81,7 @@ const sendApp = (ctx: CommandContext) =>
   })
 
 const sendDevices = (ctx: CommandContext) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     const m = messages[ctx.lang]
     const devices = yield* listDevices(ctx.tgId)
@@ -94,11 +96,13 @@ const sendDevices = (ctx: CommandContext) =>
     const keyboard: InlineKeyboard = devices.map((d) => [
       { text: m.revoke(d.name), callbackData: `${DEVICE_CALLBACK_PREFIX}:${d.deviceId}`, style: "danger" as const }
     ])
-    yield* tg.sendMessage(target(ctx), [m.devicesHeader(devices.length), ...lines].join("\n"), { keyboard }).pipe(Effect.asVoid)
+    yield* tg
+      .sendMessage(target(ctx), [m.devicesHeader(devices.length), ...lines].join("\n"), { keyboard })
+      .pipe(Effect.asVoid)
   })
 
 const sendReport = (ctx: CommandContext, periodArg: string | undefined) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     const m = messages[ctx.lang]
     const now = new Date(yield* Clock.currentTimeMillis)
@@ -162,7 +166,7 @@ const carCommand: CommandDef<CarR> = {
   description: { en: messages.en.description, ru: messages.ru.description },
   usage: { en: messages.en.usage, ru: messages.ru.usage },
   handler: (ctx) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const tg = yield* Telegram
       const m = messages[ctx.lang]
       const [sub = "", ...rest] = ctx.args.trim().split(/\s+/)
@@ -197,7 +201,7 @@ const revokeCallback: CallbackDef<CarR> = {
   prefix: DEVICE_CALLBACK_PREFIX,
   role: "user",
   handler: (ctx) =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const tg = yield* Telegram
       const m = messages[ctx.lang]
       const done = yield* revokeDevice(ctx.tgId, ctx.payload)
@@ -212,7 +216,9 @@ const ListInput = Schema.Struct({
 })
 const GetInput = Schema.Struct({
   tripId: Schema.optionalKey(Schema.String.annotate({ description: "Trip id from car_list_trips" })),
-  key: Schema.optionalKey(Schema.String.annotate({ description: "Raw uploaded file key (car/<id>/...) from car_list_trips.uploads" }))
+  key: Schema.optionalKey(
+    Schema.String.annotate({ description: "Raw uploaded file key (car/<id>/...) from car_list_trips.uploads" })
+  )
 })
 const QueryInput = Schema.Struct({
   from: Schema.optionalKey(Schema.String),
@@ -235,7 +241,7 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
       "List the user's recorded car trips (newest first) with completeness flag, plus raw uploaded files (not trips).",
     input: ListInput,
     handler: (raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const input = raw as typeof ListInput.Type
         const from = yield* parseInstant("car_list_trips", input.from)
         const to = yield* parseInstant("car_list_trips", input.to)
@@ -255,7 +261,12 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
               endedAt: man?.endedAt === undefined ? null : iso(man.endedAt),
               recording: man === null || man.status !== "finished",
               complete: o.status.complete,
-              chunks: { received: o.status.received.length, missing: o.status.missing, corrupt: o.status.corrupt, total: man?.chunkCount ?? null },
+              chunks: {
+                received: o.status.received.length,
+                missing: o.status.missing,
+                corrupt: o.status.corrupt,
+                total: man?.chunkCount ?? null
+              },
               points: o.status.rows,
               fuelRateSource: man?.fuelRateSource ?? null,
               note: man?.note ?? null
@@ -273,13 +284,18 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
       "One trip: manifest, status, computed metrics and short-lived presigned GET URLs (manifest + every chunk CSV) to curl in the sandbox. With `key` instead: a presigned URL for a raw uploaded file.",
     input: GetInput,
     handler: (raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const input = raw as typeof GetInput.Type
         const presigner = yield* Presigner
         if (input.key !== undefined) {
           const trip = yield* headTrip(ctx.tgId, input.key).pipe(mapKeyError("car_get_trip"))
           if (trip === undefined) return { found: false }
-          return { found: true, trip, downloadUrl: yield* presigner.presignGet(input.key, GET_TTL), expiresInSeconds: GET_TTL }
+          return {
+            found: true,
+            trip,
+            downloadUrl: yield* presigner.presignGet(input.key, GET_TTL),
+            expiresInSeconds: GET_TTL
+          }
         }
         const tripId = input.tripId === undefined ? undefined : parseTripId(input.tripId)
         if (tripId === undefined) return yield* fail("car_get_trip", "tripId (from car_list_trips) or key is required")
@@ -301,7 +317,8 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
           metrics,
           manifestUrl,
           chunks,
-          csvColumns: "ts,lat,lon,gps_accuracy_m,gps_speed_kmh,speed_kmh,rpm,coolant_c,intake_c,load_pct,throttle_pct,maf_gps,map_kpa,fuel_rate_lph,fuel_level_pct,voltage_v",
+          csvColumns:
+            "ts,lat,lon,gps_accuracy_m,gps_speed_kmh,speed_kmh,rpm,coolant_c,intake_c,load_pct,throttle_pct,maf_gps,map_kpa,fuel_rate_lph,fuel_level_pct,voltage_v",
           expiresInSeconds: GET_TTL
         }
       })
@@ -311,16 +328,21 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
     description: `Aggregates over trips in a period: per-trip metrics and totals. metric (optional) selects one of: ${METRIC_NAMES.join(", ")}.`,
     input: QueryInput,
     handler: (raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const input = raw as typeof QueryInput.Type
         const from = yield* parseInstant("car_query", input.from)
         const to = yield* parseInstant("car_query", input.to)
         if (input.metric !== undefined && !(METRIC_NAMES as ReadonlyArray<string>).includes(input.metric)) {
-          return { available: false, reason: `Unknown metric. Use one of: ${METRIC_NAMES.join(", ")}`, metrics: METRIC_NAMES }
+          return {
+            available: false,
+            reason: `Unknown metric. Use one of: ${METRIC_NAMES.join(", ")}`,
+            metrics: METRIC_NAMES
+          }
         }
         const all = yield* listOverview(ctx.tgId, { from, to, limit: 1000 })
         const complete = all.filter((o) => o.status.complete).slice(0, QUERY_TRIPS_LIMIT)
-        const perTrip: Array<{ readonly tripId: string; readonly startedAt: string; readonly metrics: TripMetrics }> = []
+        const perTrip: Array<{ readonly tripId: string; readonly startedAt: string; readonly metrics: TripMetrics }> =
+          []
         for (const o of complete) {
           const metrics = yield* tripMetrics(ctx.tgId, o.tripId, o.status)
           if (metrics !== undefined) perTrip.push({ tripId: o.tripId, startedAt: iso(startedAtOf(o)), metrics })
@@ -357,7 +379,7 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
       "Create a one-time link (valid 30 minutes) that opens the car recorder app in Chrome on the user's Android phone and connects that phone to this account. Use it whenever the user wants to record a trip, connect a phone or upload car data.",
     input: AppLinkInput,
     handler: (_raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const webUrl = yield* CarWebUrl
         if (webUrl === "") return yield* fail("car_app_link", "CAR_WEB_URL is not configured")
         const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: "en" })
@@ -375,7 +397,7 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
       "Create a presigned PUT URL (valid 15 minutes) for uploading a raw file with an HTTP client such as curl. Not for people on a phone: for recording or uploading trips use car_app_link.",
     input: UploadInput,
     handler: (raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const ext = (raw as typeof UploadInput.Type).ext ?? "bin"
         if (!isValidExt(ext)) return yield* fail("car_upload_link", "ext must be 1-10 letters or digits")
         return yield* uploadLink(ctx.tgId, ext)
@@ -400,12 +422,14 @@ Use Python in the sandbox (pandas, matplotlib) only to draw charts: fetch the nu
 The user is not technical: explain in plain language, give the numbers, say what to do.`
 
 const pass = <I, S>(tag: Context.Service<I, S>): Layer.Layer<I, never, I> =>
-  Layer.effect(tag, Effect.gen(function*() { return yield* tag }) as Effect.Effect<S, never, I>)
+  Layer.effect(
+    tag,
+    Effect.gen(function* () {
+      return yield* tag
+    }) as Effect.Effect<S, never, I>
+  )
 
-const webUrlLayer = Layer.effect(
-  CarWebUrl,
-  Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
-)
+const webUrlLayer = Layer.effect(CarWebUrl, Config.String("CAR_WEB_URL").pipe(Config.withDefault("")))
 
 export const layer: Layer.Layer<CarR, Config.ConfigError, CarBucket | Telegram | CarKv | CarBackend> = Layer.mergeAll(
   layerConfig,
@@ -431,4 +455,3 @@ export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram
   systemPrompt,
   enabledByDefault: false
 }
-

@@ -8,7 +8,9 @@ import { wizardSteps } from "../model/wizard.ts"
 
 const props = defineProps<{ preset?: TransportKind }>()
 const { backend, t, lang, now, perform } = useApp()
-const transport = ref<TransportKind>(props.preset ?? (backend.caps.ble ? "ble" : backend.caps.serial ? "serial" : "simulator"))
+const transport = ref<TransportKind>(
+  props.preset ?? (backend.caps.ble ? "ble" : backend.caps.serial ? "serial" : "simulator")
+)
 const scenario = ref<SimScenario>("normal")
 const dev = ref(false)
 let taps = 0
@@ -16,7 +18,14 @@ const tapTitle = () => {
   if (++taps >= 5) dev.value = !dev.value
   if (taps >= 5) taps = 0
 }
-const scenarios: SimScenario[] = ["normal", "ignition_off", "clone_garbage", "drops_every_60s", "slow_ecu", "no_fuel_pid"]
+const scenarios: SimScenario[] = [
+  "normal",
+  "ignition_off",
+  "clone_garbage",
+  "drops_every_60s",
+  "slow_ecu",
+  "no_fuel_pid"
+]
 const transports = computed(() => [
   { id: "ble" as const, ok: backend.caps.ble },
   { id: "serial" as const, ok: backend.caps.serial },
@@ -80,12 +89,31 @@ const mark = { done: "✓", active: "…", failed: "!", pending: "" } as const
     <StatusCard v-if="backend.conn.value._tag !== 'Idle' && backend.conn.value._tag !== 'Failed'" :view="view" />
 
     <div class="actions">
-      <button v-if="backend.conn.value._tag === 'Ready'" class="btn btn-primary" type="button" data-testid="connect-start" @click="perform('start')">{{ t("action.start") }}</button>
-      <button v-else-if="idle" class="btn btn-primary" type="button" data-testid="connect-go" @click="backend.connect(transport, scenario)">
+      <button
+        v-if="backend.conn.value._tag === 'Ready'"
+        class="btn btn-primary"
+        type="button"
+        data-testid="connect-start"
+        @click="perform('start')"
+      >
+        {{ t("action.start") }}
+      </button>
+      <button
+        v-else-if="idle"
+        class="btn btn-primary"
+        type="button"
+        data-testid="connect-go"
+        @click="backend.connect(transport, scenario)"
+      >
         {{ backend.conn.value._tag === "Failed" ? t("common.retry") : t("connect.start") }}
       </button>
       <button v-if="busy" class="btn" type="button" @click="backend.cancelConnect()">{{ t("connect.cancel") }}</button>
-      <button v-if="backend.conn.value._tag === 'Failed' && transport !== 'simulator'" class="link" type="button" @click="transport = 'simulator'">
+      <button
+        v-if="backend.conn.value._tag === 'Failed' && transport !== 'simulator'"
+        class="link"
+        type="button"
+        @click="transport = 'simulator'"
+      >
         {{ t("action.tryDemo") }}
       </button>
     </div>

@@ -10,7 +10,7 @@ export type SqlStorageLike = {
     query: string,
     // oxlint-disable-next-line typescript/no-explicit-any
     ...bindings: Array<any>
-  // oxlint-disable-next-line typescript/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
   ) => { readonly toArray: () => Array<any> }
 }
 
@@ -105,7 +105,9 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
       ),
     reset: (key) =>
       rows("sessions.reset", "UPDATE sessions SET claude_session_id = NULL WHERE key = ?", key).pipe(Effect.asVoid),
-    list: rows("sessions.list", "SELECT * FROM sessions ORDER BY last_used_at DESC").pipe(Effect.map((r) => r.map(toRecord))),
+    list: rows("sessions.list", "SELECT * FROM sessions ORDER BY last_used_at DESC").pipe(
+      Effect.map((r) => r.map(toRecord))
+    ),
     checkDailyLimit: Effect.gen(function* () {
       const n = yield* countToday
       if (n >= dailyLimit) return yield* new DailyLimitReached({ limit: dailyLimit })

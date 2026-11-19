@@ -24,11 +24,15 @@ export type RunInput = {
 export class AgentRunner extends Context.Service<
   AgentRunner,
   {
-    readonly run: (input: RunInput) => Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted>
+    readonly run: (
+      input: RunInput
+    ) => Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted>
     readonly restore: (tgId: TgId) => Effect.Effect<void, ContainerDown>
     readonly snapshot: (tgId: TgId) => Effect.Effect<void, ContainerDown>
     readonly destroy: (tgId: TgId) => Effect.Effect<void, ContainerDown>
     readonly readFile: (tgId: TgId, path: string) => Effect.Effect<Uint8Array, ContainerDown>
-    readonly health: (tgId: TgId) => Effect.Effect<{ readonly version: string; readonly authOk: boolean }, ContainerDown>
+    readonly health: (
+      tgId: TgId
+    ) => Effect.Effect<{ readonly version: string; readonly authOk: boolean }, ContainerDown>
   }
 >()("@bot/AgentRunner") {}

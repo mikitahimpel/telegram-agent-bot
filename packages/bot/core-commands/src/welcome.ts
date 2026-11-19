@@ -43,10 +43,7 @@ export const renderWelcome = (
 ): string => {
   const m = welcomeMessages[lang]
   const lines = [...abilities[lang], ...blurbs.map((b) => e(b))].map((l) => `• ${l}`)
-  return [
-    `${m.greeting(name)} ${m.intro}`,
-    [m.can, ...lines].join("\n"),
-    m.fresh,
-    ...(isAdmin ? [m.admin] : [])
-  ].join("\n\n")
+  return [`${m.greeting(name)} ${m.intro}`, [m.can, ...lines].join("\n"), m.fresh, ...(isAdmin ? [m.admin] : [])].join(
+    "\n\n"
+  )
 }

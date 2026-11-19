@@ -3,7 +3,10 @@ import { computeTrip } from "../src/insight.ts"
 import { buildSeries } from "../src/series.ts"
 import { cruise, gen, T0 } from "./helpers.ts"
 
-const input = (samples: ReturnType<typeof gen>, gaps: ReadonlyArray<{ from: number; to: number; reason: "unknown" }> = []) => ({
+const input = (
+  samples: ReturnType<typeof gen>,
+  gaps: ReadonlyArray<{ from: number; to: number; reason: "unknown" }> = []
+) => ({
   tripId: "t",
   startedAt: T0,
   endedAt: T0 + samples.length * 1000,
@@ -31,7 +34,9 @@ describe("computeTrip", () => {
   })
 
   it("splits moving and idle time and fuel", () => {
-    const samples = gen(T0, 200, (t) => (t < 100 ? { speedKmh: 0, rpm: 800, fuelRateLph: 1 } : { speedKmh: 50, rpm: 2000, fuelRateLph: 5 }))
+    const samples = gen(T0, 200, (t) =>
+      t < 100 ? { speedKmh: 0, rpm: 800, fuelRateLph: 1 } : { speedKmh: 50, rpm: 2000, fuelRateLph: 5 }
+    )
     const { insight } = computeTrip(input(samples))
     expect(insight.idleS).toBeGreaterThan(95)
     expect(insight.movingS).toBeGreaterThan(95)

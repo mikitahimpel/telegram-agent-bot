@@ -6,7 +6,15 @@ import { AgentRunner } from "@bot/core-contracts/agent-runner"
 import { AgentEvent } from "@bot/core-contracts/agent-event"
 import type { CommandContext } from "@bot/core-contracts/commands"
 import { ContainerDown, type BotError } from "@bot/core-contracts/errors"
-import { ChatId, ClaudeSessionId, sessionKeyOf, TgId, ThreadId, type Role, type SessionKey } from "@bot/core-contracts/ids"
+import {
+  ChatId,
+  ClaudeSessionId,
+  sessionKeyOf,
+  TgId,
+  ThreadId,
+  type Role,
+  type SessionKey
+} from "@bot/core-contracts/ids"
 import { langFromTelegram, type Lang } from "@bot/core-contracts/lang"
 import { RunControl } from "@bot/core-contracts/run-control"
 import { Scheduler, type JobHandler } from "@bot/core-contracts/scheduler"

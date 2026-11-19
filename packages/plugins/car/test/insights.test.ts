@@ -44,7 +44,16 @@ const trip = async (start: number, seconds: number, restingV?: number) => {
     startedAt: start,
     endedAt: start + seconds * 1000,
     chunkCount: 1,
-    chunks: [{ seq: 0, rows: rows.length, bytes: new TextEncoder().encode(csv).length, sha256: sha, firstTs: start, lastTs: start + (seconds - 1) * 1000 }],
+    chunks: [
+      {
+        seq: 0,
+        rows: rows.length,
+        bytes: new TextEncoder().encode(csv).length,
+        sha256: sha,
+        firstTs: start,
+        lastTs: start + (seconds - 1) * 1000
+      }
+    ],
     gaps: [],
     supportedPids: [],
     device: { appVersion: "t", userAgent: "t", transport: "simulator" },
@@ -62,7 +71,10 @@ const setup = (now = () => T0 + 10 * DAY) => {
     layerEngine(engine),
     Layer.succeed(CarBucket, r2),
     Layer.succeed(CarWebUrl, "https://bot.test/car/"),
-    Layer.succeed(Telegram, { sendMessage: (_t: unknown, html: string, options: unknown) => Effect.sync(() => (sent.push({ html, options }), { messageId: 1 })) } as never),
+    Layer.succeed(Telegram, {
+      sendMessage: (_t: unknown, html: string, options: unknown) =>
+        Effect.sync(() => (sent.push({ html, options }), { messageId: 1 }))
+    } as never),
     Layer.succeed(UserScheduler, {
       forUser: () => ({
         schedule: (j: ScheduledJob) => Effect.sync(() => void jobs.set(j.id, j)),
@@ -72,7 +84,13 @@ const setup = (now = () => T0 + 10 * DAY) => {
       })
     })
   )
-  return { sent, jobs, engine, r2, run: <A, E>(e: Effect.Effect<A, E, any>) => Effect.runPromise(e.pipe(Effect.provide(layer)) as Effect.Effect<A, E>) }
+  return {
+    sent,
+    jobs,
+    engine,
+    r2,
+    run: <A, E>(e: Effect.Effect<A, E, any>) => Effect.runPromise(e.pipe(Effect.provide(layer)) as Effect.Effect<A, E>)
+  }
 }
 
 const tool = (name: string) => carPlugin.tools.find((t) => t.name === name)!
@@ -83,13 +101,18 @@ describe("agent tools", () => {
     const t = await trip(T0, 700)
     s.engine.ingestChunk(t.tripId, 0, t.sha, t.csv)
     s.engine.ingestManifest(t.manifest)
-    s.engine.putDtc({ readAt: T0, milOn: true, codes: [{ code: "P0420", kind: "stored" }], tripId: null, vin: null }, "en")
+    s.engine.putDtc(
+      { readAt: T0, milOn: true, codes: [{ code: "P0420", kind: "stored" }], tripId: null, vin: null },
+      "en"
+    )
     const ctx = { tgId: TgId.make(ME) }
     const q = (await s.run(tool("car_sql").handler({ query: "SELECT COUNT(*) AS n FROM car_trips" }, ctx))) as any
     expect(q).toMatchObject({ columns: ["n"], rows: [[1]], truncated: false })
     const bad = (await s.run(tool("car_sql").handler({ query: "DELETE FROM car_trips" }, ctx))) as any
     expect(bad.error).toMatch(/not allowed|SELECT/)
-    expect((await s.run(tool("car_sql").handler({ query: "PRAGMA table_info(car_trips)" }, ctx)) as any).error).toBeDefined()
+    expect(
+      ((await s.run(tool("car_sql").handler({ query: "PRAGMA table_info(car_trips)" }, ctx))) as any).error
+    ).toBeDefined()
     expect(tool("car_sql").description).toContain("car_samples")
     const o = (await s.run(tool("car_overview").handler({}, ctx))) as any
     expect(o.totals.trips).toBe(1)
@@ -122,10 +145,15 @@ describe("notifications", () => {
     const t = await trip(T0, 700, 12.1)
     s.engine.ingestChunk(t.tripId, 0, t.sha, t.csv)
     s.engine.ingestManifest(t.manifest)
-    s.engine.putDtc({ readAt: T0, milOn: true, codes: [{ code: "P0301", kind: "stored" }], tripId: null, vin: null }, "en")
+    s.engine.putDtc(
+      { readAt: T0, milOn: true, codes: [{ code: "P0301", kind: "stored" }], tripId: null, vin: null },
+      "en"
+    )
     expect(await s.run(notifyPending(ME, "en", "https://bot.test/car/"))).toBe(2)
     expect(s.sent.some((m) => m.html.includes("URGENT") && m.html.includes("P0301"))).toBe(true)
-    expect(s.sent.some((m) => m.html.includes("battery") && m.options.keyboard[0][0].url.endsWith("#battery"))).toBe(true)
+    expect(s.sent.some((m) => m.html.includes("battery") && m.options.keyboard[0][0].url.endsWith("#battery"))).toBe(
+      true
+    )
     expect(s.sent.filter((m) => m.html.includes("Check engine"))).toHaveLength(0)
     expect(await s.run(notifyPending(ME, "en", "https://bot.test/car/"))).toBe(0)
     expect(s.sent).toHaveLength(2)
@@ -137,11 +165,13 @@ describe("notifications", () => {
     const t = await trip(now - 2 * DAY, 1800)
     s.engine.ingestChunk(t.tripId, 0, t.sha, t.csv)
     s.engine.ingestManifest(t.manifest)
-    await s.run(Effect.gen(function*() {
-      yield* (yield* CarBackend).setMeta(ME, "lang", "ru")
-      yield* ensureWeekly(ME)
-      yield* ensureWeekly(ME)
-    }))
+    await s.run(
+      Effect.gen(function* () {
+        yield* (yield* CarBackend).setMeta(ME, "lang", "ru")
+        yield* ensureWeekly(ME)
+        yield* ensureWeekly(ME)
+      })
+    )
     expect(s.jobs.size).toBe(1)
     const job = s.jobs.get(weeklyJobId(ME))!
     expect(job.kind).toBe("car_weekly")
@@ -160,9 +190,15 @@ describe("notifications", () => {
     expect(nextWeeklyAt(sunday - 1)).toBe(sunday)
     expect(nextWeeklyAt(sunday)).toBe(sunday + 7 * DAY)
     expect(new Date(nextWeeklyAt(Date.UTC(2026, 10, 18, 3, 0, 0))).toISOString()).toBe("2026-11-22T18:00:00.000Z")
-    expect(new Date(nextWeeklyAt(Date.UTC(2026, 10, 18, 3, 0, 0), "Europe/Warsaw")).toISOString()).toBe("2026-11-22T17:00:00.000Z")
-    expect(new Date(nextWeeklyAt(Date.UTC(2026, 2, 25, 12, 0, 0), "Europe/Warsaw")).toISOString()).toBe("2026-03-29T16:00:00.000Z")
-    expect(new Date(nextWeeklyAt(Date.UTC(2026, 10, 22, 16, 30, 0), "Asia/Tokyo")).toISOString()).toBe("2026-11-29T09:00:00.000Z")
+    expect(new Date(nextWeeklyAt(Date.UTC(2026, 10, 18, 3, 0, 0), "Europe/Warsaw")).toISOString()).toBe(
+      "2026-11-22T17:00:00.000Z"
+    )
+    expect(new Date(nextWeeklyAt(Date.UTC(2026, 2, 25, 12, 0, 0), "Europe/Warsaw")).toISOString()).toBe(
+      "2026-03-29T16:00:00.000Z"
+    )
+    expect(new Date(nextWeeklyAt(Date.UTC(2026, 10, 22, 16, 30, 0), "Asia/Tokyo")).toISOString()).toBe(
+      "2026-11-29T09:00:00.000Z"
+    )
     expect(nextWeeklyAt(sunday - 1, "Not/AZone")).toBe(sunday)
   })
 })

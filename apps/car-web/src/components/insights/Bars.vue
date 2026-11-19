@@ -3,7 +3,12 @@ import { computed } from "vue"
 
 export type BarItem = { key: string; label: string; value: number | null; caption: string }
 
-const props = defineProps<{ items: ReadonlyArray<BarItem>; selected: string | null; format: (n: number) => string; label: string }>()
+const props = defineProps<{
+  items: ReadonlyArray<BarItem>
+  selected: string | null
+  format: (n: number) => string
+  label: string
+}>()
 const emit = defineEmits<{ select: [key: string] }>()
 const max = computed(() => Math.max(1e-6, ...props.items.map((i) => i.value ?? 0)))
 </script>

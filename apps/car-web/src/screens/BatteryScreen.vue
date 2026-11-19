@@ -11,7 +11,10 @@ import { batteryTone } from "../model/insights.ts"
 
 const { backend, lang, t } = useApp()
 const f = useFmt()
-const load = useLoad(() => backend.overview(lang.value), () => `${lang.value}:${backend.insightsDemo.value}`)
+const load = useLoad(
+  () => backend.overview(lang.value),
+  () => `${lang.value}:${backend.insightsDemo.value}`
+)
 const o = computed(() => load.data.value)
 const hover = ref<number | null>(null)
 
@@ -27,8 +30,13 @@ const CRANK: ChartBand[] = [
 ]
 const trend = computed(() => o.value?.battery.trend ?? [])
 const ts = computed(() => trend.value.map((p) => p.at))
-const domain = computed<readonly [number, number]>(() => (ts.value.length > 1 ? [ts.value[0]!, ts.value[ts.value.length - 1]!] : [Date.now() - 86_400_000, Date.now()]))
-const fmtDay = (n: number) => new Intl.DateTimeFormat(lang.value === "ru" ? "ru-RU" : "en-GB", { day: "numeric", month: "short" }).format(new Date(n))
+const domain = computed<readonly [number, number]>(() =>
+  ts.value.length > 1 ? [ts.value[0]!, ts.value[ts.value.length - 1]!] : [Date.now() - 86_400_000, Date.now()]
+)
+const fmtDay = (n: number) =>
+  new Intl.DateTimeFormat(lang.value === "ru" ? "ru-RU" : "en-GB", { day: "numeric", month: "short" }).format(
+    new Date(n)
+  )
 const v1 = (n: number) => f.volts(n)
 const v0 = (n: number) => String(Math.round(n * 10) / 10)
 </script>
@@ -95,7 +103,11 @@ const v0 = (n: number) => String(Math.round(n * 10) / 10)
           <p>{{ t("battery.explain.resting") }}</p>
           <p>{{ t("battery.explain.crank") }}</p>
           <p>{{ t("battery.explain.cold") }}</p>
-          <p class="muted">{{ t("battery.explain.estimate", { at: trend.length ? fmtDateTime(lang, trend[trend.length - 1]!.at) : "—" }) }}</p>
+          <p class="muted">
+            {{
+              t("battery.explain.estimate", { at: trend.length ? fmtDateTime(lang, trend[trend.length - 1]!.at) : "—" })
+            }}
+          </p>
         </section>
       </template>
     </AsyncState>

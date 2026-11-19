@@ -11,7 +11,7 @@ describe("Speech", () => {
         return { text: "  привет \n мир " }
       }
     })
-    return Effect.gen(function*() {
+    return Effect.gen(function* () {
       const out = yield* speech.transcribe(new Uint8Array([1, 2, 3]))
       expect(out.text).toBe("привет мир")
       expect(calls[0]?.model).toBe(WHISPER_MODEL)
@@ -21,22 +21,29 @@ describe("Speech", () => {
   })
 
   it.effect("maps a thrown binding error to SpeechFailed", () =>
-    Effect.gen(function*() {
-      const speech = make({ run: async () => { throw new Error("boom") } })
+    Effect.gen(function* () {
+      const speech = make({
+        run: async () => {
+          throw new Error("boom")
+        }
+      })
       const e = yield* Effect.flip(speech.transcribe(new Uint8Array([1])))
       expect(e).toBeInstanceOf(SpeechFailed)
-    }))
+    })
+  )
 
   it.effect("maps malformed output to SpeechFailed", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const speech = make({ run: async () => ({ nope: 1 }) })
       const e = yield* Effect.flip(speech.transcribe(new Uint8Array([1])))
       expect(e._tag).toBe("SpeechFailed")
-    }))
+    })
+  )
 
   it.effect("encodes large buffers", () =>
     Effect.sync(() => {
       const big = new Uint8Array(100_000).fill(65)
       expect(atob(toBase64(big)).length).toBe(100_000)
-    }))
+    })
+  )
 })

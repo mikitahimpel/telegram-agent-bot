@@ -9,6 +9,7 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 ```
 
 ## Stack (pinned)
+
 - effect 4.1.4 (stable v4: `Context.Service`, `Schema`, `Data.TaggedError`, `Data.TaggedEnum`, `effect/http`)
 - alchemy 2.0.0-beta.87, @cloudflare/sandbox 1.0.3, @anthropic-ai/claude-code 2.1.328
 - Telegram Bot API 10.4 (2026-11-09)
@@ -19,31 +20,32 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 
 ## Layout — `packages/<context>/<feature>`, one package per feature
 
-| Package | Name | Contents |
-|---|---|---|
-| packages/core/contracts | @bot/core-contracts | ids, tagged errors, Lang/i18n helper, AgentEvent, service tags (no implementations) |
-| packages/telegram/schema | @bot/telegram-schema | Effect Schema for incoming Update & friends |
-| packages/telegram/client | @bot/telegram-client | `Telegram` Layer over `effect/http` HttpClient, 429 retry via Schedule |
-| packages/telegram/format | @bot/telegram-format | HTML escape, markdown→Telegram HTML, splitting ≤4096, rich-message builders (tables) |
-| packages/telegram/streaming | @bot/telegram-streaming | Stream<AgentEvent> → drafts (sendMessageDraft, can_stop) + final message(s); editMessageText fallback |
-| packages/bot/commands | @bot/bot-commands | registry, /help builder, setMyCommands payloads (default + admin chat scope, ru+en) |
-| packages/bot/core-commands | @bot/bot-core-commands | handlers: start help new sessions stop lang + admin agents usage allow revoke kill restart |
-| packages/bot/allowlist | @bot/bot-allowlist | `Allowlist` Layer on KV |
-| packages/bot/invites | @bot/bot-invites | `Invites` on admin DO SQLite (+ memory layer), /invite /invites, invite redemption flow |
-| packages/bot/memory | @bot/bot-memory | long-term user facts in DO SQLite (2000-token budget), `UserMemory` service; rendered as a `MEMORY [n/2000 tokens]` block appended after the stable system prompt on every run |
-| packages/plugins/memory | @bot/plugins-memory | memory plugin: memory_remember/update/forget/list tools, /memory command with forget buttons |
-| packages/bot/dispatcher | @bot/bot-dispatcher | decoded Update → command / callback / agent prompt / stop routing |
-| packages/agent/stream-json | @bot/agent-stream-json | Schema for claude CLI stream-json lines → AgentEvent; usage-limit detection |
-| packages/agent/runner | @bot/agent-runner | `AgentRunner` Layer over @cloudflare/sandbox; R2 snapshot/restore |
-| packages/agent/sessions | @bot/agent-sessions | `Sessions` Layer over DO SQLite storage |
-| packages/plugins/registry | @bot/plugins-registry | plugin registry, plugin flags (KV), MCP JSON-RPC server, MCP token (HMAC) |
-| packages/plugins/car | @bot/plugins-car | car plugin (commands + tools), R2 `car/<tgId>/` |
-| packages/infra/telegram-webhook | @bot/infra-telegram-webhook | Alchemy custom resource: setWebhook+setMyCommands / deleteWebhook |
-| apps/gateway | @bot/gateway | Worker fetch handler, UserAgent DO, Sandbox DO export, wiring of all Layers |
-| apps/claude-runner | — | Dockerfile for the sandbox image (claude CLI + python (pandas, matplotlib)) |
-| alchemy.run.ts | — | all infrastructure, stages dev/prod/pr-N |
+| Package                         | Name                        | Contents                                                                                                                                                                       |
+| ------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| packages/core/contracts         | @bot/core-contracts         | ids, tagged errors, Lang/i18n helper, AgentEvent, service tags (no implementations)                                                                                            |
+| packages/telegram/schema        | @bot/telegram-schema        | Effect Schema for incoming Update & friends                                                                                                                                    |
+| packages/telegram/client        | @bot/telegram-client        | `Telegram` Layer over `effect/http` HttpClient, 429 retry via Schedule                                                                                                         |
+| packages/telegram/format        | @bot/telegram-format        | HTML escape, markdown→Telegram HTML, splitting ≤4096, rich-message builders (tables)                                                                                           |
+| packages/telegram/streaming     | @bot/telegram-streaming     | Stream<AgentEvent> → drafts (sendMessageDraft, can_stop) + final message(s); editMessageText fallback                                                                          |
+| packages/bot/commands           | @bot/bot-commands           | registry, /help builder, setMyCommands payloads (default + admin chat scope, ru+en)                                                                                            |
+| packages/bot/core-commands      | @bot/bot-core-commands      | handlers: start help new sessions stop lang + admin agents usage allow revoke kill restart                                                                                     |
+| packages/bot/allowlist          | @bot/bot-allowlist          | `Allowlist` Layer on KV                                                                                                                                                        |
+| packages/bot/invites            | @bot/bot-invites            | `Invites` on admin DO SQLite (+ memory layer), /invite /invites, invite redemption flow                                                                                        |
+| packages/bot/memory             | @bot/bot-memory             | long-term user facts in DO SQLite (2000-token budget), `UserMemory` service; rendered as a `MEMORY [n/2000 tokens]` block appended after the stable system prompt on every run |
+| packages/plugins/memory         | @bot/plugins-memory         | memory plugin: memory_remember/update/forget/list tools, /memory command with forget buttons                                                                                   |
+| packages/bot/dispatcher         | @bot/bot-dispatcher         | decoded Update → command / callback / agent prompt / stop routing                                                                                                              |
+| packages/agent/stream-json      | @bot/agent-stream-json      | Schema for claude CLI stream-json lines → AgentEvent; usage-limit detection                                                                                                    |
+| packages/agent/runner           | @bot/agent-runner           | `AgentRunner` Layer over @cloudflare/sandbox; R2 snapshot/restore                                                                                                              |
+| packages/agent/sessions         | @bot/agent-sessions         | `Sessions` Layer over DO SQLite storage                                                                                                                                        |
+| packages/plugins/registry       | @bot/plugins-registry       | plugin registry, plugin flags (KV), MCP JSON-RPC server, MCP token (HMAC)                                                                                                      |
+| packages/plugins/car            | @bot/plugins-car            | car plugin (commands + tools), R2 `car/<tgId>/`                                                                                                                                |
+| packages/infra/telegram-webhook | @bot/infra-telegram-webhook | Alchemy custom resource: setWebhook+setMyCommands / deleteWebhook                                                                                                              |
+| apps/gateway                    | @bot/gateway                | Worker fetch handler, UserAgent DO, Sandbox DO export, wiring of all Layers                                                                                                    |
+| apps/claude-runner              | —                           | Dockerfile for the sandbox image (claude CLI + python (pandas, matplotlib))                                                                                                    |
+| alchemy.run.ts                  | —                           | all infrastructure, stages dev/prod/pr-N                                                                                                                                       |
 
 ## Rules
+
 - No comments in code (no JSDoc, no inline). Only tool directives are allowed (`@ts-expect-error`, `/// <reference>`, `eslint-disable`). Explain intent with names and types; put design notes in docs/.
 - kebab-case files/folders; PascalCase classes/services. No `any` except where contracts already use it. No barrel index.ts: `exports` in package.json lists subpaths, each maps to one `src/<name>.ts`.
 - Imports between packages only through declared `exports`; add the dependency (`"@bot/x": "workspace:*"`) to package.json.

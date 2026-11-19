@@ -39,7 +39,8 @@ export const en = {
   "conn.idle.title": "Not connected",
   "conn.idle.text": "Plug the OBD adapter into the car and connect to start recording.",
   "conn.requesting.title": "Choose your adapter",
-  "conn.requesting.text": "Pick the adapter in the list Chrome is showing. It is usually named OBDII, ELM327 or V-LINK.",
+  "conn.requesting.text":
+    "Pick the adapter in the list Chrome is showing. It is usually named OBDII, ELM327 or V-LINK.",
   "conn.connecting.title": "Connecting to the adapter",
   "conn.connecting.text": "This takes a few seconds.",
   "conn.init.title": "Setting up the adapter",
@@ -49,24 +50,33 @@ export const en = {
   "conn.ready.title": "Connected",
   "conn.ready.text": "{sensors#sensor|sensors} found. You can start recording.",
   "conn.lost.title": "Connection lost {ago} ago",
-  "conn.lost.text": "Reconnecting automatically (attempt {attempt}), next try in {next}. The trip stays open and the missing time is marked as a gap.",
+  "conn.lost.text":
+    "Reconnecting automatically (attempt {attempt}), next try in {next}. The trip stays open and the missing time is marked as a gap.",
 
   "err.BluetoothUnavailable.title": "Bluetooth is not available",
-  "err.BluetoothUnavailable.text": "Turn Bluetooth and Location on in the phone's quick settings (Android needs Location to find devices), then try again.",
+  "err.BluetoothUnavailable.text":
+    "Turn Bluetooth and Location on in the phone's quick settings (Android needs Location to find devices), then try again.",
   "err.SerialUnavailable.title": "USB connection is not available",
-  "err.SerialUnavailable.text": "This browser cannot talk to USB devices. Use Chrome on Android with an OTG cable, or choose Bluetooth.",
+  "err.SerialUnavailable.text":
+    "This browser cannot talk to USB devices. Use Chrome on Android with an OTG cable, or choose Bluetooth.",
   "err.PermissionDenied.title": "Access was not allowed",
-  "err.PermissionDenied.text": "Chrome was not allowed to use the adapter. Tap \"Try again\" and allow access. If no question appears, enable Nearby devices for Chrome in Android settings.",
+  "err.PermissionDenied.text":
+    'Chrome was not allowed to use the adapter. Tap "Try again" and allow access. If no question appears, enable Nearby devices for Chrome in Android settings.',
   "err.DeviceNotSelected.title": "No adapter chosen",
-  "err.DeviceNotSelected.text": "The list was closed without choosing. Tap \"Try again\" and pick your adapter. If the list is empty, check that the adapter is plugged in and the ignition is on.",
+  "err.DeviceNotSelected.text":
+    'The list was closed without choosing. Tap "Try again" and pick your adapter. If the list is empty, check that the adapter is plugged in and the ignition is on.',
   "err.UnsupportedDevice.title": "This is not an OBD adapter",
-  "err.UnsupportedDevice.text": "The device you chose does not speak the ELM327 language. Go back and pick another one. The adapter is usually named OBDII, ELM327 or V-LINK.",
+  "err.UnsupportedDevice.text":
+    "The device you chose does not speak the ELM327 language. Go back and pick another one. The adapter is usually named OBDII, ELM327 or V-LINK.",
   "err.AdapterNotResponding.title": "The adapter does not answer",
-  "err.AdapterNotResponding.text": "It stopped at step: {step}. Unplug the adapter, wait 5 seconds, plug it back in and try again. Cheap clone adapters sometimes need a second attempt.",
+  "err.AdapterNotResponding.text":
+    "It stopped at step: {step}. Unplug the adapter, wait 5 seconds, plug it back in and try again. Cheap clone adapters sometimes need a second attempt.",
   "err.EcuNotResponding.title": "The car does not answer",
-  "err.EcuNotResponding.text": "The adapter works, but the car's computer is silent. Turn the ignition on (or start the engine), wait a few seconds and try again. Check that the adapter is pushed all the way into the OBD port.",
+  "err.EcuNotResponding.text":
+    "The adapter works, but the car's computer is silent. Turn the ignition on (or start the engine), wait a few seconds and try again. Check that the adapter is pushed all the way into the OBD port.",
   "err.CommandTimeout.title": "The car is slow to answer",
-  "err.CommandTimeout.text": "Some requests timed out. Recording continues at a slower rate. If this keeps happening, raise the polling interval in Settings.",
+  "err.CommandTimeout.text":
+    "Some requests timed out. Recording continues at a slower rate. If this keeps happening, raise the polling interval in Settings.",
   "err.Disconnected.title": "The adapter disconnected",
   "err.Disconnected.text": "The connection dropped. Move the phone closer to the adapter and connect again.",
 
@@ -75,7 +85,8 @@ export const en = {
   "rec.recording.title": "Recording {clock}",
   "rec.recording.text": "{points#point|points} · saved on the phone",
   "rec.gap.title": "Recording, but no data",
-  "rec.gap.text": "The connection is down, so nothing is being recorded right now. The trip stays open and this time is marked as a gap. {points#point|points} saved so far.",
+  "rec.gap.text":
+    "The connection is down, so nothing is being recorded right now. The trip stays open and this time is marked as a gap. {points#point|points} saved so far.",
   "rec.finishing.title": "Saving the trip",
   "rec.finishing.text": "Writing the last points to the phone. Do not close the app.",
   "rec.error.title": "Recording problem",
@@ -88,9 +99,11 @@ export const en = {
   "sync.offline.title": "No internet",
   "sync.offline.text": "Trips are safe on the phone. Sending continues by itself when the network is back.",
   "sync.plugin_disabled.title": "Car feature is switched off",
-  "sync.plugin_disabled.text": "Sending is disabled for your account. Ask the bot admin to turn on the car plugin. Trips stay on the phone meanwhile.",
+  "sync.plugin_disabled.text":
+    "Sending is disabled for your account. Ask the bot admin to turn on the car plugin. Trips stay on the phone meanwhile.",
   "sync.forbidden.title": "No access",
-  "sync.forbidden.text": "Your account is not allowed to send trips. Ask the bot admin. Trips stay on the phone meanwhile.",
+  "sync.forbidden.text":
+    "Your account is not allowed to send trips. Ask the bot admin. Trips stay on the phone meanwhile.",
   "sync.paused.title": "Sending is paused",
   "sync.paused.text": "Nothing is being sent right now. Trips are safe on the phone.",
 
@@ -98,13 +111,16 @@ export const en = {
   "trip.recording.text": "This trip is still being recorded.",
   "trip.recording.summary": "Recording now",
   "trip.blocked.unpaired.title": "Waiting for this phone to be connected",
-  "trip.blocked.unpaired.text": "Sending cannot start until the phone is connected to your account. It uploads right after you connect.",
+  "trip.blocked.unpaired.text":
+    "Sending cannot start until the phone is connected to your account. It uploads right after you connect.",
   "trip.blocked.unpaired.summary": "Saved on the phone · uploads right after you connect the phone",
   "trip.blocked.revoked.title": "Phone disconnected, pair it again",
-  "trip.blocked.revoked.text": "This phone was disconnected from your account, so nothing is sent. Pair it again; the trip stays on the phone.",
+  "trip.blocked.revoked.text":
+    "This phone was disconnected from your account, so nothing is sent. Pair it again; the trip stays on the phone.",
   "trip.blocked.revoked.summary": "Saved on the phone · phone disconnected, pair it again",
   "trip.blocked.plugin.title": "Waiting for the admin to enable the car plugin",
-  "trip.blocked.plugin.text": "Sending is disabled for your account. The bot admin must enable the car plugin. The trip stays on the phone.",
+  "trip.blocked.plugin.text":
+    "Sending is disabled for your account. The bot admin must enable the car plugin. The trip stays on the phone.",
   "trip.blocked.plugin.summary": "Saved on the phone · the admin must enable the car plugin",
   "trip.blocked.forbidden.title": "No access to send",
   "trip.blocked.forbidden.text": "The server refused this phone. The trip stays on the phone.",
@@ -122,7 +138,8 @@ export const en = {
   "trip.uploading.text": "{confirmed#part|parts} already confirmed by the cloud. Keep the app open until it finishes.",
   "trip.uploading.summary": "Sent {sent} of {total#part|parts} · {confirmed} confirmed",
   "trip.waiting.title": "Sent {sent} of {total#part|parts}",
-  "trip.waiting.text": "{waiting} waiting for {reason}. Next try in {next}. Everything stays on the phone until the cloud confirms it.",
+  "trip.waiting.text":
+    "{waiting} waiting for {reason}. Next try in {next}. Everything stays on the phone until the cloud confirms it.",
   "trip.waiting.summary": "Sent {sent} of {total#part|parts} · {waiting} waiting for {reason} · next try in {next}",
   "trip.waiting.reason.network": "network",
   "trip.waiting.reason.rate_limited": "the server to calm down",
@@ -143,30 +160,38 @@ export const en = {
   "trip.missing.text": "Parts {list} did not arrive. They are still on the phone and will be sent again.",
   "trip.missing.summary": "{n#part|parts} missing in the cloud: {list}",
   "trip.corrupt.title": "{n#part|parts} arrived damaged",
-  "trip.corrupt.text": "Parts {list} failed the integrity check. We resend them. If it keeps failing, export the file and send it to the bot.",
+  "trip.corrupt.text":
+    "Parts {list} failed the integrity check. We resend them. If it keeps failing, export the file and send it to the bot.",
   "trip.corrupt.summary": "{n#part|parts} damaged in transit: {list}",
   "trip.conflict.title": "The cloud has different data for {n#part|parts}",
-  "trip.conflict.text": "For parts {list} the cloud already holds other data (maybe the trip was recorded twice). We never overwrite it. Export the file and send it to the bot.",
+  "trip.conflict.text":
+    "For parts {list} the cloud already holds other data (maybe the trip was recorded twice). We never overwrite it. Export the file and send it to the bot.",
   "trip.conflict.summary": "Conflict in {n#part|parts}: {list}. Nothing was overwritten",
   "trip.lost.title": "Partly in the cloud, no copy on the phone",
-  "trip.lost.text": "Parts {list} are missing in the cloud and were already deleted from the phone, so they cannot be restored. The rest of the trip is safe.",
+  "trip.lost.text":
+    "Parts {list} are missing in the cloud and were already deleted from the phone, so they cannot be restored. The rest of the trip is safe.",
   "trip.lost.summary": "Parts {list} are lost: gone from both the phone and the cloud",
 
   "env.noble.title": "This browser has no Bluetooth",
   "env.noble.text": "Web Bluetooth works in Chrome on Android. Open the link in Chrome and try again.",
   "env.serialonly.title": "Bluetooth is not supported here",
-  "env.serialonly.text": "Your browser can use a USB adapter through a cable, but not Bluetooth. Choose USB, or open the app in Chrome on Android.",
+  "env.serialonly.text":
+    "Your browser can use a USB adapter through a cable, but not Bluetooth. Choose USB, or open the app in Chrome on Android.",
   "env.insecure.title": "Connection is not secure",
-  "env.insecure.text": "Bluetooth only works on secure (https) pages. Open the app from the bot's button, not from a copied link.",
+  "env.insecure.text":
+    "Bluetooth only works on secure (https) pages. Open the app from the bot's button, not from a copied link.",
   "env.ok.title": "Your browser is supported",
   "env.ok.text": "Bluetooth is available.",
 
   "storage.low.title": "Phone storage is almost full",
-  "storage.low.text": "The app uses {pct}% of the space it may use. Delete trips that are already in the cloud, or recording may stop.",
+  "storage.low.text":
+    "The app uses {pct}% of the space it may use. Delete trips that are already in the cloud, or recording may stop.",
   "storage.notPersistent.title": "Data may be erased by the browser",
-  "storage.notPersistent.text": "Chrome may remove app data when the phone runs low on space. Trips that are not in the cloud yet could be lost. Tap to ask Chrome to keep them.",
+  "storage.notPersistent.text":
+    "Chrome may remove app data when the phone runs low on space. Trips that are not in the cloud yet could be lost. Tap to ask Chrome to keep them.",
   "clock.title": "The phone clock is wrong",
-  "clock.text": "Your clock is off by about {delta}. Trips will have the wrong time. Turn on automatic date and time in the phone settings.",
+  "clock.text":
+    "Your clock is off by about {delta}. Trips will have the wrong time. Turn on automatic date and time in the phone settings.",
 
   "home.title": "Car",
   "home.ready.title": "Ready to record",
@@ -174,7 +199,8 @@ export const en = {
   "home.allDone.title": "Everything is in the cloud",
   "home.allDone.text": "All trips are safely stored. Connect to the car to record a new one.",
   "home.pending.title": "Sending {sent} of {total#part|parts}",
-  "home.pending.text": "{trips#trip is|trips are} still on the way to the cloud. Trips stay safe on the phone meanwhile.",
+  "home.pending.text":
+    "{trips#trip is|trips are} still on the way to the cloud. Trips stay safe on the phone meanwhile.",
   "home.attention.title": "A trip needs attention",
   "home.recentTrips": "Recent trips",
   "home.noTrips": "No trips yet. Your first recording will appear here.",
@@ -286,7 +312,8 @@ export const en = {
   "trip.gap.unknown": "Unknown reason",
   "trip.gap.length": "{t} without data",
   "trip.export": "Export file",
-  "trip.export.steps": "1. Tap \"Export file\". A CSV file is prepared.\n2. In the Android share sheet pick Telegram and this bot's chat.\n3. The bot imports the file, and the trip shows up in the cloud.",
+  "trip.export.steps":
+    '1. Tap "Export file". A CSV file is prepared.\n2. In the Android share sheet pick Telegram and this bot\'s chat.\n3. The bot imports the file, and the trip shows up in the cloud.',
   "trip.delete": "Delete phone copy",
   "trip.delete.only": "Available once the whole trip is confirmed by the cloud.",
   "trip.delete.confirm": "Delete the trip from this phone? It stays in the cloud.",
@@ -295,7 +322,8 @@ export const en = {
   "trip.localGone": "No copy on the phone",
 
   "interrupted.title": "The trip was interrupted",
-  "interrupted.text": "The app closed at {time} during a recording. {points#point|points} are saved. Continue the trip or finish it as it is?",
+  "interrupted.text":
+    "The app closed at {time} during a recording. {points#point|points} are saved. Continue the trip or finish it as it is?",
   "interrupted.continue": "Continue recording",
   "interrupted.finish": "Finish the trip",
 
@@ -312,9 +340,11 @@ export const en = {
   "settings.storage.persisted": "Protected: Chrome will not erase the data",
   "settings.storage.notPersisted": "Not protected: Chrome may erase data when space runs low",
   "settings.storage.request": "Protect my data",
-  "settings.storage.requestDenied": "Chrome refused. This often happens when the app is rarely used. Keep sending trips to the cloud.",
+  "settings.storage.requestDenied":
+    "Chrome refused. This often happens when the app is rarely used. Keep sending trips to the cloud.",
   "settings.diag": "Diagnostics",
-  "settings.diag.hint": "A log of what the app and the adapter did. Send it to the developer if something does not work.",
+  "settings.diag.hint":
+    "A log of what the app and the adapter did. Send it to the developer if something does not work.",
   "settings.diag.empty": "No events yet",
   "settings.diag.copy": "Copy log",
   "settings.about": "About",
@@ -324,10 +354,12 @@ export const en = {
   "action.install": "Install the app",
 
   "sync.revoked.title": "This phone was disconnected from your account",
-  "sync.revoked.text": "Pair it again: open the bot, tap the /car app, then \"Open in Chrome\". Recordings on this phone are kept and will upload after pairing.",
+  "sync.revoked.text":
+    'Pair it again: open the bot, tap the /car app, then "Open in Chrome". Recordings on this phone are kept and will upload after pairing.',
 
   "pair.unpaired.title": "Connect this phone to your account",
-  "pair.unpaired.text": "Send /car app to the bot in Telegram, then open the link it sends in Chrome. The link works once and for 30 minutes, and pairs this phone.",
+  "pair.unpaired.text":
+    "Send /car app to the bot in Telegram, then open the link it sends in Chrome. The link works once and for 30 minutes, and pairs this phone.",
   "pair.openBot": "Open the bot",
   "pair.recordLocal": "Record without connecting",
   "pair.demo": "Try the demo (simulator)",
@@ -343,21 +375,24 @@ export const en = {
   "pair.done.title": "Phone connected",
   "pair.done.text": "This phone is linked to your account. You can record trips here.",
   "pair.invalid.title": "The link expired or was already used",
-  "pair.invalid.text": "A pairing link works once and for 30 minutes. Go back to the bot, send /car app and open the new link in Chrome.",
+  "pair.invalid.text":
+    "A pairing link works once and for 30 minutes. Go back to the bot, send /car app and open the new link in Chrome.",
   "pair.network.title": "Could not reach the server",
   "pair.network.text": "Check your internet connection and open the link again. The link is kept for 30 minutes.",
   "pair.unknown.title": "Pairing failed",
   "pair.unknown.text": "Something went wrong. Get a new link from the bot and try again.",
 
   "env.chromeIos.title": "iPhone cannot record trips",
-  "env.chromeIos.text": "Browsers on iPhone have no Bluetooth access for web pages. Use Chrome on an Android phone. You can look around with the demo.",
+  "env.chromeIos.text":
+    "Browsers on iPhone have no Bluetooth access for web pages. Use Chrome on an Android phone. You can look around with the demo.",
   "env.chromeDesktop.title": "This computer cannot connect via Bluetooth",
-  "env.chromeDesktop.text": "Bluetooth is not available in this browser. If your adapter has a USB cable, choose USB. Otherwise use Chrome on an Android phone.",
+  "env.chromeDesktop.text":
+    "Bluetooth is not available in this browser. If your adapter has a USB cable, choose USB. Otherwise use Chrome on an Android phone.",
 
   "home.unpaired.hint": "Not paired yet",
 
   "devices.title": "Connected phones",
-  "devices.empty": "No phone is paired yet. Tap \"Open recorder in Chrome\" to pair one.",
+  "devices.empty": 'No phone is paired yet. Tap "Open recorder in Chrome" to pair one.',
   "devices.revokeConfirm": "Disconnect {name}? It will have to be paired again.",
   "devices.lastSeen": "Last seen {when}",
   "devices.thisOne": "this phone",
@@ -370,23 +405,29 @@ export const en = {
   "settings.mode.chromeUnpaired": "Chrome, not paired",
   "action.openInChrome": "Open in Chrome",
   "env.webview.title": "Recording works only in Chrome",
-  "env.webview.text": "This browser cannot connect to the adapter. Open this page in Chrome on your Android phone. The pairing link is kept.",
+  "env.webview.text":
+    "This browser cannot connect to the adapter. Open this page in Chrome on your Android phone. The pairing link is kept.",
   "env.telegramWebview.title": "Recording works only in Chrome",
-  "env.telegramWebview.text": "Telegram's built-in browser cannot use Bluetooth. Tap \"Open in Chrome\". If Chrome does not open, use the steps below. The pairing link is kept.",
+  "env.telegramWebview.text":
+    'Telegram\'s built-in browser cannot use Bluetooth. Tap "Open in Chrome". If Chrome does not open, use the steps below. The pairing link is kept.',
   "chrome.fallback": "Chrome did not open?",
-  "chrome.steps": "1. Tap the ⋮ menu in the top corner.\n2. Choose \"Open in Chrome\" (or \"Open in browser\").\n3. No such item? Copy the link below and paste it into Chrome.",
+  "chrome.steps":
+    '1. Tap the ⋮ menu in the top corner.\n2. Choose "Open in Chrome" (or "Open in browser").\n3. No such item? Copy the link below and paste it into Chrome.',
   "chrome.copyLink": "Copy link",
   "chrome.linkCopied": "Link copied",
   "action.howToPair": "How to pair this phone",
-  "estimate": "≈ estimate",
+  estimate: "≈ estimate",
   "recording.fuel.estimate": "Estimated from the air flow sensor, not measured directly",
   "recording.gap.backgrounded": "The app was in the background. This time is marked as a gap.",
   "err.CommandRejected.title": "Command refused",
-  "err.CommandRejected.text": "The adapter refused a request ({token}). Recording goes on; if it keeps happening, unplug the adapter and plug it back in.",
+  "err.CommandRejected.text":
+    "The adapter refused a request ({token}). Recording goes on; if it keeps happening, unplug the adapter and plug it back in.",
   "rec.storage.title": "Cannot save to the phone",
-  "rec.storage.text": "Phone storage is full or blocked. New points wait in memory and saving is retried every few seconds. Free up space or stop the trip.",
+  "rec.storage.text":
+    "Phone storage is full or blocked. New points wait in memory and saving is retried every few seconds. Free up space or stop the trip.",
   "rec.sourceEnded.title": "The adapter stopped sending data",
-  "rec.sourceEnded.text": "The trip is still open, but nothing new is coming in. Reconnect the adapter or stop the recording. What is saved stays safe.",
+  "rec.sourceEnded.text":
+    "The trip is still open, but nothing new is coming in. Reconnect the adapter or stop the recording. What is saved stays safe.",
   "trip.legend.lost": "Lost",
   "trip.chunk.reason.lost": "This part is missing in the cloud and on the phone. It cannot be restored.",
   ...enInsights

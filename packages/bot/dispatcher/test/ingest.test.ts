@@ -54,11 +54,21 @@ const setup = (opts: { transcript?: string; sizes?: Record<string, number>; onDo
     present: ({ stream }) => Stream.runForEach(stream, (e) => Effect.sync(() => void presented.push(e))),
     albumWindow: "20 millis",
     ...(opts.onDocument === true
-      ? { onDocument: ({ document }: { document: { file_name?: string | undefined } }) => Effect.succeed(document.file_name === "trip.csv") }
+      ? {
+          onDocument: ({ document }: { document: { file_name?: string | undefined } }) =>
+            Effect.succeed(document.file_name === "trip.csv")
+        }
       : {})
   })
   const completed = AgentEvent.Completed({
-    sessionId: ClaudeSessionId.make("s1"), text: "ok", isError: false, costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 0, numTurns: 1
+    sessionId: ClaudeSessionId.make("s1"),
+    text: "ok",
+    isError: false,
+    costUsd: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    durationMs: 0,
+    numTurns: 1
   })
   const telegram = {
     sendMessage: (_t: unknown, html: string) => Effect.sync(() => (sent.push(html), { messageId: 1 })),
@@ -80,7 +90,9 @@ const setup = (opts: { transcript?: string; sizes?: Record<string, number>; onDo
     Layer.succeed(AdminNotifier, { notify: () => Effect.void }),
     Layer.succeed(McpAccess, { issue: () => Effect.succeed(undefined) }),
     Layer.succeed(UserPrefs, { timeZone: () => Effect.succeed(undefined), lang: () => Effect.succeed(undefined) }),
-    Layer.succeed(UserMemory, { forUser: () => ({ render: Effect.succeed("MEMORY [0/2000 tokens]\n(empty)") }) as unknown as MemoryStore }),
+    Layer.succeed(UserMemory, {
+      forUser: () => ({ render: Effect.succeed("MEMORY [0/2000 tokens]\n(empty)") }) as unknown as MemoryStore
+    }),
     speechTest(() =>
       opts.transcript === "fail"
         ? Effect.fail(new SpeechFailed({ reason: "x" }))
@@ -89,7 +101,8 @@ const setup = (opts: { transcript?: string; sizes?: Record<string, number>; onDo
     runControlLayer,
     sessionsLayer(fakeSql()).pipe(Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({}))))
   )
-  const run = (e: Effect.Effect<void, never, any>) => Effect.runPromise(e.pipe(Effect.provide(env)) as Effect.Effect<void>)
+  const run = (e: Effect.Effect<void, never, any>) =>
+    Effect.runPromise(e.pipe(Effect.provide(env)) as Effect.Effect<void>)
   return { dispatch, run, sent, runs, presented, downloads }
 }
 
@@ -150,7 +163,11 @@ describe("media ingestion", () => {
 
   it("uses a default prompt for a captionless document", async () => {
     const t = setup()
-    await t.run(t.dispatch(upd({ document: { file_id: "d", file_unique_id: "u", file_name: "r.pdf", mime_type: "application/pdf" } })))
+    await t.run(
+      t.dispatch(
+        upd({ document: { file_id: "d", file_unique_id: "u", file_name: "r.pdf", mime_type: "application/pdf" } })
+      )
+    )
     expect(t.runs[0]?.prompt).toContain("Пользователь прислал файл")
     expect(t.runs[0]?.attachments?.[0]).toMatchObject({ fileName: "r.pdf", mimeType: "application/pdf" })
   })
@@ -180,7 +197,12 @@ describe("media ingestion", () => {
 describe("ingest helpers", () => {
   it("picks the largest photo and truncates quotes", () => {
     expect(largestPhoto([])).toBeUndefined()
-    expect(largestPhoto([{ file_id: "a", file_unique_id: "a", width: 5, height: 5 }, { file_id: "b", file_unique_id: "b", width: 9, height: 9 }])?.file_id).toBe("b")
+    expect(
+      largestPhoto([
+        { file_id: "a", file_unique_id: "a", width: 5, height: 5 },
+        { file_id: "b", file_unique_id: "b", width: 9, height: 9 }
+      ])?.file_id
+    ).toBe("b")
     expect(truncateQuote("x".repeat(400)).length).toBe(300)
     expect(quoteOf("hi")).toBe("🎙 «hi»")
   })

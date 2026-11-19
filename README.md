@@ -54,11 +54,11 @@ Allow other users from the admin chat with `/allow <tgId>`.
 
 ### Stages
 
-| Stage | Webhook | Bot |
-|---|---|---|
-| `dev` | registered | the test bot (use the dev bot's token in `.env`) |
-| `prod` | registered | the real bot |
-| `pr-<n>` | **not** registered (a bot has a single webhook) | n/a; use the Worker URL directly |
+| Stage    | Webhook                                         | Bot                                              |
+| -------- | ----------------------------------------------- | ------------------------------------------------ |
+| `dev`    | registered                                      | the test bot (use the dev bot's token in `.env`) |
+| `prod`   | registered                                      | the real bot                                     |
+| `pr-<n>` | **not** registered (a bot has a single webhook) | n/a; use the Worker URL directly                 |
 
 Each stage has its own Worker, Durable Objects, container application, R2 bucket and KV namespace.
 
@@ -72,16 +72,16 @@ update is accepted. Repository secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCO
 
 ## Configuration
 
-| Name | Kind | Default |
-|---|---|---|
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `MCP_TOKEN_SECRET` | secret | required |
-| `CLAUDE_AUTH_MODE` | plain | `subscription`; `api_key` switches the agent to pay-as-you-go API billing |
-| `CLAUDE_CODE_OAUTH_TOKEN` | secret | required when `CLAUDE_AUTH_MODE=subscription` (`claude setup-token`) |
-| `ANTHROPIC_API_KEY` | secret | required when `CLAUDE_AUTH_MODE=api_key` (Claude Console) |
-| `ADMIN_TG_ID` | plain | required |
-| `DAILY_RUN_LIMIT` | plain | 50 runs per account per UTC day |
-| `CONTAINER_INSTANCE_TYPE` | plain | `basic` |
-| `CLAUDE_TOKEN_ISSUED_AT` | plain | empty (no expiry reminders; ignored in `api_key` mode) |
+| Name                                                                | Kind   | Default                                                                   |
+| ------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------- |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `MCP_TOKEN_SECRET` | secret | required                                                                  |
+| `CLAUDE_AUTH_MODE`                                                  | plain  | `subscription`; `api_key` switches the agent to pay-as-you-go API billing |
+| `CLAUDE_CODE_OAUTH_TOKEN`                                           | secret | required when `CLAUDE_AUTH_MODE=subscription` (`claude setup-token`)      |
+| `ANTHROPIC_API_KEY`                                                 | secret | required when `CLAUDE_AUTH_MODE=api_key` (Claude Console)                 |
+| `ADMIN_TG_ID`                                                       | plain  | required                                                                  |
+| `DAILY_RUN_LIMIT`                                                   | plain  | 50 runs per account per UTC day                                           |
+| `CONTAINER_INSTANCE_TYPE`                                           | plain  | `basic`                                                                   |
+| `CLAUDE_TOKEN_ISSUED_AT`                                            | plain  | empty (no expiry reminders; ignored in `api_key` mode)                    |
 
 ## Add a plugin
 

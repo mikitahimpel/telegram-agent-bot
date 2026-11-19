@@ -17,7 +17,8 @@ export const describeHome = (i: HomeInput, lang: Lang, now: number = Date.now())
   const t = makeT(lang)
   if (i.rec._tag !== "Idle") {
     const rec = describeStatus({ kind: "recorder", state: i.rec }, lang, now)
-    if (i.rec._tag === "Recording" && i.conn._tag === "Lost") return describeStatus({ kind: "connection", state: i.conn }, lang, now)
+    if (i.rec._tag === "Recording" && i.conn._tag === "Lost")
+      return describeStatus({ kind: "connection", state: i.conn }, lang, now)
     return rec
   }
   const attention = i.trips.find((x) => x.sync._tag === "Incomplete")
@@ -32,7 +33,8 @@ export const describeHome = (i: HomeInput, lang: Lang, now: number = Date.now())
       return { ...v, title: v.title, action: v.action ?? { id: "openTrips", label: t("action.openTrips") } }
     }
   }
-  if ((i.sync._tag === "NeedsReauth" && i.sync.reason !== "not_paired") || i.sync._tag === "Blocked") return describeStatus({ kind: "sync", state: i.sync }, lang, now)
+  if ((i.sync._tag === "NeedsReauth" && i.sync.reason !== "not_paired") || i.sync._tag === "Blocked")
+    return describeStatus({ kind: "sync", state: i.sync }, lang, now)
   if (pending.length > 0) {
     if (i.sync._tag === "Offline") return describeStatus({ kind: "sync", state: i.sync }, lang, now)
     let sent = 0
@@ -50,10 +52,24 @@ export const describeHome = (i: HomeInput, lang: Lang, now: number = Date.now())
       action: { id: "openTrips", label: t("action.openTrips") }
     }
   }
-  if (i.conn._tag === "Failed" || i.conn._tag === "Lost") return describeStatus({ kind: "connection", state: i.conn }, lang, now)
-  if (i.conn._tag === "Ready") return { tone: "ok", icon: "✅", title: t("home.ready.title"), text: t("home.ready.text"), action: { id: "start", label: t("action.start") } }
+  if (i.conn._tag === "Failed" || i.conn._tag === "Lost")
+    return describeStatus({ kind: "connection", state: i.conn }, lang, now)
+  if (i.conn._tag === "Ready")
+    return {
+      tone: "ok",
+      icon: "✅",
+      title: t("home.ready.title"),
+      text: t("home.ready.text"),
+      action: { id: "start", label: t("action.start") }
+    }
   if (i.conn._tag !== "Idle") return describeStatus({ kind: "connection", state: i.conn }, lang, now)
   if (i.trips.length > 0 && i.trips.every((x) => x.sync._tag === "Confirmed" || x.sync._tag === "CloudOnly"))
-    return { tone: "ok", icon: "✅", title: t("home.allDone.title"), text: t("home.allDone.text"), action: { id: "connect", label: t("action.connect") } }
+    return {
+      tone: "ok",
+      icon: "✅",
+      title: t("home.allDone.title"),
+      text: t("home.allDone.text"),
+      action: { id: "connect", label: t("action.connect") }
+    }
   return describeStatus({ kind: "connection", state: i.conn }, lang, now)
 }

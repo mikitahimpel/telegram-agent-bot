@@ -48,10 +48,7 @@ const attemptAsync = (operation: string, f: () => Promise<void>) =>
 
 export type SchedulerStore = {
   readonly service: Scheduler["Service"]
-  readonly runDue: <R>(
-    handlers: ReadonlyArray<JobHandler<R>>,
-    tgId: TgId
-  ) => Effect.Effect<void, StorageError, R>
+  readonly runDue: <R>(handlers: ReadonlyArray<JobHandler<R>>, tgId: TgId) => Effect.Effect<void, StorageError, R>
   readonly rearm: Effect.Effect<void, StorageError>
 }
 
@@ -59,16 +56,23 @@ export const makeStore = (sql: SqlLike, alarm: AlarmLike): SchedulerStore => {
   for (const statement of SCHEMA) sql.exec(statement).toArray()
 
   const rows = (operation: string, query: string, ...bindings: Array<unknown>) =>
-    attempt(operation, () => sql.exec(query, ...bindings).toArray().map(toJob))
+    attempt(operation, () =>
+      sql
+        .exec(query, ...bindings)
+        .toArray()
+        .map(toJob)
+    )
 
   const write = (operation: string, query: string, ...bindings: Array<unknown>) =>
     attempt(operation, () => void sql.exec(query, ...bindings).toArray())
 
   const rearm = Effect.gen(function* () {
-    const next = yield* attempt("scheduler.next", () =>
-      sql.exec("SELECT MIN(at) AS at FROM scheduled_jobs").toArray()[0]?.["at"] as number | null | undefined
+    const next = yield* attempt(
+      "scheduler.next",
+      () => sql.exec("SELECT MIN(at) AS at FROM scheduled_jobs").toArray()[0]?.["at"] as number | null | undefined
     )
-    if (next === null || next === undefined) return yield* attemptAsync("scheduler.clear-alarm", () => alarm.deleteAlarm())
+    if (next === null || next === undefined)
+      return yield* attemptAsync("scheduler.clear-alarm", () => alarm.deleteAlarm())
     yield* attemptAsync("scheduler.set-alarm", () => alarm.setAlarm(Number(next)))
   })
 
@@ -83,9 +87,12 @@ export const makeStore = (sql: SqlLike, alarm: AlarmLike): SchedulerStore => {
         job.at,
         job.payload
       ).pipe(Effect.andThen(rearm)),
-    cancel: (id) => write("scheduler.cancel", "DELETE FROM scheduled_jobs WHERE id = ?", id).pipe(Effect.andThen(rearm)),
+    cancel: (id) =>
+      write("scheduler.cancel", "DELETE FROM scheduled_jobs WHERE id = ?", id).pipe(Effect.andThen(rearm)),
     get: (id) =>
-      rows("scheduler.get", "SELECT * FROM scheduled_jobs WHERE id = ?", id).pipe(Effect.map((r) => r[0] && publicJob(r[0]))),
+      rows("scheduler.get", "SELECT * FROM scheduled_jobs WHERE id = ?", id).pipe(
+        Effect.map((r) => r[0] && publicJob(r[0]))
+      ),
     list: (kind) =>
       rows("scheduler.list", "SELECT * FROM scheduled_jobs WHERE kind = ? ORDER BY at, id", kind).pipe(
         Effect.map((r) => r.map(publicJob))
@@ -94,7 +101,8 @@ export const makeStore = (sql: SqlLike, alarm: AlarmLike): SchedulerStore => {
 
   const settle = (job: StoredJob, outcome: "ok" | "failed", now: number) =>
     Effect.gen(function* () {
-      if (outcome === "ok") return yield* write("scheduler.done", "DELETE FROM scheduled_jobs WHERE id = ? AND at = ?", job.id, job.at)
+      if (outcome === "ok")
+        return yield* write("scheduler.done", "DELETE FROM scheduled_jobs WHERE id = ? AND at = ?", job.id, job.at)
       const attempts = job.attempts + 1
       if (attempts > MAX_RETRIES) {
         yield* Effect.logError(`scheduler dropped job ${job.id} (${job.kind}) after ${MAX_RETRIES} retries`)

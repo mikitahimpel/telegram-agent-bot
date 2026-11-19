@@ -93,7 +93,10 @@ export type TripStoreShape = {
   readonly deleteChunks: (tripId: string) => Effect.Effect<void, StorageFailure>
   readonly putDtc: (record: DtcRecord) => Effect.Effect<void, StorageFailure>
   readonly listDtc: Effect.Effect<ReadonlyArray<DtcRecord>, StorageFailure>
-  readonly updateDtc: (id: string, f: (r: DtcRecord) => DtcRecord) => Effect.Effect<DtcRecord | undefined, StorageFailure>
+  readonly updateDtc: (
+    id: string,
+    f: (r: DtcRecord) => DtcRecord
+  ) => Effect.Effect<DtcRecord | undefined, StorageFailure>
   readonly deleteDtc: (id: string) => Effect.Effect<void, StorageFailure>
   readonly storageHealth: Effect.Effect<StorageHealth>
   readonly requestPersistence: Effect.Effect<boolean>
@@ -122,7 +125,12 @@ const keyPaths: Record<StoreName, ReadonlyArray<string> | string> = {
 }
 
 export const makeMemoryBackend = (): Backend => {
-  const data: Record<StoreName, Map<string, unknown>> = { trips: new Map(), chunks: new Map(), pending: new Map(), dtc: new Map() }
+  const data: Record<StoreName, Map<string, unknown>> = {
+    trips: new Map(),
+    chunks: new Map(),
+    pending: new Map(),
+    dtc: new Map()
+  }
   const keyOf = (store: StoreName, v: unknown): string => {
     const p = keyPaths[store]
     const rec = v as Record<string, unknown>
@@ -135,7 +143,9 @@ export const makeMemoryBackend = (): Backend => {
     },
     all: async (store) => [...data[store].values()].map((v) => structuredClone(v)),
     byTrip: async (store, tripId) =>
-      [...data[store].values()].filter((v) => (v as { tripId: string }).tripId === tripId).map((v) => structuredClone(v)),
+      [...data[store].values()]
+        .filter((v) => (v as { tripId: string }).tripId === tripId)
+        .map((v) => structuredClone(v)),
     write: async (ops) => {
       for (const op of ops) {
         if (op.type === "put") data[op.store].set(keyOf(op.store, op.value), structuredClone(op.value))
@@ -184,7 +194,12 @@ export const makeIndexedDbBackend = (dbName: string, factory?: IDBFactory): Back
   return {
     get: async (store, key) => {
       const db = await open()
-      return request(db.transaction(store, "readonly").objectStore(store).get(key as IDBValidKey))
+      return request(
+        db
+          .transaction(store, "readonly")
+          .objectStore(store)
+          .get(key as IDBValidKey)
+      )
     },
     all: async (store) => {
       const db = await open()
@@ -212,8 +227,7 @@ export const makeIndexedDbBackend = (dbName: string, factory?: IDBFactory): Back
           reject(e)
           try {
             tx.abort()
-          } catch {
-          }
+          } catch {}
         }
       })
     }
@@ -230,7 +244,7 @@ const sealInfo = (c: ChunkRecord): ChunkInfo => ({
 })
 
 export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const lock = yield* Semaphore.make(1)
     const changesPs = yield* PubSub.unbounded<string>()
     const notify = (tripId: string) => PubSub.publish(changesPs, tripId).pipe(Effect.asVoid)
@@ -250,11 +264,14 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
       )
 
     const putTrip = (next: TripRecord) =>
-      io(() => backend.write([{ type: "put", store: "trips", value: next }])).pipe(Effect.as(next), Effect.tap(() => notify(next.tripId)))
+      io(() => backend.write([{ type: "put", store: "trips", value: next }])).pipe(
+        Effect.as(next),
+        Effect.tap(() => notify(next.tripId))
+      )
 
     const updateTrip = (tripId: string, f: (t: TripRecord) => TripRecord) =>
       locked(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const cur = yield* getTrip(tripId)
           if (cur === undefined) return undefined
           return yield* putTrip(f(cur))
@@ -288,21 +305,24 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
         samples.length === 0
           ? Effect.void
           : locked(
-            Effect.gen(function*() {
-              const existing = yield* listPending(tripId)
-              const n = (existing[existing.length - 1]?.n ?? -1) + 1
-              const trip = yield* getTrip(tripId)
-              const last = samples[samples.length - 1]!.ts
-              const ops: Array<Op> = [{ type: "put", store: "pending", value: { tripId, n, samples } satisfies PendingBatch }]
-              if (trip !== undefined) ops.push({ type: "put", store: "trips", value: { ...trip, lastSampleAt: last } })
-              yield* io(() => backend.write(ops))
-              yield* notify(tripId)
-            })
-          ),
+              Effect.gen(function* () {
+                const existing = yield* listPending(tripId)
+                const n = (existing[existing.length - 1]?.n ?? -1) + 1
+                const trip = yield* getTrip(tripId)
+                const last = samples[samples.length - 1]!.ts
+                const ops: Array<Op> = [
+                  { type: "put", store: "pending", value: { tripId, n, samples } satisfies PendingBatch }
+                ]
+                if (trip !== undefined)
+                  ops.push({ type: "put", store: "trips", value: { ...trip, lastSampleAt: last } })
+                yield* io(() => backend.write(ops))
+                yield* notify(tripId)
+              })
+            ),
       readPending: (tripId) => unsafeGetPendingRows(tripId),
       sealPending: (tripId) =>
         locked(
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             const trip = yield* getTrip(tripId)
             if (trip === undefined) return undefined
             const batches = yield* listPending(tripId)
@@ -342,18 +362,19 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
       getChunk: (tripId, seq) => io(() => backend.get("chunks", [tripId, seq]) as Promise<ChunkRecord | undefined>),
       setChunkState: (tripId, seq, state, lastError) =>
         locked(
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             const c = (yield* io(() => backend.get("chunks", [tripId, seq]))) as ChunkRecord | undefined
             if (c === undefined) return
             const { lastError: _drop, ...rest } = c
-            const next: ChunkRecord = lastError === undefined ? { ...rest, uploadState: state } : { ...rest, uploadState: state, lastError }
+            const next: ChunkRecord =
+              lastError === undefined ? { ...rest, uploadState: state } : { ...rest, uploadState: state, lastError }
             yield* io(() => backend.write([{ type: "put", store: "chunks", value: next }]))
             yield* notify(tripId)
           })
         ),
       deleteTrip: (tripId) =>
         locked(
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             const cs = yield* listChunks(tripId)
             const ps = yield* listPending(tripId)
             yield* io(() =>
@@ -368,7 +389,7 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
         ),
       deleteChunks: (tripId) =>
         locked(
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             const cs = yield* listChunks(tripId)
             const ps = yield* listPending(tripId)
             yield* io(() =>
@@ -389,7 +410,7 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
       ),
       updateDtc: (id, f) =>
         locked(
-          Effect.gen(function*() {
+          Effect.gen(function* () {
             const cur = (yield* io(() => backend.get("dtc", id))) as DtcRecord | undefined
             if (cur === undefined) return undefined
             const next = f(cur)
@@ -409,7 +430,13 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
           const quota = e.quota ?? 0
           const persisted = s.persisted === undefined ? false : await s.persisted()
           const free = quota - usage
-          return { supported: true, usage, quota, persisted, low: quota > 0 && (free < 50 * 1024 * 1024 || free / quota < 0.15) }
+          return {
+            supported: true,
+            usage,
+            quota,
+            persisted,
+            low: quota > 0 && (free < 50 * 1024 * 1024 || free / quota < 0.15)
+          }
         } catch {
           return { supported: false, usage: 0, quota: 0, persisted: false, low: false }
         }
@@ -430,12 +457,19 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
 export const layerFromBackend = (backend: Backend, storage?: StorageApiLike): Layer.Layer<TripStore> =>
   Layer.effect(TripStore, makeTripStore(backend, storage))
 
-export const layerIndexedDb = (dbName: string, factory?: IDBFactory, storage?: StorageApiLike): Layer.Layer<TripStore> =>
-  layerFromBackend(makeIndexedDbBackend(dbName, factory), storage)
+export const layerIndexedDb = (
+  dbName: string,
+  factory?: IDBFactory,
+  storage?: StorageApiLike
+): Layer.Layer<TripStore> => layerFromBackend(makeIndexedDbBackend(dbName, factory), storage)
 
 export const layerMemory: Layer.Layer<TripStore> = Layer.effect(
   TripStore,
-  makeTripStore(makeMemoryBackend(), { estimate: async () => ({ usage: 0, quota: 1 << 30 }), persisted: async () => true, persist: async () => true })
+  makeTripStore(makeMemoryBackend(), {
+    estimate: async () => ({ usage: 0, quota: 1 << 30 }),
+    persisted: async () => true,
+    persist: async () => true
+  })
 )
 
 export { StorageFailure }

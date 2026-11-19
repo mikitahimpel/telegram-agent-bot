@@ -4,11 +4,14 @@ const hex = (bytes: ArrayBuffer): string =>
   Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("")
 
 const hmac = async (key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> => {
-  const k = await crypto.subtle.importKey("raw", key as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+  const k = await crypto.subtle.importKey("raw", key as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign"
+  ])
   return crypto.subtle.sign("HMAC", k, encoder.encode(data))
 }
 
-const sha256Hex = async (data: string): Promise<string> => hex(await crypto.subtle.digest("SHA-256", encoder.encode(data)))
+const sha256Hex = async (data: string): Promise<string> =>
+  hex(await crypto.subtle.digest("SHA-256", encoder.encode(data)))
 
 const encode = (s: string): string =>
   encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
@@ -26,7 +29,10 @@ export type PresignInput = {
 }
 
 export const presignUrl = async (input: PresignInput): Promise<string> => {
-  const amzDate = input.now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")
+  const amzDate = input.now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "")
   const date = amzDate.slice(0, 8)
   const scope = `${date}/${input.region}/${input.service}/aws4_request`
   const params: Array<[string, string]> = [

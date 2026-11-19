@@ -1,4 +1,11 @@
-import type { ContainerExecOptionsLike, ContainerLike, DirectoryBackupLike, DirectoryBackupRecord, ExecProcessLike, R2Like } from "../src/container-like.ts"
+import type {
+  ContainerExecOptionsLike,
+  ContainerLike,
+  DirectoryBackupLike,
+  DirectoryBackupRecord,
+  ExecProcessLike,
+  R2Like
+} from "../src/container-like.ts"
 
 const enc = new TextEncoder()
 
@@ -29,7 +36,11 @@ export const makeFake = (o: FakeOptions) => {
     stdout: null,
     stderr: null,
     exitCode: Promise.resolve(code),
-    output: async () => ({ stdout: enc.encode(stdout).buffer as ArrayBuffer, stderr: new ArrayBuffer(0), exitCode: code }),
+    output: async () => ({
+      stdout: enc.encode(stdout).buffer as ArrayBuffer,
+      stderr: new ArrayBuffer(0),
+      exitCode: code
+    }),
     kill: () => {}
   })
 
@@ -41,7 +52,9 @@ export const makeFake = (o: FakeOptions) => {
     const close = (code: number) => {
       if (closed) return
       closed = true
-      try { ctl.close() } catch {}
+      try {
+        ctl.close()
+      } catch {}
       resolveExit(code)
     }
     const stdout = new ReadableStream<Uint8Array>({
@@ -72,11 +85,21 @@ export const makeFake = (o: FakeOptions) => {
   }
 
   const container: ContainerLike = {
-    get running() { return running },
+    get running() {
+      return running
+    },
     images: { workspace: "img:workspace" },
-    start: () => { running = true; events.push("start") },
-    destroy: async () => { running = false; events.push("destroy") },
-    setInactivityTimeout: async (ms) => { events.push(`timeout:${ms}`) },
+    start: () => {
+      running = true
+      events.push("start")
+    },
+    destroy: async () => {
+      running = false
+      events.push("destroy")
+    },
+    setInactivityTimeout: async (ms) => {
+      events.push(`timeout:${ms}`)
+    },
     exec: async (cmd, opts) => {
       execs.push({ cmd, opts })
       const [bin, a1] = cmd
@@ -95,19 +118,34 @@ export const makeFake = (o: FakeOptions) => {
     backup: async ({ dir, name }) => {
       if (o.failBackup === true) throw new Error("r2 down")
       events.push(`backup:${dir}`)
-      const rec = { id: `b${++n}`, dir, size: 1, sha256: "x", format: "tar+zstd/1", ...(name === undefined ? {} : { name }) } as DirectoryBackupRecord
+      const rec = {
+        id: `b${++n}`,
+        dir,
+        size: 1,
+        sha256: "x",
+        format: "tar+zstd/1",
+        ...(name === undefined ? {} : { name })
+      } as DirectoryBackupRecord
       records.set(rec.id, rec)
       return rec
     },
-    restore: async (r) => { events.push(`restore:${r.dir}`) },
-    delete: async (r) => { events.push(`delete:${r.id}`) }
+    restore: async (r) => {
+      events.push(`restore:${r.dir}`)
+    },
+    delete: async (r) => {
+      events.push(`delete:${r.id}`)
+    }
   }
 
   const store = new Map<string, string>()
   const bucket: R2Like = {
     get: async (k) => (store.has(k) ? { text: async () => store.get(k)! } : null),
-    put: async (k, v) => { store.set(k, v) },
-    delete: async (k) => { for (const key of [k].flat()) store.delete(key) }
+    put: async (k, v) => {
+      store.set(k, v)
+    },
+    delete: async (k) => {
+      for (const key of [k].flat()) store.delete(key)
+    }
   }
 
   return { container, backup, bucket, store, execs, events, killed, wasAborted: () => aborted }

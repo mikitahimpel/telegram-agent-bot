@@ -36,7 +36,11 @@ export class Sessions extends Context.Service<
   Sessions,
   {
     readonly get: (key: SessionKey) => Effect.Effect<SessionRecord | undefined, StorageError>
-    readonly ensure: (key: SessionKey, threadId: ThreadId | undefined, title?: string) => Effect.Effect<SessionRecord, StorageError>
+    readonly ensure: (
+      key: SessionKey,
+      threadId: ThreadId | undefined,
+      title?: string
+    ) => Effect.Effect<SessionRecord, StorageError>
     readonly setClaudeSessionId: (key: SessionKey, id: ClaudeSessionId) => Effect.Effect<void, StorageError>
     readonly reset: (key: SessionKey) => Effect.Effect<void, StorageError>
     readonly list: Effect.Effect<ReadonlyArray<SessionRecord>, StorageError>

@@ -63,17 +63,15 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
     stopPreview()
     if (!session) return
     preview = run(
-      Stream.runForEach(session.readings({ intervalMs: base.pollingMs.value }), (e) => Effect.sync(() => onEvent(e))).pipe(
-        Effect.catch((e: ObdError) => Effect.sync(() => fail(e)))
-      )
+      Stream.runForEach(session.readings({ intervalMs: base.pollingMs.value }), (e) =>
+        Effect.sync(() => onEvent(e))
+      ).pipe(Effect.catch((e: ObdError) => Effect.sync(() => fail(e))))
     )
   }
 
   const source = (): ReadingSource => ({
     readings: () =>
-      session!.readings({ intervalMs: base.pollingMs.value }).pipe(
-        Stream.tap((e) => Effect.sync(() => onEvent(e)))
-      )
+      session!.readings({ intervalMs: base.pollingMs.value }).pipe(Stream.tap((e) => Effect.sync(() => onEvent(e))))
   })
 
   const closeSession = async () => {
@@ -109,13 +107,17 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
   const refreshDevices = async () => {
     try {
       const list = await runtime.runPromise(CarApi.use((a) => a.devices))
-      base.devices.value = list.devices.map((d) => ({ id: d.deviceId, name: d.name, lastSeenAt: d.lastSeenAt, current: false }))
-    } catch {
-    }
+      base.devices.value = list.devices.map((d) => ({
+        id: d.deviceId,
+        name: d.name,
+        lastSeenAt: d.lastSeenAt,
+        current: false
+      }))
+    } catch {}
   }
 
   runtime.runFork(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const sync = yield* SyncEngine
       yield* Stream.runForEach(SubscriptionRef.changes(sync.state), (s) =>
         Effect.sync(() => {
@@ -130,7 +132,7 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
     })
   )
   runtime.runFork(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const rec = yield* Recorder
       yield* Stream.runForEach(SubscriptionRef.changes(rec.state), (s) =>
         Effect.sync(() => {
@@ -142,7 +144,7 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
     })
   )
   runtime.runFork(
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const a = yield* AutoRecorder
       yield* Stream.runForEach(SubscriptionRef.changes(a.state), (s) =>
         Effect.sync(() => {
@@ -174,7 +176,10 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
     }
   }
 
-  const insights = async <A>(demo: () => Promise<A>, remote: (api: ReturnType<typeof insightsApi>) => Promise<A>): Promise<A> => {
+  const insights = async <A>(
+    demo: () => Promise<A>,
+    remote: (api: ReturnType<typeof insightsApi>) => Promise<A>
+  ): Promise<A> => {
     if (base.pairing.value !== "paired") {
       if (base.insightsDemo.value) return demo()
       throw new InsightsError("not_paired")
@@ -186,17 +191,39 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
 
   return {
     ...base,
-    overview: (lang) => insights(() => base.overview(lang), (api) => api.overview()),
-    tripInsight: (id, lang) => insights(() => base.tripInsight(id, lang), (api) => api.tripInsight(id)),
-    tripSeries: (id) => insights(() => base.tripSeries(id), (api) => api.tripSeries(id)),
-    alerts: (lang) => insights(() => base.alerts(lang), (api) => api.alerts()),
+    overview: (lang) =>
+      insights(
+        () => base.overview(lang),
+        (api) => api.overview()
+      ),
+    tripInsight: (id, lang) =>
+      insights(
+        () => base.tripInsight(id, lang),
+        (api) => api.tripInsight(id)
+      ),
+    tripSeries: (id) =>
+      insights(
+        () => base.tripSeries(id),
+        (api) => api.tripSeries(id)
+      ),
+    alerts: (lang) =>
+      insights(
+        () => base.alerts(lang),
+        (api) => api.alerts()
+      ),
     scanDtc: () =>
       runtime.runPromise(
         AutoRecorder.use((a) =>
           a.scanNow.pipe(
             Effect.match({
-              onFailure: (e): DtcScanOutcome => (e._tag === "AutoNotConnected" ? { _tag: "NeedsConnection" } : { _tag: "Failed", reason: e._tag }),
-              onSuccess: (r): DtcScanOutcome => ({ _tag: "Done", at: r.readAt, codes: r.codes.map((c) => c.code), milOn: r.milOn })
+              onFailure: (e): DtcScanOutcome =>
+                e._tag === "AutoNotConnected" ? { _tag: "NeedsConnection" } : { _tag: "Failed", reason: e._tag },
+              onSuccess: (r): DtcScanOutcome => ({
+                _tag: "Done",
+                at: r.readAt,
+                codes: r.codes.map((c) => c.code),
+                milOn: r.milOn
+              })
             })
           )
         )
@@ -270,7 +297,12 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       try {
         await runtime.runPromise(
           Recorder.use((r) =>
-            r.start({ source: source(), info, appVersion, ...(base.clockOffsetMs.value ? { clockOffsetMs: base.clockOffsetMs.value } : {}) })
+            r.start({
+              source: source(),
+              info,
+              appVersion,
+              ...(base.clockOffsetMs.value ? { clockOffsetMs: base.clockOffsetMs.value } : {})
+            })
           )
         )
       } catch (e) {
@@ -316,7 +348,13 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       try {
         const files = await runtime.runPromise(exportTrip(tripId))
         const r = await runtime.runPromise(
-          shareFiles([{ name: files.fileName, blob: files.csv }, { name: files.manifestFileName, blob: files.manifestJson }], files.fileName)
+          shareFiles(
+            [
+              { name: files.fileName, blob: files.csv },
+              { name: files.manifestFileName, blob: files.manifestJson }
+            ],
+            files.fileName
+          )
         )
         log("app", `export ${tripId}: ${r}`)
       } catch (e) {

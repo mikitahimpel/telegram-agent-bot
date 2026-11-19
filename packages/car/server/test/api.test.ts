@@ -27,7 +27,8 @@ const setup = (opts: { enabled?: boolean } = {}) => {
   const kv = makeMemoryKv()
   const sent: Array<{ to: any; html: string; options: any }> = []
   const telegram = Layer.succeed(Telegram, {
-    sendMessage: (to: unknown, html: string, options: unknown) => Effect.sync(() => (sent.push({ to, html, options }), { messageId: 1 }))
+    sendMessage: (to: unknown, html: string, options: unknown) =>
+      Effect.sync(() => (sent.push({ to, html, options }), { messageId: 1 }))
   } as never)
   const engines = new Map<number, CarEngine>()
   const engineOf = (tgId: number) => {
@@ -38,7 +39,10 @@ const setup = (opts: { enabled?: boolean } = {}) => {
     }
     return e
   }
-  const backend = Layer.succeed(CarBackend, backendFromInvoke(async (tgId, op, args) => runEngineOp(engineOf(tgId), op, args)))
+  const backend = Layer.succeed(
+    CarBackend,
+    backendFromInvoke(async (tgId, op, args) => runEngineOp(engineOf(tgId), op, args))
+  )
   const flags = flagsMemory([{ id: "car", title: { en: "", ru: "" }, enabledByDefault: opts.enabled ?? true }])
   const layer = Layer.mergeAll(
     Layer.succeed(CarBucket, r2),
@@ -53,26 +57,44 @@ const setup = (opts: { enabled?: boolean } = {}) => {
   )
   const call = (req: Request) => Effect.runPromise(handleCarApi(req).pipe(Effect.provide(layer)))
   const pair = async (tgId: number, lang: "en" | "ru" = "en") => {
-    const { code } = await Effect.runPromise(startPair({ tgId, firstName: "X", lang }).pipe(Effect.provide(Layer.succeed(CarKv, kv))))
+    const { code } = await Effect.runPromise(
+      startPair({ tgId, firstName: "X", lang }).pipe(Effect.provide(Layer.succeed(CarKv, kv)))
+    )
     const res = await call(req("POST", "/pair/complete", { body: JSON.stringify({ code, deviceName: "Pixel" }) }))
     return { code, res, body: (await res.clone().json()) as any }
   }
   return { r2, kv, sent, call, pair, engineOf }
 }
 
-const req = (method: string, path: string, init: { token?: string; body?: BodyInit; headers?: Record<string, string> } = {}) =>
+const req = (
+  method: string,
+  path: string,
+  init: { token?: string; body?: BodyInit; headers?: Record<string, string> } = {}
+) =>
   new Request(`https://x.test/car/api${path}`, {
     method,
     ...(init.body === undefined ? {} : { body: init.body }),
     headers: { ...(init.token === undefined ? {} : { authorization: `Device ${init.token}` }), ...init.headers }
   })
 
-const sample = (i: number) => ({ ts: 1_800_000_000_000 + i * 1000, speedKmh: 36, rpm: 1500, lat: 50 + i * 0.0001, lon: 20 })
+const sample = (i: number) => ({
+  ts: 1_800_000_000_000 + i * 1000,
+  speedKmh: 36,
+  rpm: 1500,
+  lat: 50 + i * 0.0001,
+  lon: 20
+})
 const chunkBody = (from: number, n: number) => encodeCsv(Array.from({ length: n }, (_, i) => sample(from + i)))
 const tripId = makeTripId(new Date(1_800_000_000_000), "abcd1234")
 
 const putChunk = async (s: ReturnType<typeof setup>, token: string, seq: number, body: string, sha?: string) =>
-  s.call(req("PUT", `/trips/${tripId}/chunks/${seq}`, { token, body, headers: { "x-content-sha256": sha ?? (await sha256Hex(body)) } }))
+  s.call(
+    req("PUT", `/trips/${tripId}/chunks/${seq}`, {
+      token,
+      body,
+      headers: { "x-content-sha256": sha ?? (await sha256Hex(body)) }
+    })
+  )
 
 const manifestFor = async (bodies: ReadonlyArray<string>, status: "recording" | "finished"): Promise<TripManifest> => ({
   formatVersion: 1,
@@ -110,7 +132,9 @@ describe("pairing", () => {
     expect(s.sent[0]?.options.keyboard[0][0].callbackData).toBe(`cardev:${first.body.deviceId}`)
     expect([...s.kv.store.keys()].some((k) => k.includes(first.body.deviceToken))).toBe(false)
     expect([...s.kv.store.values()].some((v) => v.includes(first.body.deviceToken))).toBe(false)
-    const again = await s.call(req("POST", "/pair/complete", { body: JSON.stringify({ code: first.code, deviceName: "Other" }) }))
+    const again = await s.call(
+      req("POST", "/pair/complete", { body: JSON.stringify({ code: first.code, deviceName: "Other" }) })
+    )
     expect(again.status).toBe(400)
     expect(((await again.json()) as any).error.code).toBe("pair_code_invalid")
   })
@@ -118,8 +142,11 @@ describe("pairing", () => {
   it("rejects expired codes", async () => {
     resetRateLimits()
     const s = setup()
-    const { code } = await Effect.runPromise(startPair({ tgId: A, firstName: "", lang: "en" }).pipe(Effect.provide(Layer.succeed(CarKv, s.kv))))
-    for (const [k, v] of s.kv.store) if (k.startsWith("carpair:")) s.kv.store.set(k, JSON.stringify({ ...JSON.parse(v), expiresAt: 1 }))
+    const { code } = await Effect.runPromise(
+      startPair({ tgId: A, firstName: "", lang: "en" }).pipe(Effect.provide(Layer.succeed(CarKv, s.kv)))
+    )
+    for (const [k, v] of s.kv.store)
+      if (k.startsWith("carpair:")) s.kv.store.set(k, JSON.stringify({ ...JSON.parse(v), expiresAt: 1 }))
     const res = await s.call(req("POST", "/pair/complete", { body: JSON.stringify({ code, deviceName: "P" }) }))
     expect(((await res.json()) as any).error.code).toBe("pair_code_invalid")
   })
@@ -155,7 +182,9 @@ describe("auth and gates", () => {
     const s = setup()
     expect((await s.call(req("GET", "/me"))).status).toBe(401)
     expect((await s.call(req("GET", "/me", { token: "x".repeat(40) }))).status).toBe(401)
-    expect((await s.call(new Request("https://x.test/car/api/me", { headers: { authorization: "tma abc" } }))).status).toBe(401)
+    expect(
+      (await s.call(new Request("https://x.test/car/api/me", { headers: { authorization: "tma abc" } }))).status
+    ).toBe(401)
   })
 
   it("plugin disabled → plugin_disabled (me still works); not on allowlist → forbidden", async () => {
@@ -204,7 +233,9 @@ describe("chunks", () => {
     const b = await s.pair(B)
     await putChunk(s, a.body.deviceToken, 0, chunkBody(0, 3))
     expect([...s.r2.objects.keys()].every((k) => k.startsWith(`car/${A}/`))).toBe(true)
-    const st = (await (await s.call(req("GET", `/trips/${tripId}/status`, { token: b.body.deviceToken }))).json()) as any
+    const st = (await (
+      await s.call(req("GET", `/trips/${tripId}/status`, { token: b.body.deviceToken }))
+    ).json()) as any
     expect(st.received).toEqual([])
     const bad = await s.call(req("GET", "/trips/..%2F111/status", { token: b.body.deviceToken }))
     expect(bad.status).toBe(400)
@@ -256,7 +287,9 @@ describe("manifest, status, finish", () => {
     const other = makeTripId(new Date(1_800_000_100_000), "zzzz9999")
     const wrong = await s.call(req("PUT", `/trips/${other}/manifest`, { token, body: JSON.stringify(manifest) }))
     expect(wrong.status).toBe(400)
-    expect((await s.call(req("PUT", `/trips/${tripId}/manifest`, { token, body: JSON.stringify(manifest) }))).status).toBe(200)
+    expect(
+      (await s.call(req("PUT", `/trips/${tripId}/manifest`, { token, body: JSON.stringify(manifest) }))).status
+    ).toBe(200)
     const shrunk = await manifestFor([bodies[0]!], "finished")
     const res = await s.call(req("PUT", `/trips/${tripId}/manifest`, { token, body: JSON.stringify(shrunk) }))
     expect(res.status).toBe(409)
@@ -266,12 +299,20 @@ describe("manifest, status, finish", () => {
   })
 })
 
-
 const richSamples = (start: number, seconds: number, restingV: number) =>
   Array.from({ length: seconds }, (_, t) =>
     t < 20
       ? { ts: start + t * 1000, speedKmh: 0, rpm: 0, voltageV: restingV }
-      : { ts: start + t * 1000, speedKmh: 50, rpm: 2000, coolantC: 90, voltageV: 14.1, fuelRateLph: 5, lat: 50 + t * 0.0001, lon: 20 }
+      : {
+          ts: start + t * 1000,
+          speedKmh: 50,
+          rpm: 2000,
+          coolantC: 90,
+          voltageV: 14.1,
+          fuelRateLph: 5,
+          lat: 50 + t * 0.0001,
+          lon: 20
+        }
   )
 
 const uploadRich = async (s: ReturnType<typeof setup>, token: string, restingV: number, seconds = 700, id = tripId) => {
@@ -280,7 +321,9 @@ const uploadRich = async (s: ReturnType<typeof setup>, token: string, restingV: 
   const bodies = parts.map((p) => encodeCsv(p as never))
   const manifest = { ...(await manifestFor(bodies, "finished")), tripId: id, fuelRateSource: "pid_5e" as const }
   for (const [seq, b] of bodies.entries()) {
-    await s.call(req("PUT", `/trips/${id}/chunks/${seq}`, { token, body: b, headers: { "x-content-sha256": await sha256Hex(b) } }))
+    await s.call(
+      req("PUT", `/trips/${id}/chunks/${seq}`, { token, body: b, headers: { "x-content-sha256": await sha256Hex(b) } })
+    )
   }
   await s.call(req("PUT", `/trips/${id}/manifest`, { token, body: JSON.stringify(manifest) }))
   return s.call(req("POST", `/trips/${id}/finish`, { token }))
@@ -308,7 +351,9 @@ describe("insights endpoints", () => {
     expect(series.body.ts.length).toBeLessThanOrEqual(50)
     expect(Object.keys(series.body.columns)).toEqual(["speed_kmh", "voltage_v"])
     expect((await getJson(s, token, `/trips/${tripId}/series?columns=bogus`)).status).toBe(400)
-    expect((await getJson(s, token, `/trips/${makeTripId(new Date(1_700_000_000_000), "nope0000")}/insight`)).status).toBe(404)
+    expect(
+      (await getJson(s, token, `/trips/${makeTripId(new Date(1_700_000_000_000), "nope0000")}/insight`)).status
+    ).toBe(404)
     const alerts = await getJson(s, token, "/alerts")
     expect(alerts.body.alerts.map((a: any) => a.kind)).toContain("battery_weak")
     const overview = await getJson(s, token, "/overview")
@@ -346,7 +391,7 @@ describe("insights endpoints", () => {
     const o = await getJson(fresh, pairedFresh.body.deviceToken, "/overview")
     expect(o.body.totals.trips).toBe(1)
     const again = await fresh.call(req("POST", "/rebuild", { token: pairedFresh.body.deviceToken }))
-    expect(((await again.json()) as any)).toMatchObject({ chunksIngested: 0, remaining: false })
+    expect((await again.json()) as any).toMatchObject({ chunksIngested: 0, remaining: false })
   })
 
   it("stores a dtc report, explains codes, notifies urgent codes once and exposes them in the overview", async () => {
@@ -354,12 +399,24 @@ describe("insights endpoints", () => {
     const s = setup()
     const { body } = await s.pair(A)
     const token = body.deviceToken as string
-    const report = { readAt: 1_800_000_000_000, milOn: true, codes: [{ code: "P0300", kind: "stored" }, { code: "P1234", kind: "pending" }], tripId: null, vin: null }
+    const report = {
+      readAt: 1_800_000_000_000,
+      milOn: true,
+      codes: [
+        { code: "P0300", kind: "stored" },
+        { code: "P1234", kind: "pending" }
+      ],
+      tripId: null,
+      vin: null
+    }
     const put = await s.call(req("PUT", "/dtc", { token, body: JSON.stringify(report) }))
     expect(put.status).toBe(200)
     const out = (await put.json()) as any
     expect(out.ok).toBe(true)
-    expect(out.explanations.map((e: any) => [e.code, e.source])).toEqual([["P0300", "catalog"], ["P1234", "generic"]])
+    expect(out.explanations.map((e: any) => [e.code, e.source])).toEqual([
+      ["P0300", "catalog"],
+      ["P1234", "generic"]
+    ])
     const msg = s.sent.find((m) => m.html.includes("P0300"))!
     expect(msg.html).toContain("URGENT")
     expect(msg.options.keyboard[0][0].url).toBe("https://x.test/car/#engine")
@@ -370,13 +427,25 @@ describe("insights endpoints", () => {
     expect(overview.body.engine).toMatchObject({ milOn: true })
     expect(overview.body.engine.activeCodes).toHaveLength(2)
     expect((await s.call(req("PUT", "/dtc", { token, body: JSON.stringify({ readAt: 1 }) }))).status).toBe(400)
-    expect((await s.call(req("PUT", "/dtc", { token, body: JSON.stringify({ ...report, codes: [{ code: "zz", kind: "stored" }] }) }))).status).toBe(400)
+    expect(
+      (
+        await s.call(
+          req("PUT", "/dtc", { token, body: JSON.stringify({ ...report, codes: [{ code: "zz", kind: "stored" }] }) })
+        )
+      ).status
+    ).toBe(400)
   })
 
   it("requires a device token", async () => {
     resetRateLimits()
     const s = setup()
-    for (const [m, p] of [["GET", "/overview"], ["GET", "/alerts"], ["PUT", "/dtc"], ["POST", "/rebuild"], ["GET", `/trips/${tripId}/insight`]] as const) {
+    for (const [m, p] of [
+      ["GET", "/overview"],
+      ["GET", "/alerts"],
+      ["PUT", "/dtc"],
+      ["POST", "/rebuild"],
+      ["GET", `/trips/${tripId}/insight`]
+    ] as const) {
       expect((await s.call(req(m, p))).status).toBe(401)
     }
   })

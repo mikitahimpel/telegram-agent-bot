@@ -10,7 +10,7 @@ const SqlInput = Schema.Struct({
 const Empty = Schema.Struct({})
 
 const langOf = (tgId: number) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const backend = yield* CarBackend
     const stored = yield* backend.getMeta(tgId, "lang")
     return (stored === "ru" ? "ru" : "en") as Lang
@@ -22,10 +22,12 @@ export const insightTools: ReadonlyArray<AgentTool<CarBackend>> = [
     description: `Run ONE read-only SQL query (SQLite dialect, SELECT or WITH only, max 1000 rows, no PRAGMA/ATTACH/writes) over the user's own car data. Prefer this for any number, trend or comparison: it is exact and fast. ${SCHEMA_DESCRIPTION}`,
     input: SqlInput,
     handler: (raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const backend = yield* CarBackend
         const result = yield* backend.query(ctx.tgId, (raw as typeof SqlInput.Type).query)
-        return result.ok ? { columns: result.columns, rows: result.rows, rowCount: result.rows.length, truncated: result.truncated } : { error: result.error }
+        return result.ok
+          ? { columns: result.columns, rows: result.rows, rowCount: result.rows.length, truncated: result.truncated }
+          : { error: result.error }
       })
   },
   {
@@ -34,7 +36,7 @@ export const insightTools: ReadonlyArray<AgentTool<CarBackend>> = [
       "Server-computed overview of the car: totals, per-week and per-month stats (distance, time, L/100 km, idle share), battery status and trend, engine status with active fault codes explained, open alerts. Use it first for general questions about the car's condition.",
     input: Empty,
     handler: (_raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const backend = yield* CarBackend
         return yield* backend.overview(ctx.tgId, yield* langOf(ctx.tgId))
       })
@@ -45,7 +47,7 @@ export const insightTools: ReadonlyArray<AgentTool<CarBackend>> = [
       "Current fault codes (check engine) from the latest scan with plain-language explanation, severity, whether it is safe to drive, causes and what to do, plus first/last seen times.",
     input: Empty,
     handler: (_raw, ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const backend = yield* CarBackend
         return yield* backend.dtcCurrent(ctx.tgId, yield* langOf(ctx.tgId))
       })

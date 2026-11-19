@@ -28,7 +28,10 @@ const errorText = (e: unknown): string => {
   if (typeof e === "object" && e !== null) {
     const tag = "_tag" in e ? String((e as { _tag: unknown })._tag) : "Error"
     const cause = "cause" in e ? (e as { cause: unknown }).cause : undefined
-    const causeMsg = typeof cause === "object" && cause !== null && "message" in cause ? String((cause as { message: unknown }).message) : undefined
+    const causeMsg =
+      typeof cause === "object" && cause !== null && "message" in cause
+        ? String((cause as { message: unknown }).message)
+        : undefined
     const op = "operation" in e ? String((e as { operation: unknown }).operation) : undefined
     return [tag, op, causeMsg].filter((s) => s !== undefined).join(": ")
   }
@@ -38,7 +41,7 @@ const errorText = (e: unknown): string => {
 const toolResult = (text: string, isError: boolean) => ({ content: [{ type: "text", text }], isError })
 
 const callTool = <R>(tools: ReadonlyArray<AgentTool<R>>, tgId: TgId, params: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const p = (typeof params === "object" && params !== null ? params : {}) as { name?: unknown; arguments?: unknown }
     const tool = tools.find((t) => t.name === p.name)
     if (tool === undefined) return undefined
@@ -51,7 +54,7 @@ const callTool = <R>(tools: ReadonlyArray<AgentTool<R>>, tgId: TgId, params: unk
   }).pipe(Effect.catchCause(() => Effect.succeed(toolResult("Internal tool error", true))))
 
 const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, msg: unknown) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (typeof msg !== "object" || msg === null || (msg as { jsonrpc?: unknown }).jsonrpc !== "2.0") {
       return rpcError(null, -32600, "Invalid Request")
     }
@@ -89,7 +92,7 @@ const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, msg: unknown)
 export const handleMcpRequest =
   <R>(registry: PluginRegistry<R>) =>
   (request: Request): Effect.Effect<Response, never, R | McpToken | PluginFlags> =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       if (request.method !== "POST") return new Response(null, { status: 405, headers: { allow: "POST" } })
       const auth = request.headers.get("authorization") ?? ""
       const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : ""

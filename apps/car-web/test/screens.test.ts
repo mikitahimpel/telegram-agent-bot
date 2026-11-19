@@ -23,7 +23,16 @@ const make = (o: DemoOptions = {}, lang: Lang = "en") => {
   return { backend, ctx, global: { provide: { [AppKey as symbol]: ctx } } }
 }
 const noCaps = { ble: false, serial: false, secureContext: true, inTelegram: false, reasons: [] }
-const recording = { _tag: "Recording", tripId: "t", startedAt: Date.now() - 1_395_000, points: 1380, chunks: 4, distanceKm: 12.3, lastSampleAt: Date.now(), gapOpen: false } as const
+const recording = {
+  _tag: "Recording",
+  tripId: "t",
+  startedAt: Date.now() - 1_395_000,
+  points: 1380,
+  chunks: 4,
+  distanceKm: 12.3,
+  lastSampleAt: Date.now(),
+  gapOpen: false
+} as const
 
 describe("screens render with fixtures", () => {
   for (const lang of ["en", "ru"] as Lang[]) {
@@ -43,7 +52,14 @@ describe("screens render with fixtures", () => {
         expect(w.find('[data-testid="dev-menu"]').exists()).toBe(true)
       })
       it("recording with gap, unsupported fuel and estimate", () => {
-        const { global } = make({ rec: { ...recording, gapOpen: true }, conn: { _tag: "Lost", since: Date.now() - 12_000, attempt: 3, nextRetryAt: Date.now() + 5000 }, supported: ["speedKmh", "rpm"] }, lang)
+        const { global } = make(
+          {
+            rec: { ...recording, gapOpen: true },
+            conn: { _tag: "Lost", since: Date.now() - 12_000, attempt: 3, nextRetryAt: Date.now() + 5000 },
+            supported: ["speedKmh", "rpm"]
+          },
+          lang
+        )
         const w = mount(RecordingScreen, { global })
         expect(w.findAll('[data-testid="status-card"]').length).toBe(2)
         expect(w.find('[data-sensor="fuelRateLph"]').classes()).toContain("off")
@@ -84,9 +100,13 @@ describe("screens render with fixtures", () => {
       })
       it("unsupported browser screen offers Open in Chrome on Android only", () => {
         const a = make({ caps: noCaps, platform: "android" }, lang)
-        expect(mount(OpenInChromeScreen, { global: a.global }).find('[data-testid="status-action"]').exists()).toBe(true)
+        expect(mount(OpenInChromeScreen, { global: a.global }).find('[data-testid="status-action"]').exists()).toBe(
+          true
+        )
         const i = make({ caps: noCaps, platform: "ios" }, lang)
-        expect(mount(OpenInChromeScreen, { global: i.global }).find('[data-testid="status-action"]').exists()).toBe(false)
+        expect(mount(OpenInChromeScreen, { global: i.global }).find('[data-testid="status-action"]').exists()).toBe(
+          false
+        )
       })
     })
   }
@@ -107,7 +127,9 @@ describe("App gating and banners", () => {
   it("WebView: open-in-Chrome button appears once", () => {
     const { global } = make({ caps: noCaps, platform: "android", pairing: "unpaired" })
     const w = mount(App, { global })
-    expect(w.findAll("button").filter((b) => b.text() === "Open in Chrome" || b.text() === "Открыть в Chrome")).toHaveLength(1)
+    expect(
+      w.findAll("button").filter((b) => b.text() === "Open in Chrome" || b.text() === "Открыть в Chrome")
+    ).toHaveLength(1)
   })
   it("unpaired: record locally reveals the app with a persistent banner", async () => {
     const { global } = make({ pairing: "unpaired" })
@@ -123,8 +145,12 @@ describe("App gating and banners", () => {
   })
   it("paired: shell with banners for offline, revoked, storage, clock", () => {
     const { global, ctx } = make({
-      pairing: "paired", online: false, sync: { _tag: "NeedsReauth", reason: "device_revoked" },
-      storage: { usedBytes: 90, quotaBytes: 100, persisted: false }, clockOffsetMs: 5 * 60_000, conn: readyConn
+      pairing: "paired",
+      online: false,
+      sync: { _tag: "NeedsReauth", reason: "device_revoked" },
+      storage: { usedBytes: 90, quotaBytes: 100, persisted: false },
+      clockOffsetMs: 5 * 60_000,
+      conn: readyConn
     })
     const w = mount(App, { global })
     expect(w.findAll('[data-testid="banners"] [data-testid="status-card"]').length).toBe(4)

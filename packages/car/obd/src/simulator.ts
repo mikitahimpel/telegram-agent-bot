@@ -67,7 +67,10 @@ const scenarioCar = (scenario: SimulatorScenario): SimCar => {
         ]
       })
     case "dtc_legacy_kwp":
-      return makeSimCar({ wire: "kwp", ecus: [{ stored: ["P0133", "P0301", "P0420", "B1234"], pending: [], permanent: [], mil: true }] })
+      return makeSimCar({
+        wire: "kwp",
+        ecus: [{ stored: ["P0133", "P0301", "P0420", "B1234"], pending: [], permanent: [], mil: true }]
+      })
     case "dtc_no_data":
       return makeSimCar({ dtcNoData: true })
     case "cranking":
@@ -77,8 +80,11 @@ const scenarioCar = (scenario: SimulatorScenario): SimCar => {
   }
 }
 
-export const crankingScript = (car: SimCar, options: { readonly idleMs?: number; readonly crankMs?: number; readonly minV?: number } = {}) =>
-  Effect.gen(function*() {
+export const crankingScript = (
+  car: SimCar,
+  options: { readonly idleMs?: number; readonly crankMs?: number; readonly minV?: number } = {}
+) =>
+  Effect.gen(function* () {
     const minV = options.minV ?? 9.7
     car.ignition = true
     car.rpm = 0
@@ -101,7 +107,12 @@ const encodeDtc = (code: string): ReadonlyArray<number> => {
   return [(letter << 6) | (digit << 4) | parseInt(code[2] as string, 16), parseInt(code.slice(3), 16)]
 }
 
-const dtcLines = (sid: number, codes: ReadonlyArray<string>, wire: "can" | "kwp", spaces: boolean): ReadonlyArray<string> => {
+const dtcLines = (
+  sid: number,
+  codes: ReadonlyArray<string>,
+  wire: "can" | "kwp",
+  spaces: boolean
+): ReadonlyArray<string> => {
   const body = codes.flatMap(encodeDtc)
   if (wire === "kwp") {
     const lines: Array<string> = []
@@ -118,7 +129,10 @@ const dtcLines = (sid: number, codes: ReadonlyArray<string>, wire: "can" | "kwp"
     return [hex(payload, spaces)]
   }
   const sep = spaces ? " " : ""
-  const lines = [payload.length.toString(16).toUpperCase().padStart(3, "0"), `0:${sep}${hex(payload.slice(0, 6), spaces)}`]
+  const lines = [
+    payload.length.toString(16).toUpperCase().padStart(3, "0"),
+    `0:${sep}${hex(payload.slice(0, 6), spaces)}`
+  ]
   for (let i = 6, n = 1; i < payload.length; i += 7, n++) {
     const part = payload.slice(i, i + 7)
     while (part.length < 7) part.push(0)
@@ -169,15 +183,15 @@ export const simulatorTransport = (
   const pidLatencyMs = scenario === "slow_ecu" ? 400 : 20
   const car = { garbageLeft: scenario === "clone_garbage" ? 2 : 0, lateLeft: scenario === "late_reply" ? 1 : 0 }
   const simCar = options.car ?? scenarioCar(scenario)
-  
+
   const open = (): Effect.Effect<ObdTransport, never, Scope.Scope> =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const scope = yield* Effect.scope
       const queue = yield* Queue.unbounded<string, Disconnected | Cause.Done>()
       const link = { echo: true, spaces: true, alive: true }
 
       const emit = (text: string) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           for (let i = 0; i < text.length; i += 18) yield* Queue.offer(queue, text.slice(i, i + 18))
         })
 
@@ -185,7 +199,7 @@ export const simulatorTransport = (
         emit((link.echo ? cmd + "\r" : "") + lines.join("\r") + "\r\r>")
 
       const respond = (raw: string) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const cmd = raw.replace(/\s/g, "").toUpperCase()
           if (cmd === "") return yield* emit(">")
           if (car.garbageLeft > 0) {
@@ -230,13 +244,17 @@ export const simulatorTransport = (
               if (simCar.dtcNoData) return yield* reply(cmd, ["NO DATA"])
               return yield* reply(
                 cmd,
-                simCar.ecus.map((e) => hex([0x41, 0x01, (e.mil ? 0x80 : 0) | (e.stored.length & 0x7f), 0x07, 0xe5, 0x00], link.spaces))
+                simCar.ecus.map((e) =>
+                  hex([0x41, 0x01, (e.mil ? 0x80 : 0) | (e.stored.length & 0x7f), 0x07, 0xe5, 0x00], link.spaces)
+                )
               )
             }
             const data =
-              pid === "0C" ? [Math.floor((simCar.rpm * 4) / 256), (simCar.rpm * 4) % 256]
-              : pid === "42" ? [Math.floor((simCar.voltageV * 1000) / 256), Math.round(simCar.voltageV * 1000) % 256]
-              : SIM_DATA[pid]
+              pid === "0C"
+                ? [Math.floor((simCar.rpm * 4) / 256), (simCar.rpm * 4) % 256]
+                : pid === "42"
+                  ? [Math.floor((simCar.voltageV * 1000) / 256), Math.round(simCar.voltageV * 1000) % 256]
+                  : SIM_DATA[pid]
             if (!supported.has(n) || data === undefined) return yield* reply(cmd, ["NO DATA"])
             return yield* reply(cmd, [hex([0x41, n, ...data], link.spaces)])
           }
@@ -255,10 +273,14 @@ export const simulatorTransport = (
           const dtcMode = /^(03|07|0A)$/.exec(cmd)
           if (dtcMode !== null) {
             yield* Effect.sleep(`${pidLatencyMs * 2} millis`)
-            if (scenario === "ignition_off" || !simCar.ignition || simCar.dtcNoData) return yield* reply(cmd, ["NO DATA"])
+            if (scenario === "ignition_off" || !simCar.ignition || simCar.dtcNoData)
+              return yield* reply(cmd, ["NO DATA"])
             const kind = cmd === "03" ? "stored" : cmd === "07" ? "pending" : "permanent"
             const sid = cmd === "03" ? 0x43 : cmd === "07" ? 0x47 : 0x4a
-            return yield* reply(cmd, simCar.ecus.flatMap((e) => dtcLines(sid, e[kind], simCar.wire, link.spaces)))
+            return yield* reply(
+              cmd,
+              simCar.ecus.flatMap((e) => dtcLines(sid, e[kind], simCar.wire, link.spaces))
+            )
           }
           return yield* reply(cmd, ["?"])
         })
@@ -284,9 +306,7 @@ export const simulatorTransport = (
         kind: "simulator",
         name: "Simulated ELM327",
         write: (line) =>
-          link.alive
-            ? Effect.forkIn(respond(line), scope).pipe(Effect.asVoid)
-            : Effect.fail(new Disconnected()),
+          link.alive ? Effect.forkIn(respond(line), scope).pipe(Effect.asVoid) : Effect.fail(new Disconnected()),
         incoming: Stream.fromQueue(queue),
         close: Effect.sync(() => {
           link.alive = false

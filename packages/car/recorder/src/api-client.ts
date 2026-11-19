@@ -23,7 +23,12 @@ export const authorizationHeader = (c: Credential): string => `Device ${c.token}
 export type CarApiShape = {
   readonly me: Effect.Effect<Me, ApiFailure>
   readonly putManifest: (manifest: TripManifest) => Effect.Effect<void, ApiFailure>
-  readonly putChunk: (tripId: string, seq: number, csv: string, sha256: string) => Effect.Effect<ChunkReceipt, ApiFailure>
+  readonly putChunk: (
+    tripId: string,
+    seq: number,
+    csv: string,
+    sha256: string
+  ) => Effect.Effect<ChunkReceipt, ApiFailure>
   readonly putDtc: (report: DtcReport) => Effect.Effect<typeof PutDtcResponse.Type, ApiFailure>
   readonly status: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly finish: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
@@ -57,7 +62,7 @@ const statusFallback = (status: number): Pick<ApiFailure, "code" | "retryable"> 
 }
 
 export const makeCarApi = (options: CarApiOptions) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const http = yield* HttpClient.HttpClient
     const credRef = yield* Ref.make<Credential | undefined>(options.credential)
     const base = options.apiBase.replace(/\/+$/, "")
@@ -97,7 +102,7 @@ export const makeCarApi = (options: CarApiOptions) =>
       schema: S,
       options?: { readonly auth?: boolean }
     ): Effect.Effect<S["Type"], ApiFailure> =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const cred = options?.auth === false ? undefined : yield* Ref.get(credRef)
         const req = yield* build(cred)
         const response = yield* http.execute(req).pipe(
@@ -106,15 +111,34 @@ export const makeCarApi = (options: CarApiOptions) =>
           ),
           Effect.timeoutOrElse({
             duration: timeout,
-            orElse: () => Effect.fail(new ApiFailure({ code: "timeout", retryable: true, message: "The server did not answer in time" }))
+            orElse: () =>
+              Effect.fail(
+                new ApiFailure({ code: "timeout", retryable: true, message: "The server did not answer in time" })
+              )
           })
         )
         if (response.status < 200 || response.status >= 300) return yield* failBody(response)
         const json = yield* response.json.pipe(
-          Effect.mapError(() => new ApiFailure({ code: "internal", retryable: true, message: "Unreadable response", status: response.status }))
+          Effect.mapError(
+            () =>
+              new ApiFailure({
+                code: "internal",
+                retryable: true,
+                message: "Unreadable response",
+                status: response.status
+              })
+          )
         )
         return yield* Schema.decodeUnknownEffect(schema)(json).pipe(
-          Effect.mapError(() => new ApiFailure({ code: "internal", retryable: true, message: "Unexpected response shape", status: response.status }))
+          Effect.mapError(
+            () =>
+              new ApiFailure({
+                code: "internal",
+                retryable: true,
+                message: "Unexpected response shape",
+                status: response.status
+              })
+          )
         )
       })
 
@@ -162,27 +186,34 @@ export const makeCarApi = (options: CarApiOptions) =>
         call(
           (cred) =>
             need(cred).pipe(
-              Effect.map((c) => authed(HttpClientRequest.put(url("/dtc")), c).pipe(HttpClientRequest.bodyJsonUnsafe(report)))
+              Effect.map((c) =>
+                authed(HttpClientRequest.put(url("/dtc")), c).pipe(HttpClientRequest.bodyJsonUnsafe(report))
+              )
             ),
           PutDtcResponse
         ),
       status: (tripId) => call(get(`/trips/${id(tripId)}/status`), TripStatus),
       finish: (tripId) =>
         call(
-          (cred) => need(cred).pipe(Effect.map((c) => authed(HttpClientRequest.post(url(`/trips/${id(tripId)}/finish`)), c))),
+          (cred) =>
+            need(cred).pipe(Effect.map((c) => authed(HttpClientRequest.post(url(`/trips/${id(tripId)}/finish`)), c))),
           TripStatus
         ),
       listTrips: (limit = 50) => call(get(`/trips?limit=${limit}`), TripList),
       pairComplete: (code, deviceName) =>
         call(
-          () => Effect.succeed(HttpClientRequest.post(url("/pair/complete")).pipe(HttpClientRequest.bodyJsonUnsafe({ code, deviceName }))),
+          () =>
+            Effect.succeed(
+              HttpClientRequest.post(url("/pair/complete")).pipe(HttpClientRequest.bodyJsonUnsafe({ code, deviceName }))
+            ),
           PairComplete,
           { auth: false }
         ),
       devices: call(get("/devices"), DeviceList),
       revokeDevice: (deviceId) =>
         call(
-          (cred) => need(cred).pipe(Effect.map((c) => authed(HttpClientRequest.delete(url(`/devices/${id(deviceId)}`)), c))),
+          (cred) =>
+            need(cred).pipe(Effect.map((c) => authed(HttpClientRequest.delete(url(`/devices/${id(deviceId)}`)), c))),
           OkBody
         ).pipe(Effect.asVoid),
       credential: Ref.get(credRef),

@@ -6,9 +6,9 @@ import { advance, eventually, info, makeEnv, makeSource, sample, settle } from "
 
 describe("Recorder", () => {
   it.effect("records, merges fresh GPS, seals and finishes", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const store = yield* TripStore
         const src = yield* makeSource
@@ -32,18 +32,20 @@ describe("Recorder", () => {
         expect((yield* SubscriptionRef.get(rec.state))._tag).toBe("Idle")
         expect(env.wl.log).toEqual(["acquire", "release"])
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 
   it.effect("integrates distance: OBD speed, GPS fallback, skips long steps and gaps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const store = yield* TripStore
         const src = yield* makeSource
         const id = yield* rec.start({ source: src.source, info })
         yield* settle()
-        const km = () => SubscriptionRef.get(rec.state).pipe(Effect.map((s) => (s._tag === "Recording" ? s.distanceKm : -1)))
+        const km = () =>
+          SubscriptionRef.get(rec.state).pipe(Effect.map((s) => (s._tag === "Recording" ? s.distanceKm : -1)))
         yield* src.emit(sample(0, { speedKmh: 36 }))
         yield* src.emit(sample(5000, { speedKmh: 36 }))
         yield* settle()
@@ -65,12 +67,13 @@ describe("Recorder", () => {
         yield* rec.stop
         expect((yield* store.getTrip(id))!.distanceKm).toBeCloseTo(0.05 + 0.1112, 3)
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 
   it.effect("seals a chunk every 30 s", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const src = yield* makeSource
         yield* rec.start({ source: src.source, info })
@@ -81,12 +84,13 @@ describe("Recorder", () => {
         const st = yield* eventually(SubscriptionRef.get(rec.state), (s) => s._tag === "Recording" && s.chunks === 1)
         expect(st._tag === "Recording" && st.chunks).toBe(1)
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 
   it.effect("records source gaps and app_backgrounded gaps", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const store = yield* TripStore
         const src = yield* makeSource
@@ -105,12 +109,13 @@ describe("Recorder", () => {
         expect(gaps[0]).toEqual({ from: 100, to: 200, reason: "adapter_disconnected" })
         expect(gaps[1]).toMatchObject({ reason: "app_backgrounded", to: 3000 })
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 
   it.effect("crash mid-trip: flushed samples survive, trip is offered for continue/finish", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      const id = yield* Effect.gen(function*() {
+      const id = yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const src = yield* makeSource
         const tripId = yield* rec.start({ source: src.source, info })
@@ -122,7 +127,7 @@ describe("Recorder", () => {
         yield* settle()
         return tripId
       }).pipe(Effect.provide(env.layer()))
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const store = yield* TripStore
         const found = yield* rec.recoverUnfinished
@@ -139,12 +144,13 @@ describe("Recorder", () => {
         expect(trip.manifest.status).toBe("finished")
         expect(trip.manifest.chunks.reduce((n, c) => n + c.rows, 0)).toBe(3)
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 
   it.effect("finishInterrupted closes the trip at the last flushed sample", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      const id = yield* Effect.gen(function*() {
+      const id = yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const src = yield* makeSource
         const tripId = yield* rec.start({ source: src.source, info })
@@ -153,24 +159,26 @@ describe("Recorder", () => {
         yield* advance(5000)
         return tripId
       }).pipe(Effect.provide(env.layer()))
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         yield* rec.finishInterrupted(id)
         const m = (yield* (yield* TripStore).getTrip(id))!.manifest
         expect(m).toMatchObject({ status: "finished", endedAt: 10, chunkCount: 1 })
         expect(yield* rec.recoverUnfinished).toEqual([])
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 
   it.effect("a second start while recording fails with busy", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const env = yield* makeEnv
-      yield* Effect.gen(function*() {
+      yield* Effect.gen(function* () {
         const rec = yield* Recorder
         const src = yield* makeSource
         yield* rec.start({ source: src.source, info })
         const err = yield* rec.start({ source: src.source, info }).pipe(Effect.flip)
         expect(err._tag).toBe("RecorderFailure")
       }).pipe(Effect.provide(env.layer()))
-    }))
+    })
+  )
 })

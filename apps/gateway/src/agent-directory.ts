@@ -8,7 +8,8 @@ import type { Env } from "./env.ts"
 const viaStub = <A>(operation: string, call: () => Promise<A>) =>
   Effect.tryPromise({
     try: call,
-    catch: (cause) => new ContainerDown({ reason: `${operation}: ${cause instanceof Error ? cause.message : String(cause)}`, cause })
+    catch: (cause) =>
+      new ContainerDown({ reason: `${operation}: ${cause instanceof Error ? cause.message : String(cause)}`, cause })
   })
 
 export const agentDirectoryLayer = (env: Env): Layer.Layer<AgentDirectory, never, Allowlist> =>
@@ -19,9 +20,7 @@ export const agentDirectoryLayer = (env: Env): Layer.Layer<AgentDirectory, never
       const stub = (tgId: number) => env.USER_AGENT.getByName(String(tgId))
 
       const info = (tgId: TgId): Effect.Effect<AgentInfo, StorageError | ContainerDown> =>
-        viaStub("info", () => stub(tgId).info(tgId)).pipe(
-          Effect.map((dto) => ({ ...dto, tgId: TgId.make(dto.tgId) }))
-        )
+        viaStub("info", () => stub(tgId).info(tgId)).pipe(Effect.map((dto) => ({ ...dto, tgId: TgId.make(dto.tgId) })))
 
       return {
         info: (tgId) =>

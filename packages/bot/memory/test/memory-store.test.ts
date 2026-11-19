@@ -28,7 +28,10 @@ describe("memory store", () => {
       yield* TestClock.setTime(2000)
       yield* store.remember("Lives in Warsaw")
       const updated = yield* store.update(1, "Name is Nikita")
-      expect(updated).toMatchObject({ ok: true, fact: { id: 1, text: "Name is Nikita", createdAt: 1000, updatedAt: 2000 } })
+      expect(updated).toMatchObject({
+        ok: true,
+        fact: { id: 1, text: "Name is Nikita", createdAt: 1000, updatedAt: 2000 }
+      })
       expect((yield* store.list).map((f) => f.text)).toEqual(["Name is Nikita", "Lives in Warsaw"])
       expect(yield* store.forget(2)).toBe(true)
       expect(yield* store.forget(2)).toBe(false)
@@ -36,7 +39,8 @@ describe("memory store", () => {
       expect(yield* store.remember("   ")).toEqual({ ok: false, reason: "empty" })
       expect(yield* store.forgetAll).toBe(1)
       expect(yield* store.list).toEqual([])
-    }))
+    })
+  )
 
   it.effect("refuses writes over the budget and allows shrinking an update", () =>
     Effect.gen(function* () {
@@ -48,7 +52,8 @@ describe("memory store", () => {
       expect(grow).toMatchObject({ ok: false, reason: "over_budget" })
       expect(yield* store.update(1, "c".repeat(40))).toMatchObject({ ok: true, usedTokens: 10 })
       expect((yield* store.list).length).toBe(1)
-    }))
+    })
+  )
 
   it.effect("renders the block with usage and ids", () =>
     Effect.gen(function* () {
@@ -58,7 +63,8 @@ describe("memory store", () => {
       yield* store.remember("Drives a Skoda")
       expect(yield* store.render).toBe(`MEMORY [8/${BUDGET_TOKENS} tokens]\n[1] Name is Mikita\n[2] Drives a Skoda`)
       expect(renderBlock([], 50)).toBe("MEMORY [0/50 tokens]\n(empty)")
-    }))
+    })
+  )
 
   it.effect("user memory layer serves only its owner", () => {
     const store = setup()

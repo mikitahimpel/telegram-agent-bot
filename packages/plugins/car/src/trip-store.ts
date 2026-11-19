@@ -27,7 +27,7 @@ export const tripIdTime = (tripId: string): number => {
 }
 
 export const listTripIds = (tgId: TgId | number, limit = 50) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bucket = yield* CarBucket
     const prefix = tripsPrefix(tgId)
     const ids: Array<string> = []
@@ -44,11 +44,15 @@ export const listTripIds = (tgId: TgId | number, limit = 50) =>
       if (!res.truncated || res.cursor === undefined) break
       cursor = res.cursor
     }
-    return ids.sort().reverse().slice(0, limit).map((id) => TripId.make(id))
+    return ids
+      .sort()
+      .reverse()
+      .slice(0, limit)
+      .map((id) => TripId.make(id))
   })
 
 export const readManifest = (tgId: TgId | number, tripId: TripId) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bucket = yield* CarBucket
     const o = yield* storage("car.manifest.get", () => bucket.get(manifestKey(tgId, tripId)))
     if (o === null) return null
@@ -68,7 +72,7 @@ export type StoredChunk = {
 }
 
 export const storedChunks = (tgId: TgId | number, tripId: TripId) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bucket = yield* CarBucket
     const prefix = `${tripPrefix(tgId, tripId)}chunks/`
     const out = new Map<number, StoredChunk>()
@@ -136,7 +140,7 @@ export const computeStatus = (
 }
 
 export const tripStatus = (tgId: TgId | number, tripId: TripId) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const [manifest, stored] = yield* Effect.all([readManifest(tgId, tripId), storedChunks(tgId, tripId)])
     return computeStatus(tripId, manifest, stored)
   })
@@ -167,7 +171,7 @@ export type OverviewFilter = {
 }
 
 export const listOverview = (tgId: TgId | number, filter: OverviewFilter = {}) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const from = filter.from?.getTime() ?? -Infinity
     const to = filter.to?.getTime() ?? Infinity
     const ids = (yield* listTripIds(tgId, 1000))
@@ -193,12 +197,12 @@ export type ReadSamples = {
 }
 
 export const readSamples = (tgId: TgId | number, tripId: TripId, seqs: ReadonlyArray<number>) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const bucket = yield* CarBucket
     const parts = yield* Effect.forEach(
       seqs,
       (seq) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const o = yield* storage("car.chunk.get", () => bucket.get(chunkKey(tgId, tripId, seq)))
           if (o === null) return { seq, samples: undefined }
           const text = new TextDecoder().decode(yield* storage("car.chunk.read", () => o.arrayBuffer()))
@@ -219,7 +223,7 @@ type CachedMetrics = {
 }
 
 export const tripMetrics = (tgId: TgId | number, tripId: TripId, status: TripStatus) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const manifest = status.manifest
     if (manifest === null) return undefined
     const bucket = yield* CarBucket
@@ -228,10 +232,11 @@ export const tripMetrics = (tgId: TgId | number, tripId: TripId, status: TripSta
       const cached = yield* storage("car.metrics.get", () => bucket.get(key))
       if (cached !== null) {
         try {
-          const parsed = JSON.parse(new TextDecoder().decode(yield* storage("car.metrics.read", () => cached.arrayBuffer()))) as CachedMetrics
+          const parsed = JSON.parse(
+            new TextDecoder().decode(yield* storage("car.metrics.read", () => cached.arrayBuffer()))
+          ) as CachedMetrics
           if (parsed.chunkCount === manifest.chunkCount && parsed.metrics.version === 1) return parsed.metrics
-        } catch {
-        }
+        } catch {}
       }
     }
     const { samples } = yield* readSamples(tgId, tripId, status.received)

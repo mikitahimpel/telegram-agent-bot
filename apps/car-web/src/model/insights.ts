@@ -8,9 +8,11 @@ const RANK: Record<Severity, number> = { info: 0, watch: 1, soon: 2, urgent: 3 }
 export const worstSeverity = (items: ReadonlyArray<{ severity: Severity }>): Severity | null =>
   items.reduce<Severity | null>((w, i) => (w === null || RANK[i.severity] > RANK[w] ? i.severity : w), null)
 
-export const bySeverityDesc = <A extends { severity: Severity }>(items: ReadonlyArray<A>): A[] => [...items].sort((a, b) => RANK[b.severity] - RANK[a.severity])
+export const bySeverityDesc = <A extends { severity: Severity }>(items: ReadonlyArray<A>): A[] =>
+  [...items].sort((a, b) => RANK[b.severity] - RANK[a.severity])
 
-export const activeAlerts = (alerts: ReadonlyArray<Alert>): Alert[] => bySeverityDesc(alerts.filter((a) => a.resolvedAt === null))
+export const activeAlerts = (alerts: ReadonlyArray<Alert>): Alert[] =>
+  bySeverityDesc(alerts.filter((a) => a.resolvedAt === null))
 
 export const verdictOf = (o: CarOverview): Verdict => {
   const sev = worstSeverity([...o.engine.activeCodes, ...activeAlerts(o.alerts)])
@@ -54,7 +56,9 @@ export const periodLabel = (p: string, kind: "week" | "month", lang: Lang): stri
   }
   const m = /^(\d{4})-(\d{2})$/.exec(p)
   if (!m) return p
-  return new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)))
+  return new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", { month: "short", timeZone: "UTC" }).format(
+    new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1))
+  )
 }
 
 export const periodTitle = (p: string, kind: "week" | "month", lang: Lang): string => {
@@ -64,7 +68,11 @@ export const periodTitle = (p: string, kind: "week" | "month", lang: Lang): stri
   }
   const m = /^(\d{4})-(\d{2})$/.exec(p)
   if (!m) return p
-  return new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)))
+  return new Intl.DateTimeFormat(lang === "ru" ? "ru-RU" : "en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)))
 }
 
 export const codeKindKey = (k: DtcExplanation["kind"]) => `engine.kind.${k}` as const

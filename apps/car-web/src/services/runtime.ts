@@ -9,7 +9,15 @@ import { API_BASE } from "./api-base.ts"
 
 export const createBackend = (): CarBackend => {
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent
-  const base = createDemoBackend({ platform: detectPlatform(ua), caps: localCapabilities(), trips: [], diag: [], pairing: "unpaired", storage: null, insightsDemo: false })
+  const base = createDemoBackend({
+    platform: detectPlatform(ua),
+    caps: localCapabilities(),
+    trips: [],
+    diag: [],
+    pairing: "unpaired",
+    storage: null,
+    insightsDemo: false
+  })
   const runtime = makeCarRuntime({ apiBase: API_BASE })
   return withRealBackend(base, runtime, typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev")
 }

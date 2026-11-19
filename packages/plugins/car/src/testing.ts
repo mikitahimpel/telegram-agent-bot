@@ -1,8 +1,13 @@
 import type { R2Like, R2ObjectLike } from "./r2.ts"
 
-export const makeMemoryR2 = (): R2Like & { readonly objects: Map<string, { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }> } => {
+export const makeMemoryR2 = (): R2Like & {
+  readonly objects: Map<string, { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }>
+} => {
   const objects = new Map<string, { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }>()
-  const toObj = (key: string, v: { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }): R2ObjectLike => ({
+  const toObj = (
+    key: string,
+    v: { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }
+  ): R2ObjectLike => ({
     key,
     size: v.bytes.length,
     uploaded: v.uploaded,

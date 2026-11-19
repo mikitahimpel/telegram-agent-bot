@@ -12,4 +12,7 @@ export type TFn = (key: MessageKey, params?: Record<string, string | number>) =>
 export const translate = (lang: Lang, key: MessageKey, params?: Record<string, string | number>): string =>
   formatMessage(lang, catalogs[lang][key], params)
 
-export const makeT = (lang: Lang): TFn => (key, params) => translate(lang, key, params)
+export const makeT =
+  (lang: Lang): TFn =>
+  (key, params) =>
+    translate(lang, key, params)

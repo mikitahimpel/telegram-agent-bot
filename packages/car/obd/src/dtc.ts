@@ -74,16 +74,24 @@ const SIDS = { stored: [0x43, "03"], pending: [0x47, "07"], permanent: [0x4a, "0
 const statusOf = (lines: ReadonlyArray<string>, parsed: unknown): DtcModeStatus =>
   parsed !== undefined ? "read" : findErrorToken(lines) === "NODATA" ? "no_data" : "failed"
 
-const sendOrFail = (elm: Elm327, command: string, timeoutMs: number): Effect.Effect<ReadonlyArray<string> | undefined, Disconnected> =>
-  elm.send(command, { timeoutMs }).pipe(
-    Effect.catch((e: CommandTimeout | Disconnected) => (e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)))
-  )
+const sendOrFail = (
+  elm: Elm327,
+  command: string,
+  timeoutMs: number
+): Effect.Effect<ReadonlyArray<string> | undefined, Disconnected> =>
+  elm
+    .send(command, { timeoutMs })
+    .pipe(
+      Effect.catch((e: CommandTimeout | Disconnected) =>
+        e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)
+      )
+    )
 
 export const readDtcScan = (
   elm: Elm327,
   style: DtcWireStyle = "auto"
 ): Effect.Effect<DtcScan, EcuNotResponding | Disconnected> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const statusLines = yield* sendOrFail(elm, "0101", 4000)
     const status = statusLines === undefined ? undefined : parseMonitorStatus(statusLines)
     const codes: Array<DtcCode> = []

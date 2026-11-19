@@ -146,4 +146,5 @@ export const Update = Schema.Struct({
 })
 export type Update = typeof Update.Type
 
-export const decodeUpdate: (u: unknown) => Effect.Effect<Update, Schema.SchemaError> = Schema.decodeUnknownEffect(Update)
+export const decodeUpdate: (u: unknown) => Effect.Effect<Update, Schema.SchemaError> =
+  Schema.decodeUnknownEffect(Update)

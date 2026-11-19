@@ -24,7 +24,7 @@ describe("guardQuery", () => {
     "select load_extension('x')",
     "/* hi */ pragma x",
     "explain select 1",
-    "select \"insert\" from car_trips; --",
+    'select "insert" from car_trips; --',
     "select 'unterminated"
   ])("rejects %s", (q) => {
     const r = guardQuery(q, [])

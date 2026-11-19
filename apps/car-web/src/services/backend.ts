@@ -29,7 +29,6 @@ export type InterruptedTrip = {
   points: number
 }
 
-
 export type CarBackend = {
   readonly platform: Platform
   readonly caps: Capabilities

@@ -92,7 +92,8 @@ const KNOWN_REASONS: ReadonlyArray<Gap["reason"]> = [
   "app_restarted",
   "unknown"
 ]
-const toReason = (r: string): Gap["reason"] => (KNOWN_REASONS as ReadonlyArray<string>).includes(r) ? (r as Gap["reason"]) : "unknown"
+const toReason = (r: string): Gap["reason"] =>
+  (KNOWN_REASONS as ReadonlyArray<string>).includes(r) ? (r as Gap["reason"]) : "unknown"
 
 type Session = {
   readonly tripId: string
@@ -117,7 +118,7 @@ type Session = {
 
 export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLock | AppLifecycle> = Layer.effect(
   Recorder,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const store = yield* TripStore
     const geoSource = yield* GeoSource
     const wakeLock = yield* WakeLock
@@ -146,12 +147,10 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       )
 
     const addGap = (s: Session, gap: Gap) =>
-      store.updateManifest(s.tripId, (m) => ({ ...m, gaps: [...m.gaps, gap] })).pipe(
-        Effect.catch(() => Effect.void)
-      )
+      store.updateManifest(s.tripId, (m) => ({ ...m, gaps: [...m.gaps, gap] })).pipe(Effect.catch(() => Effect.void))
 
     const closeSourceGap = (s: Session, to: number) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const g = s.sourceGap
         if (g === undefined) return
         s.prev = undefined
@@ -160,7 +159,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         yield* publish(s)
       })
     const closeBgGap = (s: Session, to: number) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const g = s.bgGap
         if (g === undefined) return
         s.prev = undefined
@@ -171,7 +170,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
 
     const tick = (s: Session, force: boolean) =>
       lock.withPermits(1)(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const now = yield* Clock.currentTimeMillis
           const batch = s.buffer
           s.buffer = []
@@ -208,7 +207,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       )
 
     const onReading = (s: Session, event: ReadingEvent) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (event._tag === "Reading") {
           let sample = event.sample
           const fix = s.fix
@@ -241,7 +240,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       })
 
     const launch = (s: Session, source: ReadingSource, geo: boolean) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         session = s
         s.wakeLock = yield* wakeLock.acquire
         s.geo = geo ? "acquiring" : "off"
@@ -254,7 +253,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
             Stream.runForEach((e) => onReading(s, e)),
             Effect.catch(() => Effect.void),
             Effect.andThen(
-              Effect.gen(function*() {
+              Effect.gen(function* () {
                 const now = yield* Clock.currentTimeMillis
                 s.sourceEnded = true
                 if (s.sourceGap === undefined) s.sourceGap = { from: now, reason: "adapter_disconnected" }
@@ -263,9 +262,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
             )
           )
         )
-        yield* fork(
-          Effect.forever(Effect.sleep(FLUSH_EVERY_MS).pipe(Effect.andThen(tick(s, false))))
-        )
+        yield* fork(Effect.forever(Effect.sleep(FLUSH_EVERY_MS).pipe(Effect.andThen(tick(s, false)))))
         if (geo) {
           yield* fork(
             geoSource.watch.pipe(
@@ -284,7 +281,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         yield* fork(
           lifecycle.visibility.pipe(
             Stream.runForEach((v) =>
-              Effect.gen(function*() {
+              Effect.gen(function* () {
                 const now = yield* Clock.currentTimeMillis
                 if (v === "hidden") {
                   if (s.bgGap === undefined) s.bgGap = { from: now }
@@ -302,7 +299,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       })
 
     const teardown = (s: Session) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* Effect.forEach(s.fibers, (f) => Fiber.interrupt(f), { discard: true })
         s.fibers = []
         const now = yield* Clock.currentTimeMillis
@@ -311,7 +308,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       })
 
     const finalize = (tripId: string, endedAt: number | undefined) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         yield* store.sealPending(tripId)
         const trip = yield* store.updateManifest(tripId, (m) => ({
           ...m,
@@ -324,7 +321,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         }
       })
 
-    const stop = Effect.gen(function*() {
+    const stop = Effect.gen(function* () {
       const s = session
       if (s === undefined) return
       yield* SubscriptionRef.set(state, RecorderState.Finishing({ tripId: s.tripId }))
@@ -347,7 +344,15 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
       yield* SubscriptionRef.set(state, RecorderState.Idle())
     })
 
-    const newSession = (tripId: string, startedAt: number, now: number, points: number, chunks: number, lastSampleAt: number | undefined, distanceKm = 0): Session => ({
+    const newSession = (
+      tripId: string,
+      startedAt: number,
+      now: number,
+      points: number,
+      chunks: number,
+      lastSampleAt: number | undefined,
+      distanceKm = 0
+    ): Session => ({
       tripId,
       startedAt,
       buffer: [],
@@ -371,13 +376,14 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
     const busy = Effect.fail(new RecorderFailure({ reason: "busy", message: "A trip is already being recorded" }))
 
     const start = (o: StartOptions) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (session !== undefined) return yield* busy
         const now = yield* Clock.currentTimeMillis
         const rnd = yield* Random.nextInt
         const tripId = makeTripId(new Date(now), Math.abs(rnd).toString(36))
         const offset = o.clockOffsetMs
-        const clockNote = offset !== undefined && Math.abs(offset) > CLOCK_WARN_MS ? `clock_offset_ms=${Math.round(offset)}` : undefined
+        const clockNote =
+          offset !== undefined && Math.abs(offset) > CLOCK_WARN_MS ? `clock_offset_ms=${Math.round(offset)}` : undefined
         const note = [o.note, clockNote].filter((x): x is string => x !== undefined).join("; ")
         const manifest: TripManifest = {
           formatVersion: 1,
@@ -406,7 +412,7 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
 
     const interrupted = (t: { readonly tripId: string }) => store.getTrip(t.tripId)
 
-    const recoverUnfinished = Effect.gen(function*() {
+    const recoverUnfinished = Effect.gen(function* () {
       const trips = yield* store.listTrips
       const out: Array<InterruptedTrip> = []
       for (const t of trips) {
@@ -424,17 +430,20 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
     })
 
     const loadInterrupted = (tripId: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const t = yield* interrupted({ tripId })
-        if (t === undefined) return yield* Effect.fail(new RecorderFailure({ reason: "not_found", message: `Trip ${tripId} not found` }))
+        if (t === undefined)
+          return yield* Effect.fail(new RecorderFailure({ reason: "not_found", message: `Trip ${tripId} not found` }))
         if (t.manifest.status !== "recording") {
-          return yield* Effect.fail(new RecorderFailure({ reason: "not_interrupted", message: `Trip ${tripId} is already finished` }))
+          return yield* Effect.fail(
+            new RecorderFailure({ reason: "not_interrupted", message: `Trip ${tripId} is already finished` })
+          )
         }
         return t
       })
 
     const resume = (tripId: string, source: ReadingSource, options?: { readonly geo?: boolean }) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (session !== undefined) return yield* busy
         const t = yield* loadInterrupted(tripId)
         const now = yield* Clock.currentTimeMillis
@@ -442,13 +451,28 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         const lastSampleAt = pending[pending.length - 1]?.ts ?? t.lastSampleAt ?? t.manifest.startedAt
         const points = t.manifest.chunks.reduce((n, c) => n + c.rows, 0) + pending.length
         yield* store.sealPending(tripId)
-        yield* store.updateManifest(tripId, (m) => ({ ...m, gaps: [...m.gaps, { from: lastSampleAt, to: now, reason: "app_restarted" as const }] }))
+        yield* store.updateManifest(tripId, (m) => ({
+          ...m,
+          gaps: [...m.gaps, { from: lastSampleAt, to: now, reason: "app_restarted" as const }]
+        }))
         const fresh = yield* store.getTrip(tripId)
-        yield* launch(newSession(tripId, t.manifest.startedAt, now, points, fresh?.manifest.chunks.length ?? 0, lastSampleAt, t.distanceKm ?? 0), source, options?.geo ?? false)
+        yield* launch(
+          newSession(
+            tripId,
+            t.manifest.startedAt,
+            now,
+            points,
+            fresh?.manifest.chunks.length ?? 0,
+            lastSampleAt,
+            t.distanceKm ?? 0
+          ),
+          source,
+          options?.geo ?? false
+        )
       })
 
     const finishInterrupted = (tripId: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (session?.tripId === tripId) return yield* busy
         const t = yield* loadInterrupted(tripId)
         const pending = yield* store.readPending(tripId)

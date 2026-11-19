@@ -37,7 +37,8 @@ export const COLD_START_C = 50
 export const WARM_C = 70
 
 const r = (v: number, digits = 2): number => Math.round(v * 10 ** digits) / 10 ** digits
-const rn = (v: number | undefined, digits = 2): number | null => (v === undefined || !Number.isFinite(v) ? null : r(v, digits))
+const rn = (v: number | undefined, digits = 2): number | null =>
+  v === undefined || !Number.isFinite(v) ? null : r(v, digits)
 
 export const median = (values: ReadonlyArray<number>): number | undefined => {
   if (values.length === 0) return undefined
@@ -46,7 +47,8 @@ export const median = (values: ReadonlyArray<number>): number | undefined => {
   return s.length % 2 === 1 ? (s[mid] as number) : ((s[mid - 1] as number) + (s[mid] as number)) / 2
 }
 
-const speedOf = (s: Sample): number | undefined => (isNum(s.speedKmh) ? s.speedKmh : isNum(s.gpsSpeedKmh) ? s.gpsSpeedKmh : undefined)
+const speedOf = (s: Sample): number | undefined =>
+  isNum(s.speedKmh) ? s.speedKmh : isNum(s.gpsSpeedKmh) ? s.gpsSpeedKmh : undefined
 
 type Step = {
   readonly dt: number
@@ -93,7 +95,8 @@ export const computeTrip = (input: TripInput): ComputedTrip => {
     const b = samples[i] as Sample
     const d = distanceStep(a, b, input.gaps)
     if (d === undefined) continue
-    const fuelL = isNum(a.fuelRateLph) && isNum(b.fuelRateLph) ? (((a.fuelRateLph + b.fuelRateLph) / 2) * d.dt) / 3600 : undefined
+    const fuelL =
+      isNum(a.fuelRateLph) && isNum(b.fuelRateLph) ? (((a.fuelRateLph + b.fuelRateLph) / 2) * d.dt) / 3600 : undefined
     const sa = speedOf(a)
     const sb = speedOf(b)
     const speed = sa !== undefined && sb !== undefined ? (sa + sb) / 2 : undefined
@@ -103,7 +106,15 @@ export const computeTrip = (input: TripInput): ComputedTrip => {
   const obdSteps = steps.filter((s) => s.obdKm !== undefined).length
   const gpsSteps = steps.filter((s) => s.gpsKm !== undefined).length
   const source: "obd" | "gps" | "none" =
-    steps.length === 0 ? "none" : obdSteps > 0 && obdSteps >= steps.length / 2 ? "obd" : gpsSteps > 0 ? "gps" : obdSteps > 0 ? "obd" : "none"
+    steps.length === 0
+      ? "none"
+      : obdSteps > 0 && obdSteps >= steps.length / 2
+        ? "obd"
+        : gpsSteps > 0
+          ? "gps"
+          : obdSteps > 0
+            ? "obd"
+            : "none"
   const kmOf = (s: (typeof steps)[number]) => (source === "obd" ? s.obdKm : source === "gps" ? s.gpsKm : undefined)
 
   const distanceKm = source === "none" ? undefined : steps.reduce((t, s) => t + (kmOf(s) ?? 0), 0)
@@ -115,9 +126,14 @@ export const computeTrip = (input: TripInput): ComputedTrip => {
 
   const fuelSteps = steps.filter((s) => s.fuelL !== undefined)
   const fuelL = fuelSteps.length === 0 ? undefined : fuelSteps.reduce((t, s) => t + (s.fuelL ?? 0), 0)
-  const fuelDistanceKm = fuelSteps.length === 0 || source === "none" ? undefined : fuelSteps.reduce((t, s) => t + (kmOf(s) ?? 0), 0)
-  const idleFuelL = fuelSteps.length === 0 ? undefined : fuelSteps.filter((s) => s.idle).reduce((t, s) => t + (s.fuelL ?? 0), 0)
-  const fuelPer100 = fuelL === undefined || fuelDistanceKm === undefined || fuelDistanceKm < 0.5 ? undefined : (fuelL / fuelDistanceKm) * 100
+  const fuelDistanceKm =
+    fuelSteps.length === 0 || source === "none" ? undefined : fuelSteps.reduce((t, s) => t + (kmOf(s) ?? 0), 0)
+  const idleFuelL =
+    fuelSteps.length === 0 ? undefined : fuelSteps.filter((s) => s.idle).reduce((t, s) => t + (s.fuelL ?? 0), 0)
+  const fuelPer100 =
+    fuelL === undefined || fuelDistanceKm === undefined || fuelDistanceKm < 0.5
+      ? undefined
+      : (fuelL / fuelDistanceKm) * 100
 
   const speedBands = SPEED_BAND_EDGES.slice(0, -1).map((from, i) => {
     const to = SPEED_BAND_EDGES[i + 1] as number
@@ -128,7 +144,10 @@ export const computeTrip = (input: TripInput): ComputedTrip => {
     return {
       fromKmh: from,
       toKmh: to,
-      seconds: r(inBand.reduce((t, s) => t + s.dt, 0), 1),
+      seconds: r(
+        inBand.reduce((t, s) => t + s.dt, 0),
+        1
+      ),
       fuelPer100Km: km >= 0.3 ? r((fuel / km) * 100) : null
     }
   })
@@ -141,14 +160,20 @@ export const computeTrip = (input: TripInput): ComputedTrip => {
 
   const runIdx = samples.findIndex((s) => isNum(s.rpm) && s.rpm >= ENGINE_ON_RPM)
   const run = runIdx >= 0 ? (samples[runIdx] as Sample) : undefined
-  const preStart = runIdx > 0 ? samples.slice(0, runIdx).filter((s) => isNum(s.voltageV) && run !== undefined && run.ts - s.ts <= 180_000) : []
+  const preStart =
+    runIdx > 0
+      ? samples.slice(0, runIdx).filter((s) => isNum(s.voltageV) && run !== undefined && run.ts - s.ts <= 180_000)
+      : []
   const restingV = median(preStart.map((s) => s.voltageV as number))
   const crankWindow =
     run !== undefined && runIdx > 0
-      ? samples.filter((s) => isNum(s.voltageV) && s.ts >= run.ts - 3000 && s.ts <= run.ts + 2000).map((s) => s.voltageV as number)
+      ? samples
+          .filter((s) => isNum(s.voltageV) && s.ts >= run.ts - 3000 && s.ts <= run.ts + 2000)
+          .map((s) => s.voltageV as number)
       : []
   const crankMinV = crankWindow.length === 0 ? undefined : Math.min(...crankWindow)
-  const chargingFrom = run === undefined ? Infinity : runIdx > 0 ? run.ts + CHARGING_SETTLE_MS : (first?.ts ?? 0) + CHARGING_SETTLE_MS
+  const chargingFrom =
+    run === undefined ? Infinity : runIdx > 0 ? run.ts + CHARGING_SETTLE_MS : (first?.ts ?? 0) + CHARGING_SETTLE_MS
   const charging = samples
     .filter((s) => isNum(s.voltageV) && isNum(s.rpm) && s.rpm >= CHARGING_MIN_RPM && s.ts >= chargingFrom)
     .map((s) => s.voltageV as number)
@@ -162,7 +187,9 @@ export const computeTrip = (input: TripInput): ComputedTrip => {
     if (warm !== undefined) warmupS = (warm.ts - engineStartTs) / 1000
   }
 
-  const withFix = samples.filter((s) => isNum(s.lat) && isNum(s.lon) && (!isNum(s.gpsAccuracyM) || s.gpsAccuracyM <= 50))
+  const withFix = samples.filter(
+    (s) => isNum(s.lat) && isNum(s.lon) && (!isNum(s.gpsAccuracyM) || s.gpsAccuracyM <= 50)
+  )
   const startFix = withFix[0]
   const endFix = withFix[withFix.length - 1]
   const fuelLevels = samples.map((s) => s.fuelLevelPct).filter(isNum)

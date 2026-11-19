@@ -17,17 +17,34 @@ const banners = computed<{ key: string; view: StatusView }[]>(() => {
   const add = (key: string, view: StatusView | null) => view && out.push({ key, view })
   const s = backend.sync.value
   if (backend.pairing.value === "paired") {
-    if (!backend.online.value || s._tag === "Offline") add("offline", describeStatus({ kind: "sync", state: { _tag: "Offline" } }, lang.value, now.value))
-    if (s._tag === "NeedsReauth" || s._tag === "Blocked") add("sync", describeStatus({ kind: "sync", state: s }, lang.value, now.value))
+    if (!backend.online.value || s._tag === "Offline")
+      add("offline", describeStatus({ kind: "sync", state: { _tag: "Offline" } }, lang.value, now.value))
+    if (s._tag === "NeedsReauth" || s._tag === "Blocked")
+      add("sync", describeStatus({ kind: "sync", state: s }, lang.value, now.value))
   }
   const st = backend.storage.value
-  if (st && (st.usedBytes / st.quotaBytes) * 100 >= 80) add("storage", describeStatus({ kind: "storage", level: "low", usedPct: (st.usedBytes / st.quotaBytes) * 100 }, lang.value, now.value))
-  if (Math.abs(backend.clockOffsetMs.value) > 120_000) add("clock", describeStatus({ kind: "clock", offsetMs: backend.clockOffsetMs.value }, lang.value, now.value))
+  if (st && (st.usedBytes / st.quotaBytes) * 100 >= 80)
+    add(
+      "storage",
+      describeStatus(
+        { kind: "storage", level: "low", usedPct: (st.usedBytes / st.quotaBytes) * 100 },
+        lang.value,
+        now.value
+      )
+    )
+  if (Math.abs(backend.clockOffsetMs.value) > 120_000)
+    add("clock", describeStatus({ kind: "clock", offsetMs: backend.clockOffsetMs.value }, lang.value, now.value))
   return out
 })
 
 const showUnpaired = computed(() => backend.pairing.value !== "paired")
-const showPersist = computed(() => !!backend.storage.value && !backend.storage.value.persisted && unconfirmed.value && !dismissed.value.includes("persist"))
+const showPersist = computed(
+  () =>
+    !!backend.storage.value &&
+    !backend.storage.value.persisted &&
+    unconfirmed.value &&
+    !dismissed.value.includes("persist")
+)
 const dismiss = (k: string) => dismissed.value.push(k)
 </script>
 

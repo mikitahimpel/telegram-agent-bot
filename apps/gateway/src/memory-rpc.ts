@@ -14,8 +14,10 @@ export const rpcUserMemory = (env: Env): Layer.Layer<UserMemory> =>
       const stub = () => env.USER_AGENT.getByName(String(tgId))
       return {
         list: call("memory.rpc.list", () => stub().memoryList()),
-        remember: (text: string) => call("memory.rpc.remember", async () => (await stub().memoryRemember(text)) as WriteResult),
-        update: (id: number, text: string) => call("memory.rpc.update", async () => (await stub().memoryUpdate(id, text)) as WriteResult),
+        remember: (text: string) =>
+          call("memory.rpc.remember", async () => (await stub().memoryRemember(text)) as WriteResult),
+        update: (id: number, text: string) =>
+          call("memory.rpc.update", async () => (await stub().memoryUpdate(id, text)) as WriteResult),
         forget: (id: number) => call("memory.rpc.forget", () => stub().memoryForget(id)),
         forgetAll: call("memory.rpc.forget-all", () => stub().memoryForgetAll()),
         render: call("memory.rpc.render", () => stub().memoryRender())

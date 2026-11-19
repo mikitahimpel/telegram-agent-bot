@@ -75,19 +75,21 @@ const badResponse = (method: string, description: string, errorCode = 0) =>
   new TelegramError({ method, errorCode, description })
 
 export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string = DEFAULT_API_BASE) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const http = yield* HttpClient.HttpClient
     const base = apiBase.replace(/\/+$/, "")
 
     const attempt = (method: string, body: HttpBody.HttpBody): Effect.Effect<unknown, TelegramError | RateLimited> =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const request = HttpClientRequest.post(`${base}/bot${Redacted.value(token)}/${method}`).pipe(
           HttpClientRequest.setBody(body)
         )
-        const response = yield* http.execute(request).pipe(
-          Effect.mapError((e) => badResponse(method, `transport error (${e.reason._tag})`))
+        const response = yield* http
+          .execute(request)
+          .pipe(Effect.mapError((e) => badResponse(method, `transport error (${e.reason._tag})`)))
+        const text = yield* response.text.pipe(
+          Effect.mapError(() => badResponse(method, "unreadable response body", response.status))
         )
-        const text = yield* response.text.pipe(Effect.mapError(() => badResponse(method, "unreadable response body", response.status)))
         let json: unknown
         try {
           json = JSON.parse(text)
@@ -95,7 +97,9 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
           return yield* Effect.fail(badResponse(method, `non-JSON response (HTTP ${response.status})`, response.status))
         }
         const env = yield* Schema.decodeUnknownEffect(Envelope)(json).pipe(
-          Effect.mapError(() => badResponse(method, `unexpected response shape (HTTP ${response.status})`, response.status))
+          Effect.mapError(() =>
+            badResponse(method, `unexpected response shape (HTTP ${response.status})`, response.status)
+          )
         )
         if (env.ok) return env.result
         const code = env.error_code ?? response.status
@@ -113,10 +117,10 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
         Effect.mapError((e) => (e instanceof RateLimited ? e.error : e))
       )
 
-    const call = (method: string, params: Record<string, unknown>) =>
-      send(method, HttpBody.jsonUnsafe(params))
+    const call = (method: string, params: Record<string, unknown>) => send(method, HttpBody.jsonUnsafe(params))
 
-    const decode = <S extends Schema.Constraint & { readonly DecodingServices: never }>(method: string, schema: S) =>
+    const decode =
+      <S extends Schema.Constraint & { readonly DecodingServices: never }>(method: string, schema: S) =>
       (u: unknown) =>
         Schema.decodeUnknownEffect(schema)(u).pipe(
           Effect.mapError(() => badResponse(method, "unexpected result shape"))
@@ -185,11 +189,11 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
       )
 
     const downloadFile = (filePath: string): Effect.Effect<Uint8Array, TelegramError> =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const request = HttpClientRequest.get(`${base}/file/bot${Redacted.value(token)}/${filePath}`)
-        const response = yield* http.execute(request).pipe(
-          Effect.mapError((e) => badResponse("downloadFile", `transport error (${e.reason._tag})`))
-        )
+        const response = yield* http
+          .execute(request)
+          .pipe(Effect.mapError((e) => badResponse("downloadFile", `transport error (${e.reason._tag})`)))
         if (response.status !== 200) {
           return yield* Effect.fail(badResponse("downloadFile", `HTTP ${response.status}`, response.status))
         }
@@ -206,7 +210,9 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
       )
 
     const answerCallbackQuery = (id: string, text?: string) =>
-      call("answerCallbackQuery", { callback_query_id: id, ...(text !== undefined ? { text } : {}) }).pipe(Effect.asVoid)
+      call("answerCallbackQuery", { callback_query_id: id, ...(text !== undefined ? { text } : {}) }).pipe(
+        Effect.asVoid
+      )
 
     const setMessageReaction = (to: SendTarget & { readonly messageId: number }, emoji: string) =>
       call("setMessageReaction", {
@@ -244,7 +250,7 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
 
 export const layer: Layer.Layer<Telegram, Config.ConfigError, HttpClient.HttpClient> = Layer.effect(
   Telegram,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const token = yield* Config.Redacted("TELEGRAM_BOT_TOKEN")
     const apiBase = yield* Config.String("TELEGRAM_API_BASE").pipe(Config.withDefault(DEFAULT_API_BASE))
     return yield* makeTelegram(token, apiBase)

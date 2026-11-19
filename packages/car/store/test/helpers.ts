@@ -20,7 +20,13 @@ export type BuiltTrip = {
 export const buildTrip = async (
   startTs: number,
   samples: ReadonlyArray<Sample>,
-  opts: { rows?: number; gaps?: TripManifest["gaps"]; rand?: string; fuel?: TripManifest["fuelRateSource"]; status?: "finished" | "recording" } = {}
+  opts: {
+    rows?: number
+    gaps?: TripManifest["gaps"]
+    rand?: string
+    fuel?: TripManifest["fuelRateSource"]
+    status?: "finished" | "recording"
+  } = {}
 ): Promise<BuiltTrip> => {
   const rows = opts.rows ?? 120
   const parts: Array<ReadonlyArray<Sample>> = []
@@ -65,11 +71,13 @@ export const newEngine = (now: () => number = () => T0 + 10 * DAY) => {
   return { sql, engine: makeEngine(sql, now) }
 }
 
-export const cruise = (kmh: number, extra: Partial<Sample> = {}) => (): Partial<Sample> => ({
-  speedKmh: kmh,
-  rpm: 2000,
-  coolantC: 90,
-  voltageV: 14.1,
-  fuelRateLph: 6,
-  ...extra
-})
+export const cruise =
+  (kmh: number, extra: Partial<Sample> = {}) =>
+  (): Partial<Sample> => ({
+    speedKmh: kmh,
+    rpm: 2000,
+    coolantC: 90,
+    voltageV: 14.1,
+    fuelRateLph: 6,
+    ...extra
+  })

@@ -16,15 +16,19 @@ const stripHeader = (csv: string): string => {
 }
 
 export const exportTrip = (tripId: string): Effect.Effect<ExportedTrip, ExportFailure | StorageFailure, TripStore> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const store = yield* TripStore
     const trip = yield* store.getTrip(tripId)
-    if (trip === undefined) return yield* Effect.fail(new ExportFailure({ reason: "not_found", message: `Trip ${tripId} not found` }))
+    if (trip === undefined)
+      return yield* Effect.fail(new ExportFailure({ reason: "not_found", message: `Trip ${tripId} not found` }))
     const chunks = yield* store.listChunks(tripId)
     const missing = trip.manifest.chunks.filter((c) => !chunks.some((x) => x.seq === c.seq))
     if (missing.length > 0) {
       return yield* Effect.fail(
-        new ExportFailure({ reason: "chunk_missing", message: `Local copy lost parts: ${missing.map((m) => m.seq).join(", ")}` })
+        new ExportFailure({
+          reason: "chunk_missing",
+          message: `Local copy lost parts: ${missing.map((m) => m.seq).join(", ")}`
+        })
       )
     }
     const pending = yield* store.readPending(tripId)
@@ -45,7 +49,10 @@ export const exportTrip = (tripId: string): Effect.Effect<ExportedTrip, ExportFa
 
 export type ShareResult = "shared" | "downloaded" | "cancelled"
 
-export const shareFiles = (files: ReadonlyArray<{ readonly name: string; readonly blob: Blob }>, title?: string): Effect.Effect<ShareResult> =>
+export const shareFiles = (
+  files: ReadonlyArray<{ readonly name: string; readonly blob: Blob }>,
+  title?: string
+): Effect.Effect<ShareResult> =>
   Effect.promise(async (): Promise<ShareResult> => {
     const fileObjs = files.map((f) => new File([f.blob], f.name, { type: f.blob.type }))
     const nav = typeof navigator === "undefined" ? undefined : navigator

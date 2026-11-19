@@ -1,47 +1,136 @@
 import { describe, expect, it } from "vite-plus/test"
 import type { Lang } from "../src/i18n/format.ts"
 import { describeStatus, type StatusInput, type StatusView } from "../src/model/describe-status.ts"
-import type { ConnectionVm, ObdErrorCode, PairError, RecorderVm, SyncErrorCode, SyncGlobalVm, TripSyncVm } from "../src/model/types.ts"
+import type {
+  ConnectionVm,
+  ObdErrorCode,
+  PairError,
+  RecorderVm,
+  SyncErrorCode,
+  SyncGlobalVm,
+  TripSyncVm
+} from "../src/model/types.ts"
 
 const NOW = 1_800_000_000_000
 const langs: Lang[] = ["ru", "en"]
 
 const errorCodes: ObdErrorCode[] = [
-  "BluetoothUnavailable", "SerialUnavailable", "PermissionDenied", "DeviceNotSelected", "UnsupportedDevice",
-  "AdapterNotResponding", "EcuNotResponding", "CommandTimeout", "CommandRejected", "Disconnected"
+  "BluetoothUnavailable",
+  "SerialUnavailable",
+  "PermissionDenied",
+  "DeviceNotSelected",
+  "UnsupportedDevice",
+  "AdapterNotResponding",
+  "EcuNotResponding",
+  "CommandTimeout",
+  "CommandRejected",
+  "Disconnected"
 ]
 const connections: ConnectionVm[] = [
-  { _tag: "Idle" }, { _tag: "RequestingDevice" }, { _tag: "Connecting" },
-  { _tag: "InitializingAdapter", step: 2, total: 5, label: "ATE0" }, { _tag: "WaitingForEcu" },
+  { _tag: "Idle" },
+  { _tag: "RequestingDevice" },
+  { _tag: "Connecting" },
+  { _tag: "InitializingAdapter", step: 2, total: 5, label: "ATE0" },
+  { _tag: "WaitingForEcu" },
   { _tag: "Ready", sensors: 4, supportedPids: ["0C"], fuelRateSource: "none", adapterName: "OBDII" },
   { _tag: "Lost", since: NOW - 12_000, attempt: 3, nextRetryAt: NOW + 4_000 },
   ...errorCodes.map((code): ConnectionVm => ({ _tag: "Failed", error: { code, step: "ATZ", reason: "adapter_off" } }))
 ]
 const recorders: RecorderVm[] = [
   { _tag: "Idle" },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 1_395_000, points: 1380, chunks: 4, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: false },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 1_395_000, points: 1380, chunks: 4, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: true },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 5000, points: 5, chunks: 0, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: false, storageError: "quota" },
-  { _tag: "Recording", tripId: "t", startedAt: NOW - 5000, points: 5, chunks: 0, distanceKm: 1.5, lastSampleAt: NOW, gapOpen: false, sourceEnded: true },
-  { _tag: "Finishing" }, { _tag: "Error", message: "QuotaExceededError" }
+  {
+    _tag: "Recording",
+    tripId: "t",
+    startedAt: NOW - 1_395_000,
+    points: 1380,
+    chunks: 4,
+    distanceKm: 1.5,
+    lastSampleAt: NOW,
+    gapOpen: false
+  },
+  {
+    _tag: "Recording",
+    tripId: "t",
+    startedAt: NOW - 1_395_000,
+    points: 1380,
+    chunks: 4,
+    distanceKm: 1.5,
+    lastSampleAt: NOW,
+    gapOpen: true
+  },
+  {
+    _tag: "Recording",
+    tripId: "t",
+    startedAt: NOW - 5000,
+    points: 5,
+    chunks: 0,
+    distanceKm: 1.5,
+    lastSampleAt: NOW,
+    gapOpen: false,
+    storageError: "quota"
+  },
+  {
+    _tag: "Recording",
+    tripId: "t",
+    startedAt: NOW - 5000,
+    points: 5,
+    chunks: 0,
+    distanceKm: 1.5,
+    lastSampleAt: NOW,
+    gapOpen: false,
+    sourceEnded: true
+  },
+  { _tag: "Finishing" },
+  { _tag: "Error", message: "QuotaExceededError" }
 ]
 const syncs: SyncGlobalVm[] = [
-  { _tag: "Idle" }, { _tag: "Syncing" }, { _tag: "Offline" }, { _tag: "NeedsReauth", reason: "device_revoked" }, { _tag: "NeedsReauth", reason: "not_paired" },
-  { _tag: "Blocked", code: "plugin_disabled" }, { _tag: "Blocked", code: "forbidden" }, { _tag: "Paused" }
+  { _tag: "Idle" },
+  { _tag: "Syncing" },
+  { _tag: "Offline" },
+  { _tag: "NeedsReauth", reason: "device_revoked" },
+  { _tag: "NeedsReauth", reason: "not_paired" },
+  { _tag: "Blocked", code: "plugin_disabled" },
+  { _tag: "Blocked", code: "forbidden" },
+  { _tag: "Paused" }
 ]
-const syncErrors: SyncErrorCode[] = ["network", "rate_limited", "server", "checksum_mismatch", "unauthorized", "unknown"]
+const syncErrors: SyncErrorCode[] = [
+  "network",
+  "rate_limited",
+  "server",
+  "checksum_mismatch",
+  "unauthorized",
+  "unknown"
+]
 const trips: TripSyncVm[] = [
-  { _tag: "Recording" }, { _tag: "Queued" },
+  { _tag: "Recording" },
+  { _tag: "Queued" },
   { _tag: "Uploading", sent: 3, total: 14, confirmed: 2 },
-  ...syncErrors.map((lastError): TripSyncVm => ({ _tag: "Waiting", sent: 12, total: 14, nextRetryAt: NOW + 40_000, lastError })),
-  { _tag: "Verifying" }, { _tag: "Confirmed", at: NOW }, { _tag: "CloudOnly" },
+  ...syncErrors.map((lastError): TripSyncVm => ({
+    _tag: "Waiting",
+    sent: 12,
+    total: 14,
+    nextRetryAt: NOW + 40_000,
+    lastError
+  })),
+  { _tag: "Verifying" },
+  { _tag: "Confirmed", at: NOW },
+  { _tag: "CloudOnly" },
   { _tag: "Incomplete", missing: [2], corrupt: [], conflict: [], localCopy: true },
   { _tag: "Incomplete", missing: [], corrupt: [4, 5], conflict: [], localCopy: true },
   { _tag: "Incomplete", missing: [], corrupt: [], conflict: [1], localCopy: true },
   { _tag: "Incomplete", missing: [1, 2], corrupt: [], conflict: [], localCopy: false }
 ]
 const tripSyncs: SyncGlobalVm[] = [...syncs]
-const pairs: Array<"unpaired" | "localOnly" | "progress" | "done" | PairError> = ["unpaired", "localOnly", "progress", "done", "invalid", "network", "blocked", "unknown"]
+const pairs: Array<"unpaired" | "localOnly" | "progress" | "done" | PairError> = [
+  "unpaired",
+  "localOnly",
+  "progress",
+  "done",
+  "invalid",
+  "network",
+  "blocked",
+  "unknown"
+]
 
 const all: StatusInput[] = [
   ...connections.map((state): StatusInput => ({ kind: "connection", state })),
@@ -51,7 +140,8 @@ const all: StatusInput[] = [
   ...recorders.map((state): StatusInput => ({ kind: "recorder", state })),
   ...syncs.map((state): StatusInput => ({ kind: "sync", state })),
   ...trips.map((state): StatusInput => ({ kind: "trip", state })),
-  { kind: "storage", level: "low", usedPct: 91 }, { kind: "storage", level: "notPersistent" },
+  { kind: "storage", level: "low", usedPct: 91 },
+  { kind: "storage", level: "notPersistent" },
   { kind: "clock", offsetMs: 600_000 },
   ...pairs.map((state): StatusInput => ({ kind: "pair", state }))
 ]
@@ -96,7 +186,8 @@ describe("describeStatus is exhaustive", () => {
     ]
     for (const lang of ["en", "ru"] as const) {
       for (const g of tripSyncs) {
-        const key = g._tag === "NeedsReauth" ? `NeedsReauth:${g.reason}` : g._tag === "Blocked" ? `Blocked:${g.code}` : g._tag
+        const key =
+          g._tag === "NeedsReauth" ? `NeedsReauth:${g.reason}` : g._tag === "Blocked" ? `Blocked:${g.code}` : g._tag
         for (const state of queued) {
           const v = describeStatus({ kind: "trip", state, sync: g }, lang, NOW)
           const blocking = !["Idle", "Syncing"].includes(g._tag)
@@ -119,12 +210,26 @@ describe("describeStatus is exhaustive", () => {
 
 describe("exact copy", () => {
   it("en waiting trip", () => {
-    const v = describeStatus({ kind: "trip", state: { _tag: "Waiting", sent: 12, total: 14, nextRetryAt: NOW + 40_000, lastError: "network" } }, "en", NOW)
+    const v = describeStatus(
+      {
+        kind: "trip",
+        state: { _tag: "Waiting", sent: 12, total: 14, nextRetryAt: NOW + 40_000, lastError: "network" }
+      },
+      "en",
+      NOW
+    )
     expect(v.summary).toBe("Sent 12 of 14 parts · 2 waiting for network · next try in 40 s")
     expect(v.action?.id).toBe("retryNow")
   })
   it("ru waiting trip uses plural forms", () => {
-    const v = describeStatus({ kind: "trip", state: { _tag: "Waiting", sent: 12, total: 14, nextRetryAt: NOW + 40_000, lastError: "network" } }, "ru", NOW)
+    const v = describeStatus(
+      {
+        kind: "trip",
+        state: { _tag: "Waiting", sent: 12, total: 14, nextRetryAt: NOW + 40_000, lastError: "network" }
+      },
+      "ru",
+      NOW
+    )
     expect(v.summary).toBe("Отправлено 12 из 14 частей · ожидают 2: нет сети · следующая попытка через 40 с")
   })
   it("recording title has clock and points", () => {
@@ -152,7 +257,14 @@ describe("actions", () => {
     expect(v.title).toMatch(/disconnected from your account/)
   })
   it("conflict -> export, corrupt/missing -> retry, lost local copy -> no action", () => {
-    const inc = (p: Partial<Extract<TripSyncVm, { _tag: "Incomplete" }>>): TripSyncVm => ({ _tag: "Incomplete", missing: [], corrupt: [], conflict: [], localCopy: true, ...p })
+    const inc = (p: Partial<Extract<TripSyncVm, { _tag: "Incomplete" }>>): TripSyncVm => ({
+      _tag: "Incomplete",
+      missing: [],
+      corrupt: [],
+      conflict: [],
+      localCopy: true,
+      ...p
+    })
     expect(describeStatus({ kind: "trip", state: inc({ conflict: [0] }) }, "en").action?.id).toBe("exportFile")
     expect(describeStatus({ kind: "trip", state: inc({ corrupt: [0] }) }, "en").action?.id).toBe("retryNow")
     expect(describeStatus({ kind: "trip", state: inc({ missing: [0] }) }, "en").action?.id).toBe("retryNow")
@@ -169,20 +281,40 @@ describe("actions", () => {
 describe("environment", () => {
   const caps = (ble: boolean, serial: boolean, secureContext = true) => ({ ble, serial, secureContext })
   it("returns null when recording is possible", () => {
-    expect(describeStatus({ kind: "env", caps: caps(true, false), platform: "android", telegramWebview: false }, "en")).toBeNull()
-    expect(describeStatus({ kind: "env", caps: caps(false, true), platform: "desktop", telegramWebview: false }, "en")).toBeNull()
+    expect(
+      describeStatus({ kind: "env", caps: caps(true, false), platform: "android", telegramWebview: false }, "en")
+    ).toBeNull()
+    expect(
+      describeStatus({ kind: "env", caps: caps(false, true), platform: "desktop", telegramWebview: false }, "en")
+    ).toBeNull()
   })
   it("Telegram WebView gets the specific message with an Open in Chrome action", () => {
     for (const lang of langs) {
-      const v = describeStatus({ kind: "env", caps: caps(false, false), platform: "android", telegramWebview: true }, lang)!
+      const v = describeStatus(
+        { kind: "env", caps: caps(false, false), platform: "android", telegramWebview: true },
+        lang
+      )!
       expect(v.action?.id).toBe("openInChrome")
       expect(v.text).toMatch(/Telegram/)
     }
   })
   it("other Android WebView, iOS, desktop, insecure", () => {
-    expect(describeStatus({ kind: "env", caps: caps(false, false), platform: "android", telegramWebview: false }, "en")!.action?.id).toBe("openInChrome")
-    expect(describeStatus({ kind: "env", caps: caps(false, false), platform: "ios", telegramWebview: true }, "en")!.title).toMatch(/iPhone/)
-    expect(describeStatus({ kind: "env", caps: caps(false, false), platform: "desktop", telegramWebview: false }, "en")!.action).toBeUndefined()
-    expect(describeStatus({ kind: "env", caps: caps(false, false, false), platform: "android", telegramWebview: false }, "ru")!.title).toMatch(/защищ/)
+    expect(
+      describeStatus({ kind: "env", caps: caps(false, false), platform: "android", telegramWebview: false }, "en")!
+        .action?.id
+    ).toBe("openInChrome")
+    expect(
+      describeStatus({ kind: "env", caps: caps(false, false), platform: "ios", telegramWebview: true }, "en")!.title
+    ).toMatch(/iPhone/)
+    expect(
+      describeStatus({ kind: "env", caps: caps(false, false), platform: "desktop", telegramWebview: false }, "en")!
+        .action
+    ).toBeUndefined()
+    expect(
+      describeStatus(
+        { kind: "env", caps: caps(false, false, false), platform: "android", telegramWebview: false },
+        "ru"
+      )!.title
+    ).toMatch(/защищ/)
   })
 })

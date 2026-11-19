@@ -29,7 +29,9 @@ export type WebhookOutcome =
 
 export const screenWebhook = (request: Request, env: Env): Effect.Effect<WebhookOutcome> =>
   Effect.gen(function* () {
-    const ok = yield* Effect.promise(() => secretMatches(request.headers.get(SECRET_HEADER), env.TELEGRAM_WEBHOOK_SECRET))
+    const ok = yield* Effect.promise(() =>
+      secretMatches(request.headers.get(SECRET_HEADER), env.TELEGRAM_WEBHOOK_SECRET)
+    )
     if (!ok) return { _tag: "Forbidden" } as const
     const raw = yield* Effect.promise(() => request.json()).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
     if (raw === undefined) return { _tag: "Ignored", reason: "invalid json" } as const
@@ -37,7 +39,8 @@ export const screenWebhook = (request: Request, env: Env): Effect.Effect<Webhook
     if (decoded._tag === "Failure") return { _tag: "Ignored", reason: "undecodable update" } as const
     const tgId = senderOf(decoded.success)
     if (tgId === undefined) return { _tag: "Ignored", reason: "no sender" } as const
-    const inviteCode = decoded.success.message === undefined ? undefined : inviteCodeFromMessage(decoded.success.message)
+    const inviteCode =
+      decoded.success.message === undefined ? undefined : inviteCodeFromMessage(decoded.success.message)
     if (inviteCode !== undefined && decoded.success.message?.from !== undefined) {
       return { _tag: "Invite", from: decoded.success.message.from, code: inviteCode } as const
     }

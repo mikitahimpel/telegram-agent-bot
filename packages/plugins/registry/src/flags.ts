@@ -112,8 +112,10 @@ export const CALLBACK_PREFIX = "plg"
 export const callbackData = (tgId: TgId, pluginId: string, enable: boolean): string =>
   `${CALLBACK_PREFIX}:${tgId}:${pluginId}:${enable ? 1 : 0}`
 
-const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
-  ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
+const target = (ctx: {
+  readonly chatId: SendTarget["chatId"]
+  readonly threadId: SendTarget["threadId"] | undefined
+}): SendTarget => (ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId })
 
 export const makePluginAdmin = (
   plugins: ReadonlyArray<AnyPlugin>
@@ -122,7 +124,7 @@ export const makePluginAdmin = (
   readonly callbacks: ReadonlyArray<CallbackDef<Telegram | PluginFlags>>
 } => {
   const render = (tgId: TgId, lang: "ru" | "en") =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const flags = yield* PluginFlags
       const m = messages[lang]
       if (plugins.length === 0) return { text: m.none, keyboard: [] as InlineKeyboard }
@@ -150,7 +152,7 @@ export const makePluginAdmin = (
     description: { en: messages.en.description, ru: messages.ru.description },
     usage: { en: messages.en.usage, ru: messages.ru.usage },
     handler: (ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const tg = yield* Telegram
         const id = parseTgId(ctx.args.trim())
         if (id === undefined) {
@@ -166,7 +168,7 @@ export const makePluginAdmin = (
     prefix: CALLBACK_PREFIX,
     role: "admin",
     handler: (ctx) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const tg = yield* Telegram
         const flags = yield* PluginFlags
         const [idText, pluginId, bit] = ctx.payload.split(":")

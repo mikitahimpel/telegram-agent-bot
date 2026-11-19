@@ -64,7 +64,7 @@ const windows = new Map<string, { start: number; count: number }>()
 export const resetRateLimits = (): void => windows.clear()
 
 const rateLimit = (key: string, limit: number, lang: Lang) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis
     if (windows.size > 5000) for (const [k, w] of windows) if (now - w.start >= WINDOW_MS) windows.delete(k)
     const w = windows.get(key)
@@ -79,7 +79,7 @@ type Principal = {
 }
 
 const authenticate = (request: Request) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const header = request.headers.get("authorization") ?? ""
     const m = /^Device\s+(\S+)$/.exec(header)
     if (m === null) return yield* Effect.fail(apiFail("unauthorized", messages.en.unauthorized))
@@ -89,7 +89,7 @@ const authenticate = (request: Request) =>
   })
 
 const requireAllowed = (p: Principal) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const role = yield* (yield* Allowlist).roleOf(p.tgId)
     if (role === undefined) return yield* Effect.fail(apiFail("forbidden", messages[p.lang].forbidden))
   })
@@ -97,12 +97,13 @@ const requireAllowed = (p: Principal) =>
 const pluginEnabled = (p: Principal) => Effect.flatMap(Effect.service(PluginFlags), (f) => f.isEnabled("car", p.tgId))
 
 const requirePlugin = (p: Principal) =>
-  Effect.gen(function*() {
-    if (!(yield* pluginEnabled(p))) return yield* Effect.fail(apiFail("plugin_disabled", messages[p.lang].pluginDisabled))
+  Effect.gen(function* () {
+    if (!(yield* pluginEnabled(p)))
+      return yield* Effect.fail(apiFail("plugin_disabled", messages[p.lang].pluginDisabled))
   })
 
 const readBody = (request: Request, max: number, lang: Lang) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const declared = Number(request.headers.get("content-length") ?? "0")
     if (declared > max) return yield* Effect.fail(apiFail("too_large", messages[lang].tooLarge))
     const buf = yield* Effect.tryPromise({
@@ -116,13 +117,16 @@ const readBody = (request: Request, max: number, lang: Lang) =>
 const decodeManifest = Schema.decodeUnknownSync(TripManifest)
 
 const webUrlOf = (request: Request) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const configured = yield* Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
     return configured === "" ? new URL("/car/", request.url).href : configured
   })
 
 const forward = <A, E>(label: string, effect: Effect.Effect<A, E, CarBackend>) =>
-  effect.pipe(Effect.tapError((e) => Effect.logWarning(`car store ${label} failed`, e)), Effect.option)
+  effect.pipe(
+    Effect.tapError((e) => Effect.logWarning(`car store ${label} failed`, e)),
+    Effect.option
+  )
 
 const langOf = (p: Principal, url: URL): Lang => {
   const q = url.searchParams.get("lang")
@@ -133,14 +137,16 @@ const storageOp = <A>(f: () => Promise<A>) =>
   Effect.tryPromise({ try: f, catch: () => apiFail("internal", messages.en.internal) })
 
 const putManifest = (p: Principal, tripId: TripId, request: Request) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const m = messages[p.lang]
     const body = yield* readBody(request, MAX_MANIFEST_BYTES, p.lang)
     let manifest: TripManifest
     try {
       manifest = decodeManifest(JSON.parse(new TextDecoder().decode(body)))
     } catch (e) {
-      return yield* Effect.fail(apiFail("bad_request", m.badRequest(`manifest: ${e instanceof Error ? e.message.slice(0, 200) : "invalid"}`)))
+      return yield* Effect.fail(
+        apiFail("bad_request", m.badRequest(`manifest: ${e instanceof Error ? e.message.slice(0, 200) : "invalid"}`))
+      )
     }
     if (manifest.tripId !== tripId) {
       return yield* Effect.fail(apiFail("bad_request", m.badRequest("tripId in the path and in the manifest differ")))
@@ -168,7 +174,7 @@ const putManifest = (p: Principal, tripId: TripId, request: Request) =>
   })
 
 const putChunk = (p: Principal, tripId: TripId, seq: number, request: Request) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const m = messages[p.lang]
     const claimed = (request.headers.get("x-content-sha256") ?? "").toLowerCase()
     if (!/^[0-9a-f]{64}$/.test(claimed)) {
@@ -216,7 +222,7 @@ const putChunk = (p: Principal, tripId: TripId, seq: number, request: Request) =
   })
 
 const notifyFinished = (p: Principal, tripId: TripId, status: TripStatus, webUrl: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const manifest = status.manifest
     if (manifest === null) return
     const bucket = yield* CarBucket
@@ -244,7 +250,10 @@ const notifyFinished = (p: Principal, tripId: TripId, status: TripStatus, webUrl
       const metrics = yield* tripMetrics(p.tgId, tripId, status).pipe(Effect.catch(() => Effect.succeed(undefined)))
       const seconds = metrics?.durationSeconds ?? ((manifest.endedAt ?? manifest.startedAt) - manifest.startedAt) / 1000
       const distance = metrics?.distanceKm === undefined ? "" : m.distance(formatKm(metrics.distanceKm, p.lang))
-      yield* tg.sendMessage(to, m.tripSaved(formatStamp(manifest.startedAt), formatDuration(seconds, p.lang), distance, status.rows))
+      yield* tg.sendMessage(
+        to,
+        m.tripSaved(formatStamp(manifest.startedAt), formatDuration(seconds, p.lang), distance, status.rows)
+      )
     } else {
       const list = missingParts.map((s) => s + 1).join(", ")
       yield* tg.sendMessage(
@@ -257,25 +266,37 @@ const notifyFinished = (p: Principal, tripId: TripId, status: TripStatus, webUrl
   })
 
 const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const method = request.method
     const [a, b, c, d] = segments
 
     if (a === "pair" && b === "complete" && segments.length === 2 && method === "POST") {
       const ip = request.headers.get("cf-connecting-ip") ?? "unknown"
       yield* rateLimit(`pair:${ip}`, LIMIT_PAIR_PER_IP, "en")
-      const raw = yield* Effect.tryPromise({ try: () => request.json(), catch: () => apiFail("bad_request", messages.en.badRequest("invalid JSON")) })
+      const raw = yield* Effect.tryPromise({
+        try: () => request.json(),
+        catch: () => apiFail("bad_request", messages.en.badRequest("invalid JSON"))
+      })
       const req = yield* Schema.decodeUnknownEffect(PairCompleteRequest)(raw).pipe(
         Effect.mapError(() => apiFail("bad_request", messages.en.badRequest("code and deviceName are required")))
       )
       const paired = yield* completePair(req.code, req.deviceName)
-      if (paired === undefined) return json({ error: { code: "pair_code_invalid", message: messages.en.pairInvalid, retryable: false } }, 400)
+      if (paired === undefined)
+        return json({ error: { code: "pair_code_invalid", message: messages.en.pairInvalid, retryable: false } }, 400)
       const { token, record } = paired
       const m = messages[record.lang]
       const tg = yield* Telegram
       yield* tg
         .sendMessage({ chatId: ChatId.make(record.tgId) }, m.newDevice(escapeHtml(record.name)), {
-          keyboard: [[{ text: m.revoke(record.name), callbackData: `${DEVICE_CALLBACK_PREFIX}:${record.deviceId}`, style: "danger" }]]
+          keyboard: [
+            [
+              {
+                text: m.revoke(record.name),
+                callbackData: `${DEVICE_CALLBACK_PREFIX}:${record.deviceId}`,
+                style: "danger"
+              }
+            ]
+          ]
         })
         .pipe(Effect.ignore)
       return json({ deviceToken: token, deviceId: record.deviceId, tgId: record.tgId, firstName: record.firstName })
@@ -294,7 +315,12 @@ const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
       if (segments.length === 1 && method === "GET") {
         const devices = yield* listDevices(p.tgId)
         return json({
-          devices: devices.map((x) => ({ deviceId: x.deviceId, name: x.name, createdAt: x.createdAt, lastSeenAt: x.lastSeenAt }))
+          devices: devices.map((x) => ({
+            deviceId: x.deviceId,
+            name: x.name,
+            createdAt: x.createdAt,
+            lastSeenAt: x.lastSeenAt
+          }))
         })
       }
       if (segments.length === 2 && method === "DELETE") {
@@ -307,28 +333,45 @@ const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
     yield* requirePlugin(p)
 
     if (a === "dtc" && segments.length === 1 && method === "PUT") {
-      const raw = yield* Effect.tryPromise({ try: () => request.json(), catch: () => apiFail("bad_request", messages[p.lang].badRequest("invalid JSON")) })
+      const raw = yield* Effect.tryPromise({
+        try: () => request.json(),
+        catch: () => apiFail("bad_request", messages[p.lang].badRequest("invalid JSON"))
+      })
       const report = yield* Schema.decodeUnknownEffect(DtcReport)(raw).pipe(
         Effect.mapError(() => apiFail("bad_request", messages[p.lang].badRequest("invalid DTC report")))
       )
       if (report.codes.length > 200) return yield* Effect.fail(apiFail("too_large", messages[p.lang].tooLarge))
       const backend = yield* CarBackend
-      const explanations = yield* backend.putDtc(p.tgId, report, langOf(p, url)).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      const explanations = yield* backend
+        .putDtc(p.tgId, report, langOf(p, url))
+        .pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
       yield* notifyPending(p.tgId, p.lang, yield* webUrlOf(request)).pipe(Effect.ignore)
       return json({ ok: true, explanations })
     }
     if (a === "overview" && segments.length === 1 && method === "GET") {
       const backend = yield* CarBackend
-      const counts = yield* backend.counts(p.tgId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      const counts = yield* backend
+        .counts(p.tgId)
+        .pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
       if (counts.trips === 0) yield* rebuildFromR2(p.tgId).pipe(Effect.ignore)
-      return json(yield* backend.overview(p.tgId, langOf(p, url)).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal))))
+      return json(
+        yield* backend
+          .overview(p.tgId, langOf(p, url))
+          .pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      )
     }
     if (a === "alerts" && segments.length === 1 && method === "GET") {
       const backend = yield* CarBackend
-      return json({ alerts: yield* backend.alerts(p.tgId, langOf(p, url)).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal))) })
+      return json({
+        alerts: yield* backend
+          .alerts(p.tgId, langOf(p, url))
+          .pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      })
     }
     if (a === "rebuild" && segments.length === 1 && method === "POST") {
-      return json(yield* rebuildFromR2(p.tgId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal))))
+      return json(
+        yield* rebuildFromR2(p.tgId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      )
     }
 
     if (a === "trips" && segments.length === 1 && method === "GET") {
@@ -338,25 +381,33 @@ const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
     }
     if (a === "trips" && b !== undefined) {
       const tripId = parseTripId(b)
-      if (tripId === undefined) return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("invalid trip id")))
-      if (c === "manifest" && segments.length === 3 && method === "PUT") return json(yield* putManifest(p, tripId, request))
+      if (tripId === undefined)
+        return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("invalid trip id")))
+      if (c === "manifest" && segments.length === 3 && method === "PUT")
+        return json(yield* putManifest(p, tripId, request))
       if (c === "chunks" && segments.length === 4 && method === "PUT") {
-        if (!/^\d{1,6}$/.test(d ?? "")) return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("invalid seq")))
+        if (!/^\d{1,6}$/.test(d ?? ""))
+          return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("invalid seq")))
         return json(yield* putChunk(p, tripId, Number(d), request))
       }
       if (c === "insight" && segments.length === 3 && method === "GET") {
         const backend = yield* CarBackend
-        const insight = yield* backend.tripInsight(p.tgId, tripId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+        const insight = yield* backend
+          .tripInsight(p.tgId, tripId)
+          .pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
         if (insight === null) return yield* Effect.fail(apiFail("not_found", messages[p.lang].notFound))
         return json(insight)
       }
       if (c === "series" && segments.length === 3 && method === "GET") {
         const columns = parseColumns(url.searchParams.get("columns"))
-        if (columns === undefined) return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("unknown column")))
+        if (columns === undefined)
+          return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("unknown column")))
         const pointsRaw = url.searchParams.get("points")
         const points = pointsRaw === null ? DEFAULT_POINTS : clampPoints(Number(pointsRaw))
         const backend = yield* CarBackend
-        const series = yield* backend.tripSeries(p.tgId, tripId, points, columns).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+        const series = yield* backend
+          .tripSeries(p.tgId, tripId, points, columns)
+          .pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
         if (series === null) return yield* Effect.fail(apiFail("not_found", messages[p.lang].notFound))
         return json(series)
       }
@@ -378,12 +429,17 @@ const escapeHtml = (t: string) => t.replaceAll("&", "&amp;").replaceAll("<", "&l
 
 export const handleCarApi = (request: Request): Effect.Effect<Response, never, CarApiR> => {
   const url = new URL(request.url)
-  const segments = url.pathname.replace(/^\/car\/api\/?/, "").split("/").filter((s) => s !== "")
+  const segments = url.pathname
+    .replace(/^\/car\/api\/?/, "")
+    .split("/")
+    .filter((s) => s !== "")
   return route(request, segments, url).pipe(
     Effect.catchCause((cause) => {
       const failure = cause.reasons.flatMap((r) => (r._tag === "Fail" ? [r.error] : []))[0]
       if (failure instanceof ApiFail) return Effect.succeed(errorResponse(failure))
-      return Effect.logError("car api failed", cause).pipe(Effect.as(errorResponse(apiFail("internal", messages.en.internal))))
+      return Effect.logError("car api failed", cause).pipe(
+        Effect.as(errorResponse(apiFail("internal", messages.en.internal)))
+      )
     })
   )
 }

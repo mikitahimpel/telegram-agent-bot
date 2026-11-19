@@ -22,12 +22,20 @@ export type Sent = {
   readonly keyboard: InlineKeyboard | undefined
 }
 
-export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArray<TgId>; agents?: ReadonlyArray<AgentInfo> } = {}) => {
+export const makeWorld = (
+  opts: { topicsEnabled?: boolean; allowed?: ReadonlyArray<TgId>; agents?: ReadonlyArray<AgentInfo> } = {}
+) => {
   const sent: Array<Sent> = []
   const answers: Array<{ id: string; text: string | undefined }> = []
   const sessionMap = new Map<string, SessionRecord>()
   const allowed = new Set<number>(opts.allowed ?? [])
-  const state = { lang: undefined as Lang | undefined, stopResult: false, killed: [] as Array<number>, restarted: [] as Array<number>, stopKeys: [] as Array<string> }
+  const state = {
+    lang: undefined as Lang | undefined,
+    stopResult: false,
+    killed: [] as Array<number>,
+    restarted: [] as Array<number>,
+    stopKeys: [] as Array<string>
+  }
   const never = () => Effect.die("unused")
 
   const telegram = Layer.succeed(Telegram, {
@@ -48,7 +56,9 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
     sendChatAction: never,
     createForumTopic: (_chat, _name) =>
       opts.topicsEnabled === false
-        ? Effect.fail(new TelegramError({ method: "createForumTopic", errorCode: 400, description: "Bad Request: not a forum" }))
+        ? Effect.fail(
+            new TelegramError({ method: "createForumTopic", errorCode: 400, description: "Bad Request: not a forum" })
+          )
         : Effect.succeed({ threadId: ThreadId.make(77) }),
     answerCallbackQuery: (id, text) => {
       answers.push({ id, text })
@@ -60,7 +70,15 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
   const sessions = Layer.succeed(Sessions, {
     get: (key) => Effect.succeed(sessionMap.get(key)),
     ensure: (key, threadId, title) => {
-      const rec: SessionRecord = { key, threadId, title: title ?? "main", claudeSessionId: undefined, createdAt: 0, lastUsedAt: Date.UTC(2026, 10, 19, 10, 0), runs: 3 }
+      const rec: SessionRecord = {
+        key,
+        threadId,
+        title: title ?? "main",
+        claudeSessionId: undefined,
+        createdAt: 0,
+        lastUsedAt: Date.UTC(2026, 10, 19, 10, 0),
+        runs: 3
+      }
       sessionMap.set(key, rec)
       return Effect.succeed(rec)
     },
@@ -76,7 +94,8 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
 
   const allowlist = Layer.succeed(Allowlist, {
     adminId,
-    roleOf: (id) => Effect.succeed(id === adminId ? ("admin" as const) : allowed.has(id) ? ("user" as const) : undefined),
+    roleOf: (id) =>
+      Effect.succeed(id === adminId ? ("admin" as const) : allowed.has(id) ? ("user" as const) : undefined),
     allow: (id) => Effect.sync(() => void allowed.add(id)),
     updateProfile: () => Effect.void,
     revoke: (id) => Effect.sync(() => void allowed.delete(id)),
@@ -101,7 +120,11 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
   const help = Layer.succeed(HelpRegistry, { ...registry, blurbsFor: () => Effect.succeed(["track your car trips"]) })
 
   return {
-    sent, answers, allowed, state, registry,
+    sent,
+    answers,
+    allowed,
+    state,
+    registry,
     layer: Layer.mergeAll(telegram, sessions, allowlist, directory, runControl, help)
   }
 }
@@ -113,6 +136,9 @@ export const ctxOf = (role: Role, args = "", lang: Lang = "en", threadId?: numbe
     chatId: ChatId.make(role === "admin" ? 1 : 2),
     threadId: t,
     sessionKey: sessionKeyOf(t) as SessionKey,
-    role, lang, args, messageId: 10
+    role,
+    lang,
+    args,
+    messageId: 10
   }
 }

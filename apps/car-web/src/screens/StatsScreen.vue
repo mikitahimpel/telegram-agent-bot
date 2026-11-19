@@ -14,14 +14,20 @@ const METRICS: Metric[] = ["distanceKm", "durationS", "fuelL", "fuelPer100Km", "
 
 const { backend, lang, t } = useApp()
 const f = useFmt()
-const load = useLoad(() => backend.overview(lang.value), () => `${lang.value}:${backend.insightsDemo.value}`)
+const load = useLoad(
+  () => backend.overview(lang.value),
+  () => `${lang.value}:${backend.insightsDemo.value}`
+)
 const o = computed(() => load.data.value)
 const kind = ref<"week" | "month">("week")
 const metric = ref<Metric>("distanceKm")
 const picked = ref<string | null>(null)
 
-const rows = computed<ReadonlyArray<PeriodStats>>(() => (kind.value === "week" ? o.value?.byWeek : o.value?.byMonth) ?? [])
-const value = (p: PeriodStats, m: Metric): number | null => (m === "idleShare" ? (p.idleShare === null ? null : p.idleShare * 100) : p[m])
+const rows = computed<ReadonlyArray<PeriodStats>>(
+  () => (kind.value === "week" ? o.value?.byWeek : o.value?.byMonth) ?? []
+)
+const value = (p: PeriodStats, m: Metric): number | null =>
+  m === "idleShare" ? (p.idleShare === null ? null : p.idleShare * 100) : p[m]
 const fmtMetric = (n: number): string => {
   switch (metric.value) {
     case "distanceKm":
@@ -42,8 +48,17 @@ const barValue = (p: PeriodStats): number | null => {
   const v = value(p, metric.value)
   return v === null ? null : metric.value === "durationS" ? v / 3600 : v
 }
-const items = computed(() => rows.value.map((p) => ({ key: p.period, label: periodLabel(p.period, kind.value, lang.value), value: barValue(p), caption: periodTitle(p.period, kind.value, lang.value) })))
-const current = computed(() => rows.value.find((p) => p.period === (picked.value ?? rows.value[rows.value.length - 1]?.period)) ?? null)
+const items = computed(() =>
+  rows.value.map((p) => ({
+    key: p.period,
+    label: periodLabel(p.period, kind.value, lang.value),
+    value: barValue(p),
+    caption: periodTitle(p.period, kind.value, lang.value)
+  }))
+)
+const current = computed(
+  () => rows.value.find((p) => p.period === (picked.value ?? rows.value[rows.value.length - 1]?.period)) ?? null
+)
 const cell = (p: PeriodStats, m: Metric): string => {
   const v = value(p, m)
   if (v === null) return "—"
@@ -70,21 +85,50 @@ const cell = (p: PeriodStats, m: Metric): string => {
     <AsyncState :loading="load.loading.value" :error="load.error.value" :has-data="!!o" @retry="load.reload">
       <template v-if="o">
         <div class="seg" role="tablist" :aria-label="t('stats.period')">
-          <button v-for="k in ['week', 'month'] as const" :key="k" type="button" role="tab" :aria-selected="kind === k" :class="{ on: kind === k }" :data-testid="`period-${k}`" @click="kind = k; picked = null">
+          <button
+            v-for="k in ['week', 'month'] as const"
+            :key="k"
+            type="button"
+            role="tab"
+            :aria-selected="kind === k"
+            :class="{ on: kind === k }"
+            :data-testid="`period-${k}`"
+            @click="
+              kind = k;
+              picked = null
+            "
+          >
             {{ t(`stats.${k}`) }}
           </button>
         </div>
         <div class="chips" role="group" :aria-label="t('stats.metric')">
-          <button v-for="m in METRICS" :key="m" type="button" class="chip" :class="{ on: metric === m }" :aria-pressed="metric === m" :data-testid="`metric-${m}`" @click="metric = m">
+          <button
+            v-for="m in METRICS"
+            :key="m"
+            type="button"
+            class="chip"
+            :class="{ on: metric === m }"
+            :aria-pressed="metric === m"
+            :data-testid="`metric-${m}`"
+            @click="metric = m"
+          >
             {{ t(`stats.metric.${m}`) }}
           </button>
         </div>
         <section v-if="rows.length" class="card">
-          <Bars :items="items" :selected="current?.period ?? null" :format="fmtMetric" :label="t(`stats.metric.${metric}`)" @select="picked = $event" />
+          <Bars
+            :items="items"
+            :selected="current?.period ?? null"
+            :format="fmtMetric"
+            :label="t(`stats.metric.${metric}`)"
+            @select="picked = $event"
+          />
           <p v-if="current" class="muted bars-caption" data-testid="bars-caption">
             {{ periodTitle(current.period, kind, lang) }}: {{ t(`stats.metric.${metric}`) }} {{ cell(current, metric) }}
           </p>
-          <p v-if="metric === 'fuelL' || metric === 'fuelPer100Km'" class="muted fine">{{ t("overview.fuel.estimate") }}</p>
+          <p v-if="metric === 'fuelL' || metric === 'fuelPer100Km'" class="muted fine">
+            {{ t("overview.fuel.estimate") }}
+          </p>
         </section>
         <p v-else class="card" data-testid="stats-empty">{{ t("stats.empty") }}</p>
 
@@ -108,7 +152,10 @@ const cell = (p: PeriodStats, m: Metric): string => {
         </div>
         <section class="card totals" data-testid="stats-totals">
           <h3>{{ t("stats.totals") }}</h3>
-          <p>{{ f.km(o.totals.distanceKm, 0) }} · {{ f.dur(o.totals.durationS) }} · {{ t("stats.tripsN", { n: o.totals.trips }) }}</p>
+          <p>
+            {{ f.km(o.totals.distanceKm, 0) }} · {{ f.dur(o.totals.durationS) }} ·
+            {{ t("stats.tripsN", { n: o.totals.trips }) }}
+          </p>
         </section>
       </template>
     </AsyncState>

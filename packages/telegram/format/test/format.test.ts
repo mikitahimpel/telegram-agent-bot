@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vite-plus/test"
 import { escapeHtml, expandableQuote, markdownToTelegramHtml as md, splitHtml, table } from "../src/format.ts"
 
-const visible = (h: string) =>
-  h.replace(/<[^>]*>/g, "").replace(/&(amp|lt|gt|quot);/g, "x")
+const visible = (h: string) => h.replace(/<[^>]*>/g, "").replace(/&(amp|lt|gt|quot);/g, "x")
 
 const balanced = (h: string): boolean => {
   const st: string[] = []
   for (const m of h.matchAll(/<(\/)?([a-z-]+)[^>]*>/g)) {
-    if (m[1]) { if (st.pop() !== m[2]) return false } else st.push(m[2]!)
+    if (m[1]) {
+      if (st.pop() !== m[2]) return false
+    } else st.push(m[2]!)
   }
   return st.length === 0
 }
@@ -30,7 +31,8 @@ describe("markdownToTelegramHtml", () => {
     expect(md("```ts\nconst a = 1 < 2\n```")).toBe('<pre><code class="language-ts">const a = 1 &lt; 2</code></pre>')
     expect(md("```\nx\n```")).toBe("<pre>x</pre>")
   })
-  it("unclosed fence runs to end", () => expect(md("```py\nx = 1")).toBe('<pre><code class="language-py">x = 1</code></pre>'))
+  it("unclosed fence runs to end", () =>
+    expect(md("```py\nx = 1")).toBe('<pre><code class="language-py">x = 1</code></pre>'))
   it("markdown inside code is untouched", () => expect(md("```\n**x**\n```")).toBe("<pre>**x**</pre>"))
   it("links", () => {
     expect(md("[a *b*](https://x.com/?a=1&b=2)")).toBe('<a href="https://x.com/?a=1&amp;b=2">a <i>b</i></a>')
@@ -63,7 +65,8 @@ describe("splitHtml", () => {
     expect(splitHtml("abcdefghij", 4)).toEqual(["abcd", "efgh", "ij"])
   })
   it("closes and reopens tags, including pre", () => {
-    const html = '<pre><code class="language-ts">' + Array.from({ length: 10 }, (_, i) => `line${i}`).join("\n") + "</code></pre>"
+    const html =
+      '<pre><code class="language-ts">' + Array.from({ length: 10 }, (_, i) => `line${i}`).join("\n") + "</code></pre>"
     const out = splitHtml(html, 20)
     expect(out.length).toBeGreaterThan(1)
     for (const c of out) {
@@ -72,7 +75,9 @@ describe("splitHtml", () => {
       expect(balanced(c)).toBe(true)
       expect(visible(c).length).toBeLessThanOrEqual(20)
     }
-    expect(out.map((c) => c.replace(/<[^>]*>/g, "")).join("\n")).toBe(Array.from({ length: 10 }, (_, i) => `line${i}`).join("\n"))
+    expect(out.map((c) => c.replace(/<[^>]*>/g, "")).join("\n")).toBe(
+      Array.from({ length: 10 }, (_, i) => `line${i}`).join("\n")
+    )
   })
   it("never breaks tags or entities", () => {
     const html = "<b>" + "&amp;".repeat(30) + '</b> <a href="https://x.y/?a=1&amp;b=2">' + "z".repeat(30) + "</a>"

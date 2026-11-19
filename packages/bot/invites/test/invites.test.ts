@@ -27,7 +27,9 @@ const nodeSql = (): SqlLike => {
   return {
     exec: (query, ...bindings) => {
       const stmt = db.prepare(query)
-      const rows = /^\s*(select|.*returning)/is.test(query) ? (stmt.all(...bindings) as Array<unknown>) : (stmt.run(...bindings), [])
+      const rows = /^\s*(select|.*returning)/is.test(query)
+        ? (stmt.all(...bindings) as Array<unknown>)
+        : (stmt.run(...bindings), [])
       return { toArray: () => rows }
     }
   }
@@ -105,7 +107,10 @@ describe("option parsing", () => {
     expect(parseInviteArgs("uses=101", known)).toMatchObject({ ok: false, error: { kind: "uses" } })
     expect(parseInviteArgs("ttl=91d", known)).toMatchObject({ ok: false, error: { kind: "ttl" } })
     expect(parseInviteArgs("ttl=abc", known)).toMatchObject({ ok: false, error: { kind: "ttl" } })
-    expect(parseInviteArgs("plugins=car,zzz", known)).toMatchObject({ ok: false, error: { kind: "plugin", value: "zzz" } })
+    expect(parseInviteArgs("plugins=car,zzz", known)).toMatchObject({
+      ok: false,
+      error: { kind: "plugin", value: "zzz" }
+    })
     expect(parseTtl("90d")).toBe(90 * 24 * hour)
   })
   it("detects invite start messages", () => {
@@ -247,7 +252,13 @@ describe("redeem flow", () => {
     const w = setup()
     return Effect.gen(function* () {
       const invites = yield* Invites
-      const { code } = yield* invites.create({ createdBy: admin, uses: 1, ttlMs: hour, plugins: ["car"], note: "Masha" })
+      const { code } = yield* invites.create({
+        createdBy: admin,
+        uses: 1,
+        ttlMs: hour,
+        plugins: ["car"],
+        note: "Masha"
+      })
       yield* redeemInviteStart({ from: user(alice, { username: "masha", language_code: "ru" }), code, adminLang: "en" })
       const allowlist = yield* Allowlist
       expect(yield* allowlist.roleOf(alice)).toBe("user")

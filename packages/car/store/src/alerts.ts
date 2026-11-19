@@ -48,26 +48,37 @@ const ev = (o: Record<string, number | null | undefined>): Record<string, number
   return out
 }
 
-export const evaluateTrip = (insight: TripInsight, extras: TripExtras, baseline: FuelBaseline): ReadonlyArray<Finding> => {
+export const evaluateTrip = (
+  insight: TripInsight,
+  extras: TripExtras,
+  baseline: FuelBaseline
+): ReadonlyArray<Finding> => {
   const T = THRESHOLDS
   const out: Array<Finding> = []
   const tripId = insight.tripId
   const raise = (key: string, kind: AlertKind, severity: Severity, evidence: Record<string, number>) =>
     out.push({ key, kind, status: "raise", severity, evidence, tripId })
-  const clear = (key: string, kind: AlertKind) => out.push({ key, kind, status: "clear", severity: "info", evidence: {}, tripId })
+  const clear = (key: string, kind: AlertKind) =>
+    out.push({ key, kind, status: "clear", severity: "info", evidence: {}, tripId })
 
   const resting = insight.restingVoltageV
   const crank = insight.crankMinV ?? null
   if (resting !== null || crank !== null) {
     const evidence = ev({ restingV: resting, crankMinV: crank })
-    if ((resting !== null && resting < T.restingWeakV) || (crank !== null && crank < T.crankWeakV)) raise("battery_weak", "battery_weak", "soon", evidence)
+    if ((resting !== null && resting < T.restingWeakV) || (crank !== null && crank < T.crankWeakV))
+      raise("battery_weak", "battery_weak", "soon", evidence)
     else if (resting !== null && resting < T.restingWatchV) raise("battery_weak", "battery_weak", "watch", evidence)
-    else if ((resting === null || resting >= T.restingOkV) && (crank === null || crank >= T.crankOkV)) clear("battery_weak", "battery_weak")
+    else if ((resting === null || resting >= T.restingOkV) && (crank === null || crank >= T.crankOkV))
+      clear("battery_weak", "battery_weak")
   }
 
   const charging = insight.chargingAvgV ?? null
   if (charging !== null) {
-    const evidence = ev({ chargingAvgV: charging, chargingMinV: extras.chargingMinV, chargingMaxV: extras.chargingMaxV })
+    const evidence = ev({
+      chargingAvgV: charging,
+      chargingMinV: extras.chargingMinV,
+      chargingMaxV: extras.chargingMaxV
+    })
     if (charging < T.chargingLowV) raise("charging_problem:low", "charging_problem", "soon", evidence)
     else if (charging >= T.chargingOkLowV) clear("charging_problem:low", "charging_problem")
     if (charging > T.chargingHighV) raise("charging_problem:high", "charging_problem", "urgent", evidence)
@@ -75,7 +86,8 @@ export const evaluateTrip = (insight: TripInsight, extras: TripExtras, baseline:
   }
 
   if (insight.maxCoolantC !== null) {
-    if (insight.maxCoolantC > T.overheatC) raise("overheating", "overheating", "urgent", ev({ maxCoolantC: insight.maxCoolantC }))
+    if (insight.maxCoolantC > T.overheatC)
+      raise("overheating", "overheating", "urgent", ev({ maxCoolantC: insight.maxCoolantC }))
     else if (insight.maxCoolantC < T.overheatClearC && insight.durationS >= 300) clear("overheating", "overheating")
   }
 
@@ -86,7 +98,12 @@ export const evaluateTrip = (insight: TripInsight, extras: TripExtras, baseline:
         raise("slow_warmup", "slow_warmup", "watch", ev({ startCoolantC: start, warmupS: insight.warmupS }))
       } else if (insight.warmupS <= T.warmupOkS) clear("slow_warmup", "slow_warmup")
     } else if (insight.movingS + insight.idleS >= T.warmupObserveS && (insight.maxCoolantC ?? 0) < 70) {
-      raise("slow_warmup", "slow_warmup", "watch", ev({ startCoolantC: start, maxCoolantC: insight.maxCoolantC, observedS: insight.movingS + insight.idleS }))
+      raise(
+        "slow_warmup",
+        "slow_warmup",
+        "watch",
+        ev({ startCoolantC: start, maxCoolantC: insight.maxCoolantC, observedS: insight.movingS + insight.idleS })
+      )
     }
   }
 
@@ -98,7 +115,12 @@ export const evaluateTrip = (insight: TripInsight, extras: TripExtras, baseline:
     baseline.trips >= T.fuelBaselineMinTrips
   ) {
     const deltaPct = ((insight.fuelPer100Km - baseline.medianPer100Km) / baseline.medianPer100Km) * 100
-    const evidence = ev({ fuelPer100Km: insight.fuelPer100Km, medianPer100Km: baseline.medianPer100Km, deltaPct, baselineTrips: baseline.trips })
+    const evidence = ev({
+      fuelPer100Km: insight.fuelPer100Km,
+      medianPer100Km: baseline.medianPer100Km,
+      deltaPct,
+      baselineTrips: baseline.trips
+    })
     if (deltaPct > T.fuelUpPct) raise("fuel_consumption_up", "fuel_consumption_up", "watch", evidence)
     else if (deltaPct <= T.fuelUpClearPct) clear("fuel_consumption_up", "fuel_consumption_up")
   }
@@ -116,7 +138,16 @@ export const evaluateDtc = (
   codes: ReadonlyArray<{ readonly code: string; readonly severity: Severity }>
 ): ReadonlyArray<Finding> => {
   if (!report.milOn && codes.length === 0) {
-    return [{ key: "check_engine", kind: "check_engine", status: "clear", severity: "info", evidence: {}, tripId: report.tripId }]
+    return [
+      {
+        key: "check_engine",
+        kind: "check_engine",
+        status: "clear",
+        severity: "info",
+        evidence: {},
+        tripId: report.tripId
+      }
+    ]
   }
   const worst = codes.reduce<Severity>((s, c) => maxSeverity(s, c.severity), "watch")
   const severity = codes.length === 0 ? "soon" : worst
@@ -154,14 +185,18 @@ const toRow = (r: Record<string, string | number | null>): AlertRow => ({
   evidence: JSON.parse(str(r["evidence_json"]) || "{}") as Record<string, number>
 })
 
-export const readAlerts = (sql: CarSql, where: string, params: ReadonlyArray<string | number> = []): ReadonlyArray<AlertRow> =>
-  sql.all(`SELECT * FROM car_alerts ${where}`, params).map(toRow)
+export const readAlerts = (
+  sql: CarSql,
+  where: string,
+  params: ReadonlyArray<string | number> = []
+): ReadonlyArray<AlertRow> => sql.all(`SELECT * FROM car_alerts ${where}`, params).map(toRow)
 
 export const applyFindings = (sql: CarSql, findings: ReadonlyArray<Finding>, now: number): void => {
   for (const f of findings) {
     const open = sql.all(`SELECT id, severity FROM car_alerts WHERE dedup_key = ? AND resolved_at IS NULL`, [f.key])[0]
     if (f.status === "clear") {
-      if (open !== undefined) sql.run(`UPDATE car_alerts SET resolved_at = ?, updated_at = ? WHERE id = ?`, [now, now, str(open["id"])])
+      if (open !== undefined)
+        sql.run(`UPDATE car_alerts SET resolved_at = ?, updated_at = ? WHERE id = ?`, [now, now, str(open["id"])])
       continue
     }
     const evidence = JSON.stringify(f.evidence)

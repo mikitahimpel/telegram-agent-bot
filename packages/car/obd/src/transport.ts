@@ -30,7 +30,11 @@ export type ObdTransport = {
 
 export type IncomingQueue = Queue.Queue<string, Disconnected | Cause.Done>
 
-export const BLE_SERVICES: ReadonlyArray<{ service: BluetoothServiceUUID; notify: BluetoothCharacteristicUUID; write: BluetoothCharacteristicUUID }> = [
+export const BLE_SERVICES: ReadonlyArray<{
+  service: BluetoothServiceUUID
+  notify: BluetoothCharacteristicUUID
+  write: BluetoothCharacteristicUUID
+}> = [
   { service: 0xfff0, notify: 0xfff1, write: 0xfff2 },
   { service: 0xffe0, notify: 0xffe1, write: 0xffe1 },
   { service: 0x18f0, notify: 0x2af0, write: 0x2af1 },
@@ -65,8 +69,10 @@ const chunkBytes = (bytes: Uint8Array, size: number): Uint8Array[] => {
   return out
 }
 
-export const bleRequestDevice = (options?: { readonly namePrefix?: string }): Effect.Effect<BluetoothDevice, ObdError> =>
-  Effect.gen(function*() {
+export const bleRequestDevice = (options?: {
+  readonly namePrefix?: string
+}): Effect.Effect<BluetoothDevice, ObdError> =>
+  Effect.gen(function* () {
     if (typeof navigator === "undefined" || navigator.bluetooth === undefined) {
       return yield* new BluetoothUnavailable({ reason: "unsupported" })
     }
@@ -84,10 +90,13 @@ export const bleRequestDevice = (options?: { readonly namePrefix?: string }): Ef
     })
   })
 
-export const bleTransport = (options?: { readonly namePrefix?: string }): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+export const bleTransport = (options?: {
+  readonly namePrefix?: string
+}): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
   Effect.flatMap(bleRequestDevice(options), (device) => bleConnect(device))
 
-export const bleOpenDevice = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdError, Scope.Scope> => bleConnect(device)
+export const bleOpenDevice = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+  bleConnect(device)
 
 export type BleSupport = { readonly ble: boolean; readonly getDevices: boolean; readonly watchAdvertisements: boolean }
 
@@ -126,13 +135,16 @@ export const bleOpenRemembered = (
   deviceId: string,
   options: { readonly advertisementWaitMs?: number } = {}
 ): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (typeof navigator === "undefined" || navigator.bluetooth === undefined) {
       return yield* new BluetoothUnavailable({ reason: "unsupported" })
     }
     const bt = navigator.bluetooth
     if (typeof bt.getDevices !== "function") return yield* new ReconnectUnavailable({ reason: "unsupported" })
-    const devices = yield* Effect.tryPromise({ try: () => bt.getDevices(), catch: () => new ReconnectUnavailable({ reason: "unsupported" }) })
+    const devices = yield* Effect.tryPromise({
+      try: () => bt.getDevices(),
+      catch: () => new ReconnectUnavailable({ reason: "unsupported" })
+    })
     const device = devices.find((d) => d.id === deviceId)
     if (device === undefined) return yield* new ReconnectUnavailable({ reason: "forgotten" })
     const direct = yield* Effect.result(bleConnect(device))
@@ -143,12 +155,14 @@ export const bleOpenRemembered = (
     const seen = yield* waitForAdvertisement(device, options.advertisementWaitMs ?? 20_000)
     if (!seen) return yield* new ReconnectUnavailable({ reason: "out_of_range" })
     return yield* bleConnect(device).pipe(
-      Effect.mapError((e): ObdError => (e._tag === "PermissionDenied" ? new ReconnectUnavailable({ reason: "gesture_required" }) : e))
+      Effect.mapError((e): ObdError =>
+        e._tag === "PermissionDenied" ? new ReconnectUnavailable({ reason: "gesture_required" }) : e
+      )
     )
   })
 
 const bleConnect = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const gatt = device.gatt
     if (gatt === undefined) return yield* new BluetoothUnavailable({ reason: "unsupported" })
     const server = yield* Effect.tryPromise({
@@ -163,9 +177,10 @@ const bleConnect = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdErr
     let found: { notify: BluetoothRemoteGATTCharacteristic; write: BluetoothRemoteGATTCharacteristic } | undefined
     for (const known of BLE_SERVICES) {
       tried.push(uuidLabel(known.service))
-      const service = yield* Effect.tryPromise({ try: () => server.getPrimaryService(known.service), catch: () => undefined }).pipe(
-        Effect.orElseSucceed(() => undefined)
-      )
+      const service = yield* Effect.tryPromise({
+        try: () => server.getPrimaryService(known.service),
+        catch: () => undefined
+      }).pipe(Effect.orElseSucceed(() => undefined))
       if (service === undefined) continue
       const chars = yield* Effect.tryPromise({ try: () => service.getCharacteristics(), catch: () => undefined }).pipe(
         Effect.orElseSucceed(() => undefined)
@@ -174,7 +189,9 @@ const bleConnect = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdErr
       const notifiable = chars.filter((c) => c.properties.notify || c.properties.indicate)
       const writable = chars.filter((c) => c.properties.write || c.properties.writeWithoutResponse)
       const prefer = (list: BluetoothRemoteGATTCharacteristic[], uuid: BluetoothCharacteristicUUID) =>
-        list.find((c) => c.uuid === BluetoothUUID.canonicalUUID(uuid as number)) ?? list.find((c) => c.uuid === String(uuid)) ?? list[0]
+        list.find((c) => c.uuid === BluetoothUUID.canonicalUUID(uuid as number)) ??
+        list.find((c) => c.uuid === String(uuid)) ??
+        list[0]
       const notify = prefer(notifiable, known.notify)
       const write = prefer(writable, known.write)
       if (notify !== undefined && write !== undefined) {
@@ -277,8 +294,11 @@ const probePort = async (port: SerialPort, baudRates: ReadonlyArray<number>): Pr
   return last
 }
 
-export const serialTransport = (options?: { readonly baudRate?: number; readonly baudRates?: ReadonlyArray<number> }): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
-  Effect.gen(function*() {
+export const serialTransport = (options?: {
+  readonly baudRate?: number
+  readonly baudRates?: ReadonlyArray<number>
+}): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+  Effect.gen(function* () {
     if (typeof navigator === "undefined" || navigator.serial === undefined) return yield* new SerialUnavailable()
     const serial = navigator.serial
     const port = yield* Effect.tryPromise({
@@ -290,8 +310,11 @@ export const serialTransport = (options?: { readonly baudRate?: number; readonly
     return yield* serialOpen(port, rates)
   })
 
-const serialOpen = (port: SerialPort, rates: ReadonlyArray<number>): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
-  Effect.gen(function*() {
+const serialOpen = (
+  port: SerialPort,
+  rates: ReadonlyArray<number>
+): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+  Effect.gen(function* () {
     const opened = yield* Effect.tryPromise({ try: () => probePort(port, rates), catch: () => new Disconnected() })
     if (typeof opened === "string") {
       return yield* new AdapterNotResponding({ step: `baud:${rates.join("/")}`, lastResponse: opened })
@@ -302,7 +325,7 @@ const serialOpen = (port: SerialPort, rates: ReadonlyArray<number>): Effect.Effe
     const encoder = new TextEncoder()
     let closing = false
     const info = port.getInfo()
-    const pump = Effect.gen(function*() {
+    const pump = Effect.gen(function* () {
       while (true) {
         const result = yield* Effect.tryPromise({ try: () => reader.read(), catch: () => new Disconnected() })
         if (result.done) return yield* new Disconnected()
@@ -314,7 +337,10 @@ const serialOpen = (port: SerialPort, rates: ReadonlyArray<number>): Effect.Effe
 
     const transport: ObdTransport = {
       kind: "serial",
-      name: info.usbVendorId !== undefined ? `USB serial ${info.usbVendorId.toString(16)}:${(info.usbProductId ?? 0).toString(16)} @${baud}` : `Serial adapter @${baud}`,
+      name:
+        info.usbVendorId !== undefined
+          ? `USB serial ${info.usbVendorId.toString(16)}:${(info.usbProductId ?? 0).toString(16)} @${baud}`
+          : `Serial adapter @${baud}`,
       write: (line) =>
         Effect.tryPromise({ try: () => writer.write(encoder.encode(line + "\r")), catch: () => new Disconnected() }),
       incoming: Stream.fromQueue(queue),

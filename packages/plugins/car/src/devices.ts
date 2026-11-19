@@ -34,7 +34,10 @@ const randomHex = (bytes: number): string =>
   Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) => b.toString(16).padStart(2, "0")).join("")
 
 const base64url = (bytes: Uint8Array): string =>
-  btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "")
 
 const kvError = (operation: string) => (cause: unknown) => new StorageError({ operation, cause })
 
@@ -52,7 +55,7 @@ const parse = <A>(raw: string | null): A | undefined => {
 }
 
 const kvOp = <A>(operation: string, f: (kv: CarKvLike) => Promise<A>) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const kv = yield* CarKv
     return yield* Effect.tryPromise({ try: () => f(kv), catch: kvError(operation) })
   })
@@ -61,13 +64,16 @@ const readIndex = (tgId: number) =>
   kvOp("car.devices.index", (kv) => kv.get(idxKey(tgId))).pipe(Effect.map((raw) => parse<Array<IndexEntry>>(raw) ?? []))
 
 const cleanName = (name: string): string => {
-  // eslint-disable-next-line no-control-regex
-  const n = name.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 60)
+  const n = name
+    // oxlint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim()
+    .slice(0, 60)
   return n === "" ? "Chrome" : n
 }
 
 export const startPair = (who: { readonly tgId: number; readonly firstName: string; readonly lang: Lang }) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis
     const code = randomHex(16)
     const expiresAt = now + PAIR_TTL_SECONDS * 1000
@@ -85,7 +91,7 @@ export type PairedDevice = {
 }
 
 export const completePair = (code: string, deviceName: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (!/^[0-9a-f]{32}$/.test(code)) return undefined
     const now = yield* Clock.currentTimeMillis
     const codeHash = yield* Effect.promise(() => sha256Hex(code))
@@ -118,22 +124,22 @@ export const completePair = (code: string, deviceName: string) =>
   })
 
 export const authDevice = (token: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     if (token.length < 20 || token.length > 100) return undefined
     const hash = yield* Effect.promise(() => sha256Hex(token))
     const record = parse<DeviceRecord>(yield* kvOp("car.devices.get", (kv) => kv.get(devKey(hash))))
     if (record === undefined) return undefined
     const now = yield* Clock.currentTimeMillis
     if (record.lastSeenAt === null || now - record.lastSeenAt >= LAST_SEEN_INTERVAL_MS) {
-      yield* kvOp("car.devices.touch", (kv) => kv.put(devKey(hash), JSON.stringify({ ...record, lastSeenAt: now }))).pipe(
-        Effect.ignore
-      )
+      yield* kvOp("car.devices.touch", (kv) =>
+        kv.put(devKey(hash), JSON.stringify({ ...record, lastSeenAt: now }))
+      ).pipe(Effect.ignore)
     }
     return record
   })
 
 export const listDevices = (tgId: number) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const index = yield* readIndex(tgId)
     const out: Array<DeviceRecord> = []
     for (const e of index) {
@@ -144,7 +150,7 @@ export const listDevices = (tgId: number) =>
   })
 
 export const revokeDevice = (tgId: number, deviceId: string) =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const index = yield* readIndex(tgId)
     const entry = index.find((e) => e.deviceId === deviceId)
     if (entry === undefined) return false

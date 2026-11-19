@@ -24,7 +24,12 @@ describe("battery tracker", () => {
     ])
     for (let s = 12; s <= 50; s += 2) t.voltage(s * 1000, 14.2)
     const report = t.report()
-    expect(report).toMatchObject({ restingV: 12.6, crankMinV: 9.6, chargingV: 14.2, chargingSamples: expect.any(Number) })
+    expect(report).toMatchObject({
+      restingV: 12.6,
+      crankMinV: 9.6,
+      chargingV: 14.2,
+      chargingSamples: expect.any(Number)
+    })
   })
 
   it("does not report cranking without a prior off observation", () => {
@@ -49,12 +54,14 @@ describe("session watch (simulator)", () => {
   it.effect("waitForEcu: ignition off then on, cranking captured through watch", () =>
     Effect.scoped(
       driven(
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const car = makeSimCar({ ignition: false, rpm: 0, voltageV: 12.5 })
           const session = yield* connect("simulator", { scenario: "normal", car, waitForEcu: true })
           expect(session.ecuIdentified).toBe(false)
           const tracker = makeBatteryTracker()
-          yield* Effect.forkScoped(Effect.sleep("3 seconds").pipe(Effect.andThen(crankingScript(car, { idleMs: 3000 }))))
+          yield* Effect.forkScoped(
+            Effect.sleep("3 seconds").pipe(Effect.andThen(crankingScript(car, { idleMs: 3000 })))
+          )
           const ticks: Array<WatchTick> = []
           yield* session.watch({ intervalMs: 500 }).pipe(
             Stream.runForEach((tick) =>
@@ -75,5 +82,7 @@ describe("session watch (simulator)", () => {
           expect(r.crankMinV).toBeLessThanOrEqual(10.5)
         }),
         100
-      )))
+      )
+    )
+  )
 })

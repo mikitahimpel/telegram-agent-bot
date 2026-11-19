@@ -38,7 +38,7 @@ export const presentRun = <E, R = never>(
   target: SendTarget,
   opts: PresentOptions
 ): Effect.Effect<PresentResult, E | TelegramError, R | Telegram> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const tg = yield* Telegram
     const t = messages[opts.lang]
     const throttleMs = opts.throttleMs ?? 700
@@ -68,9 +68,11 @@ export const presentRun = <E, R = never>(
     }
 
     const pushPreview = (html: string) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         if (mode === "draft") {
-          const r = yield* Effect.result(withPlainFallback((h) => tg.sendMessageDraft({ ...target, draftId: opts.draftId }, h), html))
+          const r = yield* Effect.result(
+            withPlainFallback((h) => tg.sendMessageDraft({ ...target, draftId: opts.draftId }, h), html)
+          )
           if (r._tag === "Success") return
           mode = "edit"
         }
@@ -84,7 +86,7 @@ export const presentRun = <E, R = never>(
       })
 
     const flush = (force: boolean) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis
         if (!force && now - lastSent < throttleMs) return
         const html = renderPreview()
@@ -130,7 +132,7 @@ export const presentRun = <E, R = never>(
     const finalText = done.text.trim() !== "" ? done.text : currentText()
     const asDocument = finalText.length > DOCUMENT_THRESHOLD
 
-    const sendFinal = Effect.gen(function*() {
+    const sendFinal = Effect.gen(function* () {
       if (asDocument) {
         if (placeholderId !== undefined) {
           const id = placeholderId
@@ -150,7 +152,9 @@ export const presentRun = <E, R = never>(
       if (placeholderId !== undefined) {
         const id = placeholderId
         const first = list[0]!
-        const edited = yield* Effect.result(withPlainFallback((h) => tg.editMessageText({ ...target, messageId: id }, h), first))
+        const edited = yield* Effect.result(
+          withPlainFallback((h) => tg.editMessageText({ ...target, messageId: id }, h), first)
+        )
         if (edited._tag === "Success") rest = list.slice(1)
       }
       for (const chunk of rest) {

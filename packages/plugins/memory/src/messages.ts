@@ -4,9 +4,11 @@ export const messages = defineMessages({
   en: {
     title: "Memory",
     description: "What I remember about you",
-    listHeader: (n: number, used: number, budget: number) => `<b>What I remember about you (${n})</b>\n<i>${used} of ${budget} tokens used</i>`,
+    listHeader: (n: number, used: number, budget: number) =>
+      `<b>What I remember about you (${n})</b>\n<i>${used} of ${budget} tokens used</i>`,
     line: (i: number, text: string) => `${i}. ${text}`,
-    empty: "I don't remember anything about you yet. Just tell me about yourself and I'll keep the important things in mind.",
+    empty:
+      "I don't remember anything about you yet. Just tell me about yourself and I'll keep the important things in mind.",
     forgetButton: (text: string) => `Forget: ${text}`,
     forgetAllButton: "Forget everything",
     confirmAllText: (n: number) => `Forget all ${n} facts about you? This cannot be undone.`,
@@ -20,7 +22,8 @@ export const messages = defineMessages({
   ru: {
     title: "Память",
     description: "Что я о вас помню",
-    listHeader: (n: number, used: number, budget: number) => `<b>Что я о вас помню (${n})</b>\n<i>Занято ${used} из ${budget} токенов</i>`,
+    listHeader: (n: number, used: number, budget: number) =>
+      `<b>Что я о вас помню (${n})</b>\n<i>Занято ${used} из ${budget} токенов</i>`,
     line: (i: number, text: string) => `${i}. ${text}`,
     empty: "Пока я ничего о вас не помню. Просто расскажите о себе, и я запомню важное.",
     forgetButton: (text: string) => `Забыть: ${text}`,

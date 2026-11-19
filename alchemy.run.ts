@@ -7,6 +7,8 @@ import { TelegramWebhook, providers as telegramProviders } from "@bot/infra-tele
 import { registry } from "./apps/gateway/src/registry.ts"
 
 const GATEWAY_MAIN = `${import.meta.dirname}/apps/gateway/src/worker.ts`
+// Built by `pnpm --filter @bot/car-web build`; served under /car/ by the Worker's static assets layer.
+const CAR_WEB_DIST = `${import.meta.dirname}/apps/car-web/dist`
 const RUNNER_CONTEXT = `${import.meta.dirname}/apps/claude-runner`
 
 export default Alchemy.Stack(
@@ -28,6 +30,8 @@ export default Alchemy.Stack(
     const adminTgId = yield* Config.Int("ADMIN_TG_ID")
     const dailyRunLimit = yield* Config.Int("DAILY_RUN_LIMIT").pipe(Config.withDefault(50))
     const instanceType = yield* Config.String("CONTAINER_INSTANCE_TYPE").pipe(Config.withDefault("basic"))
+    // Optional override; empty = derived from the request origin (`<worker url>/car/`), because a Worker cannot bind its own URL.
+    const carWebUrl = yield* Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
     const tokenIssuedAt = yield* Config.String("CLAUDE_TOKEN_ISSUED_AT").pipe(Config.withDefault(""))
 
     // `agents/<tgId>/` snapshots of ~/.claude and `car/<tgId>/` data share one bucket.
@@ -52,6 +56,14 @@ export default Alchemy.Stack(
       compatibility: { date: "2026-11-19", flags: ["nodejs_compat"] },
       observability: { logs: { enabled: true, invocationLogs: true, persist: true } },
       crons: ["0 */6 * * *"],
+      // Assets-first: files under /car/ (recorder PWA) never invoke the Worker; unknown /car/* paths fall back to
+      // index.html (SPA). The Worker's own routes are listed in runWorkerFirst so the SPA fallback cannot shadow them.
+      assets: {
+        directory: CAR_WEB_DIST,
+        base: "/car",
+        notFoundHandling: "single-page-application",
+        runWorkerFirst: ["/health", "/telegram/*", "/mcp", "/car/api/*"]
+      },
       env: {
         USER_AGENT: Cloudflare.DurableObject("UserAgent", { containers: [runner] }),
         KV: kv,
@@ -63,6 +75,7 @@ export default Alchemy.Stack(
         MCP_TOKEN_SECRET: mcpTokenSecret,
         ADMIN_TG_ID: String(adminTgId),
         DAILY_RUN_LIMIT: String(dailyRunLimit),
+        CAR_WEB_URL: carWebUrl,
         CONTAINER_INSTANCE_TYPE: instanceType,
         CLAUDE_TOKEN_ISSUED_AT: tokenIssuedAt
       }

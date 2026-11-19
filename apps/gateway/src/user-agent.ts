@@ -6,7 +6,7 @@ import { layer as sessionsLayer } from "@bot/agent-sessions/sessions"
 import { layer as allowlistLayer } from "@bot/bot-allowlist/allowlist"
 import { HelpRegistry } from "@bot/bot-core-commands/help-registry"
 import { layer as adminNotifierLayer, AdminNotifier } from "@bot/bot-dispatcher/admin-notifier"
-import { makeDispatcher, type PresentRun } from "@bot/bot-dispatcher/dispatcher"
+import { makeDispatcher, type DocumentHook, type PresentRun } from "@bot/bot-dispatcher/dispatcher"
 import { McpAccess } from "@bot/bot-dispatcher/mcp-access"
 import { layer as runControlLayer } from "@bot/bot-dispatcher/run-control"
 import { AgentRunner } from "@bot/core-contracts/agent-runner"
@@ -16,6 +16,7 @@ import { TgId, ChatId } from "@bot/core-contracts/ids"
 import { RunControl } from "@bot/core-contracts/run-control"
 import { Sessions } from "@bot/core-contracts/sessions"
 import { Telegram } from "@bot/core-contracts/telegram"
+import { importDocument, isCsvDocument } from "@bot/plugins-car/import"
 import { McpToken } from "@bot/plugins-registry/mcp-token"
 import { PluginFlags } from "@bot/plugins-registry/flags"
 import { decodeUpdate } from "@bot/telegram-schema/schema"
@@ -24,7 +25,8 @@ import { agentDirectoryLayer } from "./agent-directory.ts"
 import { configLayer } from "./config.ts"
 import type { Env } from "./env.ts"
 import { pluginEnvironment } from "./layers.ts"
-import { pluginRegistry } from "./plugins.ts"
+import { pluginRegistry, type PluginR } from "./plugins.ts"
+import type { CoreR } from "@bot/bot-core-commands/core-commands"
 import { registry } from "./registry.ts"
 import { daysLeft, healthMessages, parseIssuedAt, reminderStage } from "./token-expiry.ts"
 
@@ -35,7 +37,14 @@ const MCP_TOKEN_TTL_SECONDS = 2 * 60 * 60
 const present: PresentRun = ({ to, lang, stream }) =>
   presentRun(stream, to, { lang, draftId: 1 + Math.floor(Math.random() * 2_000_000_000) }).pipe(Effect.asVoid)
 
-const { dispatch } = makeDispatcher({ registry, present })
+const importCsvDocument: DocumentHook<CoreR | PluginR> = ({ document, tgId, chatId, threadId, lang }) =>
+  Effect.gen(function* () {
+    if (!isCsvDocument(document)) return false
+    if (!(yield* (yield* PluginFlags).isEnabled("car", tgId))) return false
+    return yield* importDocument({ tgId, chatId, threadId, lang }, document)
+  })
+
+const { dispatch } = makeDispatcher({ registry, present, onDocument: importCsvDocument })
 
 export interface AgentInfoDto extends Omit<AgentInfo, "tgId"> {
   readonly tgId: number
@@ -54,7 +63,7 @@ const makeRuntime = (ctx: DurableObjectState, env: Env, tgId: number, origin: ()
   }
 
   const base = Layer.mergeAll(
-    pluginEnvironment(env),
+    pluginEnvironment(env, origin()),
     allowlistLayer(env.KV),
     sessionsLayer(ctx.storage.sql),
     runnerLayer(deps),
@@ -86,7 +95,7 @@ const makeRuntime = (ctx: DurableObjectState, env: Env, tgId: number, origin: ()
     agentDirectoryLayer(env),
     mcpAccess,
     Layer.succeed(HelpRegistry, registry)
-  ).pipe(Layer.provideMerge(base), Layer.provide(configLayer(env)))
+  ).pipe(Layer.provideMerge(base), Layer.provide(configLayer(env, origin())))
 
   return ManagedRuntime.make(derived)
 }

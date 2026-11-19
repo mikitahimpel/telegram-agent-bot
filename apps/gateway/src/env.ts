@@ -17,6 +17,8 @@ export interface Env {
   readonly CLAUDE_CODE_OAUTH_TOKEN: string
   readonly MCP_TOKEN_SECRET: string
   readonly ADMIN_TG_ID: string
+  /** Public Mini App/recorder URL (`https://host/car/`); derived from the request origin when empty. */
+  readonly CAR_WEB_URL?: string
   readonly DAILY_RUN_LIMIT?: string
   readonly CONTAINER_INSTANCE_TYPE?: string
   readonly CLAUDE_TOKEN_ISSUED_AT?: string

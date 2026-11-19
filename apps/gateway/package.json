@@ -15,6 +15,7 @@
     "@bot/agent-runner": "workspace:*",
     "@bot/agent-sessions": "workspace:*",
     "@bot/bot-allowlist": "workspace:*",
+    "@bot/car-server": "workspace:*",
     "@bot/bot-commands": "workspace:*",
     "@bot/bot-core-commands": "workspace:*",
     "@bot/bot-dispatcher": "workspace:*",

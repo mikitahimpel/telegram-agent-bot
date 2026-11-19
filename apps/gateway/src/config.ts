@@ -19,11 +19,14 @@ const r2Config = (raw: string | undefined): Record<string, string> => {
 }
 
 /** Worker bindings as a flat config source: `Config.String("X")` reads `env.X`. */
-export const configRecord = (env: Env): Record<string, string> => {
+export const configRecord = (env: Env, origin?: string): Record<string, string> => {
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(env)) if (typeof value === "string") out[key] = value
+  // The Worker cannot reference its own URL in its bindings, so an empty CAR_WEB_URL falls back to the request origin.
+  if (out["CAR_WEB_URL"] === "") delete out["CAR_WEB_URL"]
+  if (out["CAR_WEB_URL"] === undefined && origin !== undefined && origin !== "") out["CAR_WEB_URL"] = `${origin}/car/`
   return { ...out, ...r2Config(env.R2_S3) }
 }
 
-export const configLayer = (env: Env): Layer.Layer<never> =>
-  ConfigProvider.layer(ConfigProvider.fromUnknown(configRecord(env)))
+export const configLayer = (env: Env, origin?: string): Layer.Layer<never> =>
+  ConfigProvider.layer(ConfigProvider.fromUnknown(configRecord(env, origin)))

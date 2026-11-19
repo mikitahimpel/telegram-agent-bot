@@ -40,6 +40,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm --filter @bot/car-web build
       - name: Deploy ${{ env.ALCHEMY_STAGE }}
         run: pnpm exec alchemy deploy --stage "$ALCHEMY_STAGE" --yes --no-input 2>&1 | tee deploy.log
       - name: Smoke test

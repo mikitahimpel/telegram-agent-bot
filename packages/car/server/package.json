@@ -4,10 +4,12 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./api": "./src/api.ts",
-    "./init-data": "./src/init-data.ts"
+    "./api": "./src/api.ts"
   },
-  "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
   "dependencies": {
     "@bot/car-format": "workspace:*",
     "@bot/core-contracts": "workspace:*",
@@ -15,5 +17,10 @@
     "@bot/plugins-registry": "workspace:*",
     "effect": "catalog:"
   },
-  "devDependencies": { "@effect/vitest": "catalog:", "typescript": "catalog:", "vitest": "catalog:" }
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@bot/bot-allowlist": "workspace:*"
+  }
 }

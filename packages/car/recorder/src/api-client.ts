@@ -7,19 +7,18 @@ import {
   ManifestReceipt,
   Me,
   PairComplete,
-  PairStart,
   TripList,
   TripStatus
 } from "@bot/car-format/api"
 import type { TripManifest } from "@bot/car-format/manifest"
 import { ApiFailure } from "./errors.ts"
 
-export type Credential =
-  | { readonly kind: "tma"; readonly initData: string }
-  | { readonly kind: "device"; readonly token: string }
+/** Long-lived device token from pairing. */
+export interface Credential {
+  readonly token: string
+}
 
-export const authorizationHeader = (c: Credential): string =>
-  c.kind === "tma" ? `tma ${c.initData}` : `Device ${c.token}`
+export const authorizationHeader = (c: Credential): string => `Device ${c.token}`
 
 export interface CarApiShape {
   readonly me: Effect.Effect<Me, ApiFailure>
@@ -28,8 +27,6 @@ export interface CarApiShape {
   readonly status: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly finish: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly listTrips: (limit?: number) => Effect.Effect<TripList, ApiFailure>
-  /** Needs a `tma` credential. */
-  readonly pairStart: Effect.Effect<PairStart, ApiFailure>
   /** No auth header. */
   readonly pairComplete: (code: string, deviceName: string) => Effect.Effect<PairComplete, ApiFailure>
   readonly devices: Effect.Effect<DeviceList, ApiFailure>
@@ -170,17 +167,6 @@ export const makeCarApi = (options: CarApiOptions) =>
           TripStatus
         ),
       listTrips: (limit = 50) => call(get(`/trips?limit=${limit}`), TripList),
-      pairStart: call(
-        (cred) =>
-          need(cred).pipe(
-            Effect.flatMap((c) =>
-              c.kind === "tma"
-                ? Effect.succeed(authed(HttpClientRequest.post(url("/pair/start")), c))
-                : Effect.fail(new ApiFailure({ code: "forbidden", retryable: false, message: "Pairing must be started from Telegram" }))
-            )
-          ),
-        PairStart
-      ),
       pairComplete: (code, deviceName) =>
         call(
           () => Effect.succeed(HttpClientRequest.post(url("/pair/complete")).pipe(HttpClientRequest.bodyJsonUnsafe({ code, deviceName }))),

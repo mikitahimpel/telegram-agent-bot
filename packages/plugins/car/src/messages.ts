@@ -10,9 +10,8 @@ export const messages = defineMessages({
     usage: "app | trips | report [7d|30d|month|YYYY-MM] | devices | upload [ext]",
     help:
       "<b>/car</b>\n<code>/car app</code> - open the car app\n<code>/car trips</code> - list trips\n<code>/car report [7d|30d|month|YYYY-MM]</code> - metrics for a period\n<code>/car devices</code> - connected phones\n<code>/car upload [ext]</code> - raw file upload link\nYou can also send a trip <code>.csv</code> file to this chat to import it.",
-    appText: "Open the car app to see your trips. To record a trip, open it in Chrome (Bluetooth is not available inside Telegram).",
-    openApp: "Open app",
-    openChrome: "Open in Chrome",
+    appText: "Tap the button to connect the recorder. Open it in Chrome on Android (Bluetooth does not work inside Telegram). The link is one-time and valid for 10 minutes.",
+    openApp: "Open recorder",
     appNotConfigured: "The car app address is not configured yet. Ask the admin.",
     badExt: "Extension must be 1-10 letters or digits.",
     badPeriod: "Unknown period. Use <code>7d</code>, <code>30d</code>, <code>month</code> or <code>YYYY-MM</code>.",
@@ -55,9 +54,8 @@ export const messages = defineMessages({
     usage: "app | trips | report [7d|30d|month|YYYY-MM] | devices | upload [ext]",
     help:
       "<b>/car</b>\n<code>/car app</code> - открыть приложение\n<code>/car trips</code> - список поездок\n<code>/car report [7d|30d|month|YYYY-MM]</code> - метрики за период\n<code>/car devices</code> - подключённые телефоны\n<code>/car upload [ext]</code> - ссылка для загрузки файла\nМожно также отправить в чат <code>.csv</code> файл поездки - он будет импортирован.",
-    appText: "Откройте приложение, чтобы посмотреть поездки. Для записи поездки откройте его в Chrome (внутри Telegram Bluetooth недоступен).",
-    openApp: "Открыть приложение",
-    openChrome: "Открыть в Chrome",
+    appText: "Нажмите кнопку, чтобы подключить рекордер. Открывайте в Chrome на Android (внутри Telegram Bluetooth не работает). Ссылка одноразовая и действует 10 минут.",
+    openApp: "Открыть рекордер",
     appNotConfigured: "Адрес приложения ещё не настроен. Обратитесь к администратору.",
     badExt: "Расширение: 1-10 букв или цифр.",
     badPeriod: "Неизвестный период. Используйте <code>7d</code>, <code>30d</code>, <code>month</code> или <code>YYYY-MM</code>.",

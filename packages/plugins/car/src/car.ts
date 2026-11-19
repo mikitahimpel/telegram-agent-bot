@@ -70,10 +70,7 @@ const sendApp = (ctx: CommandContext) =>
     const webUrl = yield* CarWebUrl
     if (webUrl === "") return yield* tg.sendMessage(target(ctx), m.appNotConfigured).pipe(Effect.asVoid)
     const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: ctx.lang })
-    const keyboard: InlineKeyboard = [
-      [{ text: m.openApp, webAppUrl: webUrl }],
-      [{ text: m.openChrome, url: pairUrl(webUrl, code) }]
-    ]
+    const keyboard: InlineKeyboard = [[{ text: m.openApp, url: pairUrl(webUrl, code) }]]
     yield* tg.sendMessage(target(ctx), m.appText, { keyboard }).pipe(Effect.asVoid)
   })
 

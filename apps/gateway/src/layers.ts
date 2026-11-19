@@ -1,4 +1,5 @@
 import { Layer } from "effect"
+import { CarKv } from "@bot/plugins-car/kv"
 import { CarBucket, type R2Like as CarR2Like } from "@bot/plugins-car/r2"
 import { PluginFlags, layerKv } from "@bot/plugins-registry/flags"
 import { layer as mcpTokenLayer } from "@bot/plugins-registry/mcp-token"
@@ -11,14 +12,15 @@ import { pluginRegistry } from "./plugins.ts"
  * Everything plugin tools and plugin commands need: Telegram, flags, the car bucket and the
  * plugin layers themselves. Shared by the user-agent DO and the Worker's /mcp route.
  */
-export const pluginEnvironment = (env: Env) => {
+export const pluginEnvironment = (env: Env, origin?: string) => {
   const base = Layer.mergeAll(
     telegramLayer,
     layerKv(env.KV, pluginRegistry.plugins),
     Layer.succeed(CarBucket, env.BACKUPS as unknown as CarR2Like),
+    Layer.succeed(CarKv, env.KV),
     mcpTokenLayer
   )
-  return pluginRegistry.layer.pipe(Layer.provideMerge(base), Layer.provide(configLayer(env)))
+  return pluginRegistry.layer.pipe(Layer.provideMerge(base), Layer.provide(configLayer(env, origin)))
 }
 
 export { PluginFlags }

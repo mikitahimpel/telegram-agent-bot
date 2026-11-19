@@ -83,6 +83,12 @@ importers:
       '@bot/car-format':
         specifier: workspace:*
         version: link:../../packages/car/format
+      '@bot/car-obd':
+        specifier: workspace:*
+        version: link:../../packages/car/obd
+      '@bot/car-recorder':
+        specifier: workspace:*
+        version: link:../../packages/car/recorder
       effect:
         specifier: 'catalog:'
         version: 4.1.4
@@ -90,6 +96,12 @@ importers:
         specifier: 3.5.45
         version: 3.5.45(typescript@5.9.3)
     devDependencies:
+      '@types/w3c-web-serial':
+        specifier: 1.0.9
+        version: 1.0.9
+      '@types/web-bluetooth':
+        specifier: 0.0.22
+        version: 0.0.22
       '@vitejs/plugin-vue':
         specifier: 6.0.11
         version: 6.0.11(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))(vue@3.5.45(typescript@5.9.3))
@@ -132,6 +144,9 @@ importers:
       '@bot/bot-dispatcher':
         specifier: workspace:*
         version: link:../../packages/bot/dispatcher
+      '@bot/car-server':
+        specifier: workspace:*
+        version: link:../../packages/car/server
       '@bot/core-contracts':
         specifier: workspace:*
         version: link:../../packages/core/contracts
@@ -386,6 +401,37 @@ importers:
       fake-indexeddb:
         specifier: 6.2.8
         version: 6.2.8
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/car/server:
+    dependencies:
+      '@bot/car-format':
+        specifier: workspace:*
+        version: link:../format
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      '@bot/plugins-car':
+        specifier: workspace:*
+        version: link:../../plugins/car
+      '@bot/plugins-registry':
+        specifier: workspace:*
+        version: link:../../plugins/registry
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@bot/bot-allowlist':
+        specifier: workspace:*
+        version: link:../../bot/allowlist
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

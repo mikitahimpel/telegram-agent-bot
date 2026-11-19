@@ -7,7 +7,7 @@ export const messages = defineMessages({
     distance: (km: string) => `, ${km}`,
     tripPartial: (got: number, total: number, missing: string) =>
       `⚠️ trip uploaded partially: ${got} of ${total} parts, missing ${missing}; open the app to resend`,
-    openApp: "Open app",
+    openApp: "Open recorder",
     newDevice: (name: string) => `New device connected: <b>${name}</b>. If this was not you, disconnect it.`,
     revoke: (name: string) => `Disconnect ${name}`,
     unauthorized: "Authorization is missing or expired. Reopen the app from the bot.",
@@ -28,7 +28,7 @@ export const messages = defineMessages({
     distance: (km: string) => `, ${km}`,
     tripPartial: (got: number, total: number, missing: string) =>
       `⚠️ поездка загружена частично: ${got} из ${total} частей, не хватает ${missing}; откройте приложение, чтобы дослать`,
-    openApp: "Открыть приложение",
+    openApp: "Открыть рекордер",
     newDevice: (name: string) => `Подключено новое устройство: <b>${name}</b>. Если это были не вы, отключите его.`,
     revoke: (name: string) => `Отключить ${name}`,
     unauthorized: "Авторизация отсутствует или истекла. Откройте приложение из бота заново.",

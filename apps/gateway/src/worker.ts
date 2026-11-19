@@ -1,4 +1,6 @@
 import { Effect, Layer, ManagedRuntime } from "effect"
+import { layer as allowlistLayer } from "@bot/bot-allowlist/allowlist"
+import { handleCarApi } from "@bot/car-server/api"
 import { handleMcpRequest } from "@bot/plugins-registry/mcp-server"
 import { configLayer } from "./config.ts"
 import type { Env } from "./env.ts"
@@ -16,6 +18,19 @@ const mcpRuntime = (env: Env) => {
   if (rt === undefined) {
     rt = ManagedRuntime.make(Layer.provide(pluginEnvironment(env), configLayer(env)))
     mcpRuntimes.set(env, rt)
+  }
+  return rt
+}
+
+const carApiRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
+
+const carApiRuntime = (env: Env) => {
+  let rt = carApiRuntimes.get(env)
+  if (rt === undefined) {
+    rt = ManagedRuntime.make(
+      Layer.provide(Layer.mergeAll(pluginEnvironment(env), allowlistLayer(env.KV)), configLayer(env))
+    )
+    carApiRuntimes.set(env, rt)
   }
   return rt
 }
@@ -47,6 +62,9 @@ export default {
     if (pathname === "/telegram/webhook" && request.method === "POST") return webhook(request, env, ctx)
     if (pathname === "/mcp") {
       return mcpRuntime(env).runPromise(handleMcpRequest(pluginRegistry)(request).pipe(Effect.withSpan("gateway.mcp")))
+    }
+    if (pathname.startsWith("/car/api/")) {
+      return carApiRuntime(env).runPromise(handleCarApi(request).pipe(Effect.withSpan("gateway.car-api")))
     }
     return text("not found", 404)
   },

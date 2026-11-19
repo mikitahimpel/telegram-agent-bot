@@ -15,7 +15,8 @@
     "./kv": "./src/kv.ts",
     "./import": "./src/import.ts",
     "./trip-store": "./src/trip-store.ts",
-    "./messages": "./src/messages.ts"
+    "./messages": "./src/messages.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

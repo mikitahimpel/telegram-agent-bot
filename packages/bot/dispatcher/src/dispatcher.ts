@@ -12,7 +12,7 @@ import { RunControl } from "@bot/core-contracts/run-control"
 import { Sessions } from "@bot/core-contracts/sessions"
 import { Telegram, type SendTarget } from "@bot/core-contracts/telegram"
 import { parseCommand } from "@bot/telegram-schema/command"
-import type { CallbackQuery, Message, Update } from "@bot/telegram-schema/schema"
+import type { CallbackQuery, Document, Message, Update } from "@bot/telegram-schema/schema"
 import { messages } from "@bot/bot-commands/messages"
 import { AdminNotifier } from "./admin-notifier.ts"
 import { McpAccess } from "./mcp-access.ts"
@@ -28,9 +28,19 @@ export type PresentRun = (args: {
   readonly stream: Stream.Stream<AgentEvent, BotError>
 }) => Effect.Effect<void, BotError, Telegram>
 
+/** A document the user sent. Return true when it was handled (e.g. a plugin imported it); false falls through. */
+export type DocumentHook<R> = (args: {
+  readonly document: Document
+  readonly tgId: TgId
+  readonly chatId: ChatId
+  readonly threadId: ThreadId | undefined
+  readonly lang: Lang
+}) => Effect.Effect<boolean, BotError, R>
+
 export interface DispatcherOptions<R> {
   readonly registry: Registry<R>
   readonly present: PresentRun
+  readonly onDocument?: DocumentHook<R>
   /** Bot username used to ignore `/cmd@otherbot`. */
   readonly botUsername?: string
 }
@@ -99,6 +109,16 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
       const tg = yield* Telegram
       const threadId = origin.threadId
       const sessionKey = sessionKeyOf(threadId)
+      if (message.document !== undefined && options.onDocument !== undefined) {
+        const handled = yield* options.onDocument({
+          document: message.document,
+          tgId: origin.tgId,
+          chatId: origin.chatId,
+          threadId,
+          lang
+        })
+        if (handled) return
+      }
       const text = message.text ?? message.caption
       if (text === undefined || text.trim() === "") return
       const parsed = parseCommand(message, options.botUsername)

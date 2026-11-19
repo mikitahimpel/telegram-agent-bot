@@ -44,7 +44,7 @@ jobs:
       - run: vp run test
       - run: vp run build
       - name: Deploy ${{ env.ALCHEMY_STAGE }}
-        run: vp exec alchemy deploy --stage "$ALCHEMY_STAGE" --yes --no-input 2>&1 | tee deploy.log
+        run: set -o pipefail; vp exec alchemy deploy --stage "$ALCHEMY_STAGE" --yes --no-input 2>&1 | tee deploy.log
       - name: Smoke test
         run: |
           url="$(grep -oE 'https://[A-Za-z0-9._-]+\.workers\.dev' deploy.log | head -n 1)"

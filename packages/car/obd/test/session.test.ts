@@ -107,4 +107,17 @@ describe("session (simulator)", () => {
           expect(readings(events)).toHaveLength(2)
         })
       )))
+
+  it.effect("late_reply: a reply after the timeout never answers the next command", () =>
+    Effect.scoped(
+      driven(
+        Effect.gen(function*() {
+          const session = yield* connect("simulator", { scenario: "late_reply" })
+          const rs = readings(yield* collect(session, 2))
+          expect(rs[0]?.rpm).toBeUndefined()
+          expect(rs[0]).toMatchObject({ speedKmh: 60, loadPct: expect.closeTo(50.2, 1), throttlePct: expect.closeTo(20, 0) })
+          expect(rs[0]?.mafGps).toBeCloseTo(12.34)
+          expect(rs[1]).toMatchObject({ rpm: 2000, speedKmh: 60 })
+        })
+      )))
 })

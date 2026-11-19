@@ -1,4 +1,4 @@
-import { Deferred, Effect, Scope, Semaphore, Stream } from "effect"
+import { Deferred, Effect, Fiber, Scope, Semaphore, Stream } from "effect"
 import {
   AdapterNotResponding,
   CommandRejected,
@@ -107,6 +107,7 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
     let buffer = ""
     let pending: Deferred.Deferred<string, Disconnected> | undefined
     let dead = false
+    let resyncState: { need: number; count: number; done: Deferred.Deferred<void> } | undefined
 
     const markDead = Effect.sync(() => {
       dead = true
@@ -117,13 +118,53 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
       Stream.runForEach(transport.incoming, (chunk) =>
         Effect.sync(() => {
           buffer += chunk
-          const end = buffer.indexOf(">")
-          if (end >= 0 && pending !== undefined) {
+          let end = buffer.indexOf(">")
+          while (end >= 0) {
             const text = buffer.slice(0, end)
             buffer = buffer.slice(end + 1)
-            Deferred.doneUnsafe(pending, Effect.succeed(text))
+            if (resyncState !== undefined) {
+              resyncState.count++
+              if (resyncState.count >= resyncState.need) Deferred.doneUnsafe(resyncState.done, Effect.void)
+            } else if (pending !== undefined) {
+              Deferred.doneUnsafe(pending, Effect.succeed(text))
+            }
+            end = buffer.indexOf(">")
           }
         })).pipe(Effect.catch(() => Effect.void), Effect.andThen(markDead))
+    )
+
+    /**
+     * After a timeout the late reply (and its prompt) may still arrive. Send a bare CR and swallow input
+     * until two prompts have been seen (the stale one and the answer to CR); if they don't both come
+     * within 1.5 s, send ATE0 once and swallow its prompt. Only then is the next command dispatched.
+     */
+    const awaitPrompts = (need: number, ms: number) =>
+      Effect.gen(function*() {
+        const done = yield* Deferred.make<void>()
+        buffer = ""
+        pending = undefined
+        resyncState = { need, count: 0, done }
+        return yield* Deferred.await(done).pipe(Effect.timeoutOption(ms), Effect.map((o) => o._tag === "Some"))
+      })
+
+    const resync = Effect.gen(function*() {
+      const waiting = yield* Effect.forkChild(awaitPrompts(2, 1500))
+      yield* Effect.yieldNow
+      yield* transport.write("")
+      const ok = yield* Fiber.join(waiting)
+      if (!ok) {
+        const retry = yield* Effect.forkChild(awaitPrompts(1, 3000))
+        yield* Effect.yieldNow
+        yield* transport.write("ATE0")
+        yield* Fiber.join(retry)
+      }
+    }).pipe(
+      Effect.ensuring(
+        Effect.sync(() => {
+          resyncState = undefined
+          buffer = ""
+        })
+      )
     )
 
     const send: Elm327["send"] = (command, options) =>
@@ -135,7 +176,10 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
           pending = reply
           yield* transport.write(command)
           const raw = yield* Deferred.await(reply).pipe(Effect.timeoutOption(options?.timeoutMs ?? DEFAULT_TIMEOUT_MS))
-          if (raw._tag === "None") return yield* new CommandTimeout({ command })
+          if (raw._tag === "None") {
+            yield* resync
+            return yield* new CommandTimeout({ command })
+          }
           return cleanReply(raw.value, command)
         }).pipe(
           Effect.ensuring(

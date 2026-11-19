@@ -10,6 +10,7 @@ export type SimulatorScenario =
   | "drops_every_60s"
   | "slow_ecu"
   | "no_fuel_pid"
+  | "late_reply"
 
 export interface SimulatorOptions {
   /** PIDs (hex, e.g. "0F") the simulated car does not support. */
@@ -59,7 +60,7 @@ export const simulatorTransport = (
   const unsupported = new Set([...(options.unsupported ?? []), ...(scenario === "no_fuel_pid" ? ["5E"] : [])])
   const supported = new Set(ALL_PIDS.filter((p) => !unsupported.has(p)).map((p) => parseInt(p, 16)))
   const pidLatencyMs = scenario === "slow_ecu" ? 400 : 20
-  const car = { garbageLeft: scenario === "clone_garbage" ? 2 : 0 }
+  const car = { garbageLeft: scenario === "clone_garbage" ? 2 : 0, lateLeft: scenario === "late_reply" ? 1 : 0 }
 
   const open = (): Effect.Effect<ObdTransport, never, Scope.Scope> =>
     Effect.gen(function*() {
@@ -78,6 +79,7 @@ export const simulatorTransport = (
       const respond = (raw: string) =>
         Effect.gen(function*() {
           const cmd = raw.replace(/\s/g, "").toUpperCase()
+          if (cmd === "") return yield* emit(">")
           if (car.garbageLeft > 0) {
             car.garbageLeft--
             yield* Effect.sleep("100 millis")
@@ -108,6 +110,10 @@ export const simulatorTransport = (
               return yield* reply(cmd, pid === "00" ? ["SEARCHING...", "UNABLE TO CONNECT"] : ["NO DATA"])
             }
             const n = parseInt(pid, 16)
+            if (car.lateLeft > 0 && n % 0x20 !== 0) {
+              car.lateLeft--
+              yield* Effect.sleep("2500 millis")
+            }
             if (n % 0x20 === 0) {
               const prefix = pid === "00" ? ["SEARCHING..."] : []
               return yield* reply(cmd, [...prefix, hex([0x41, n, ...maskBytes(n, supported)], link.spaces)])

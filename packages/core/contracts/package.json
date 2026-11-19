@@ -14,9 +14,16 @@
     "./agent-runner": "./src/agent-runner.ts",
     "./agent-directory": "./src/agent-directory.ts",
     "./commands": "./src/commands.ts",
-    "./plugin": "./src/plugin.ts"
+    "./plugin": "./src/plugin.ts",
+    "./run-control": "./src/run-control.ts"
   },
-  "scripts": { "typecheck": "tsc -p ." },
-  "dependencies": { "effect": "catalog:" },
-  "devDependencies": { "typescript": "catalog:" }
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
 }

@@ -1,10 +1,10 @@
 import { ref } from "vue"
 import { fixtureDiag, fixtureReading, fixtureTrips, readyConn } from "../fixtures/index.ts"
 import type {
-  AppMode,
   Capabilities,
   ConnectionVm,
   DiagEvent,
+  FuelRateSource,
   PairedDevice,
   Platform,
   Reading,
@@ -19,7 +19,6 @@ import type {
 import type { CarBackend, InterruptedTrip, PairingState } from "./backend.ts"
 
 export interface DemoOptions {
-  mode?: AppMode
   platform?: Platform
   caps?: Capabilities
   conn?: ConnectionVm
@@ -33,10 +32,10 @@ export interface DemoOptions {
   diag?: DiagEvent[]
   supported?: SensorKey[] | null
   online?: boolean
+  fuelSource?: FuelRateSource
   clockOffsetMs?: number
   /** Disable timers (tests). */
   static?: boolean
-  pairStartUrl?: string | null
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
@@ -46,7 +45,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
  * until the real adapter (car-obd + car-recorder runtime) is wired in services/runtime.ts.
  */
 export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
-  const caps: Capabilities = o.caps ?? { ble: true, serial: true, secureContext: true, inTelegram: o.mode === "telegram", reasons: [] }
+  const caps: Capabilities = o.caps ?? { ble: true, serial: true, secureContext: true, inTelegram: false, reasons: [] }
   const conn = ref<ConnectionVm>(o.conn ?? { _tag: "Idle" })
   const rec = ref<RecorderVm>(o.rec ?? { _tag: "Idle" })
   const sync = ref<SyncGlobalVm>(o.sync ?? { _tag: "Idle" })
@@ -61,6 +60,7 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
   const online = ref(o.online ?? true)
   const clockOffsetMs = ref(o.clockOffsetMs ?? 0)
   const wakeLock = ref(false)
+  const fuelSource = ref<FuelRateSource>(o.fuelSource ?? "none")
   const pollingMs = ref(500)
   let cancelled = false
   let timer: ReturnType<typeof setInterval> | undefined
@@ -78,12 +78,11 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
       rpm: Math.round(1800 + Math.random() * 900),
       coolantC: 88,
       fuelRateLph: supported.value?.includes("fuelRateLph") ? +(4 + Math.random()).toFixed(1) : null,
-      voltage: 13.9
+      voltageV: 13.9
     }
   }
 
   return {
-    mode: o.mode ?? "chrome",
     platform: o.platform ?? "android",
     caps,
     demo: true,
@@ -100,6 +99,7 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     pairing,
     online,
     clockOffsetMs,
+    fuelSource,
     wakeLock,
     pollingMs,
 
@@ -133,7 +133,7 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
         log("elm", "< UNABLE TO CONNECT")
         return fail("EcuNotResponding")
       }
-      const sensors: SensorKey[] = scenario === "no_fuel_pid" ? ["speedKmh", "rpm", "coolantC", "voltage"] : ["speedKmh", "rpm", "coolantC", "voltage", "fuelRateLph"]
+      const sensors: SensorKey[] = scenario === "no_fuel_pid" ? ["speedKmh", "rpm", "coolantC", "voltageV"] : ["speedKmh", "rpm", "coolantC", "voltageV", "fuelRateLph"]
       supported.value = sensors
       conn.value = { ...readyConn, sensors: sensors.length, adapterName: kind === "simulator" ? "Demo" : "OBDII" } as ConnectionVm
     },
@@ -186,13 +186,11 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     setPollingMs(ms) {
       pollingMs.value = ms
     },
-    async pairStart() {
-      return o.pairStartUrl === undefined ? "https://example.invalid/car/#pair=demo" : o.pairStartUrl
-    },
     async refreshDevices() {},
     async revokeDevice(id) {
       devices.value = devices.value.filter((d) => d.id !== id)
     },
+    async adoptCredential() {},
     async retryPairing() {
       pairing.value = "unpaired"
     },

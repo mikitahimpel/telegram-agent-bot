@@ -12,7 +12,9 @@
   "dependencies": {
     "@bot/car-format": "workspace:*",
     "effect": "catalog:",
-    "vue": "3.5.45"
+    "vue": "3.5.45",
+    "@bot/car-obd": "workspace:*",
+    "@bot/car-recorder": "workspace:*"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "6.0.11",
@@ -21,6 +23,8 @@
     "typescript": "catalog:",
     "vite": "8.3.8",
     "vitest": "catalog:",
-    "vue-tsc": "3.3.14"
+    "vue-tsc": "3.3.14",
+    "@types/web-bluetooth": "0.0.22",
+    "@types/w3c-web-serial": "1.0.9"
   }
 }

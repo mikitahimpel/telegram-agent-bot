@@ -11,8 +11,7 @@ import type {
   SyncErrorCode,
   SyncGlobalVm,
   Tone,
-  TripSyncVm,
-  AppMode
+  TripSyncVm
 } from "./types.ts"
 
 export interface StatusAction {
@@ -35,11 +34,11 @@ export interface StatusView {
 
 export type StatusInput =
   | { kind: "connection"; state: ConnectionVm }
-  | { kind: "error"; code: ObdErrorCode; step?: string; detail?: string }
+  | { kind: "error"; code: ObdErrorCode; step?: string; detail?: string; reason?: string }
   | { kind: "recorder"; state: RecorderVm }
   | { kind: "sync"; state: SyncGlobalVm }
   | { kind: "trip"; state: TripSyncVm; localCopyLost?: boolean }
-  | { kind: "env"; caps: Pick<Capabilities, "ble" | "serial" | "secureContext">; platform: Platform; mode: AppMode }
+  | { kind: "env"; caps: Pick<Capabilities, "ble" | "serial" | "secureContext">; platform: Platform; telegramWebview: boolean }
   | { kind: "storage"; level: "low" | "notPersistent"; usedPct?: number }
   | { kind: "clock"; offsetMs: number }
   | { kind: "pair"; state: "unpaired" | "progress" | "done" | PairError }
@@ -60,17 +59,21 @@ const listParts = (seqs: number[]): string => {
 
 const act = (t: TFn, id: ActionId): StatusAction => ({ id, label: t(`action.${id}` as MessageKey) })
 
-const errorView = (t: TFn, code: ObdErrorCode, step: string | undefined, detail: string | undefined): StatusView => {
-  const tone: Tone = code === "CommandTimeout" ? "warn" : "error"
+const errorView = (t: TFn, code: ObdErrorCode, step: string | undefined, detail: string | undefined, reason?: string): StatusView => {
+  if (code === "BluetoothUnavailable" && reason === "insecure_context")
+    return { tone: "error", icon: "⛔", title: t("env.insecure.title"), text: t("env.insecure.text"), action: act(t, "tryDemo"), details: detail ?? `${code}:${reason}` }
+  if (code === "BluetoothUnavailable" && reason === "unsupported")
+    return { tone: "error", icon: "⛔", title: t("env.noble.title"), text: t("env.noble.text"), action: act(t, "tryDemo"), details: detail ?? `${code}:${reason}` }
+  const tone: Tone = code === "CommandTimeout" || code === "CommandRejected" ? "warn" : "error"
   const actionId: ActionId =
     code === "BluetoothUnavailable" || code === "SerialUnavailable" ? "tryDemo" : "retry"
   return {
     tone,
     icon: tone === "warn" ? "⚠️" : "⛔",
     title: t(`err.${code}.title` as MessageKey),
-    text: t(`err.${code}.text` as MessageKey, { step: step ?? "?" }),
+    text: t(`err.${code}.text` as MessageKey, { step: step ?? "?", token: reason ?? "?" }),
     action: act(t, actionId),
-    details: detail ?? `${code}${step ? ` (${step})` : ""}`
+    details: detail ?? `${code}${step ? ` (${step})` : ""}${reason ? ` [${reason}]` : ""}`
   }
 }
 
@@ -108,7 +111,7 @@ const connectionView = (t: TFn, s: ConnectionVm, now: number): StatusView => {
         text: t("conn.lost.text", { attempt: s.attempt, next: fmtDuration(t, Math.max(0, s.nextRetryAt - now)) })
       }
     case "Failed":
-      return errorView(t, s.error.code, s.error.step, s.error.detail)
+      return errorView(t, s.error.code, s.error.step, s.error.detail, s.error.reason)
   }
 }
 
@@ -117,6 +120,10 @@ const recorderView = (t: TFn, lang: Lang, s: RecorderVm, now: number): StatusVie
     case "Idle":
       return { tone: "info", icon: "⏺", title: t("rec.idle.title"), text: t("rec.idle.text") }
     case "Recording":
+      if (s.storageError)
+        return { tone: "error", icon: "💾", title: t("rec.storage.title"), text: t("rec.storage.text"), action: act(t, "stop"), details: `storage: ${s.storageError}` }
+      if (s.sourceEnded)
+        return { tone: "warn", icon: "🔌", title: t("rec.sourceEnded.title"), text: t("rec.sourceEnded.text"), action: act(t, "stop") }
       if (s.gapOpen)
         return {
           tone: "warn",
@@ -156,21 +163,14 @@ const syncView = (t: TFn, s: SyncGlobalVm): StatusView => {
     case "Offline":
       return { tone: "warn", icon: "📴", title: t("sync.offline.title"), text: t("sync.offline.text") }
     case "NeedsReauth":
-      return s.reason === "device_revoked"
-        ? {
-            tone: "error",
-            icon: "🔒",
-            title: t("sync.revoked.title"),
-            text: t("sync.revoked.text"),
-            action: act(t, "howToPair")
-          }
-        : {
-            tone: "error",
-            icon: "🔒",
-            title: t("sync.reauth.title"),
-            text: t("sync.reauth.text"),
-            action: act(t, "reopenFromBot")
-          }
+      if (s.reason === "not_paired") return pairView(t, "unpaired")
+      return {
+        tone: "error",
+        icon: "🔒",
+        title: t("sync.revoked.title"),
+        text: t("sync.revoked.text"),
+        action: act(t, "howToPair")
+      }
     case "Blocked":
       return {
         tone: "error",
@@ -257,26 +257,22 @@ const tripView = (t: TFn, lang: Lang, s: TripSyncVm, now: number, localCopyLost:
 }
 
 const envView = (t: TFn, i: Extract<StatusInput, { kind: "env" }>): StatusView | null => {
-  const { caps, platform, mode } = i
+  const { caps, platform, telegramWebview } = i
   const base = (k: string, action?: ActionId): StatusView => ({
     tone: "error",
     icon: "🚫",
     title: t(`env.${k}.title` as MessageKey),
     text: t(`env.${k}.text` as MessageKey),
     ...(action ? { action: act(t, action) } : {}),
-    details: `ble=${caps.ble} serial=${caps.serial} secure=${caps.secureContext} platform=${platform} mode=${mode}`
+    details: `ble=${caps.ble} serial=${caps.serial} secure=${caps.secureContext} platform=${platform} telegramWebview=${telegramWebview}`
   })
   if (!caps.secureContext) return base("insecure")
-  if (caps.ble) return null
-  if (mode === "telegram") {
-    if (platform === "ios") return base("ios", "tryDemo")
-    if (platform === "desktop") return base("desktop", "tryDemo")
-    return base("telegramWebview", "openInChrome")
-  }
-  if (caps.serial) return base("serialonly")
-  if (platform === "ios") return base("chromeIos", "tryDemo")
-  if (platform === "desktop") return base("chromeDesktop", "tryDemo")
-  return base("noble", "tryDemo")
+  if (caps.ble || caps.serial) return null
+  if (platform === "ios") return base("chromeIos")
+  if (telegramWebview) return base("telegramWebview", "openInChrome")
+  if (platform === "android") return base("webview", "openInChrome")
+  if (platform === "desktop") return base("chromeDesktop")
+  return base("noble")
 }
 
 const pairView = (t: TFn, state: Extract<StatusInput, { kind: "pair" }>["state"]): StatusView => {
@@ -307,7 +303,7 @@ export function describeStatus(input: StatusInput, lang: Lang, now: number = Dat
     case "connection":
       return connectionView(t, input.state, now)
     case "error":
-      return errorView(t, input.code, input.step, input.detail)
+      return errorView(t, input.code, input.step, input.detail, input.reason)
     case "recorder":
       return recorderView(t, lang, input.state, now)
     case "sync":

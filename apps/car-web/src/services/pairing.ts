@@ -1,10 +1,8 @@
 import type { PairError } from "../model/types.ts"
+import { Effect } from "effect"
+import { clearCredentials, loadCredentials, saveCredentials, type DeviceCredentials } from "@bot/car-recorder/credentials"
 
-export interface Credential {
-  deviceToken: string
-  tgId: number
-  firstName: string
-}
+export type Credential = DeviceCredentials
 
 export const parsePairHash = (hash: string): string | null => {
   const m = /(?:^#|&)pair=([A-Za-z0-9_-]+)/.exec(hash)
@@ -39,7 +37,7 @@ export const completePair = async (
   }
   if (res.ok) {
     const body = (await res.json()) as Credential
-    return { ok: true, credential: { deviceToken: body.deviceToken, tgId: body.tgId, firstName: body.firstName } }
+    return { ok: true, credential: { deviceToken: body.deviceToken, deviceId: body.deviceId, tgId: body.tgId, firstName: body.firstName } }
   }
   let code2 = ""
   try {
@@ -53,46 +51,8 @@ export const completePair = async (
   return { ok: false, error: "unknown" }
 }
 
-export const startPair = async (apiBase: string, initData: string, fetchFn: typeof fetch = fetch): Promise<string | null> => {
-  try {
-    const res = await fetchFn(`${apiBase}/pair/start`, { method: "POST", headers: { authorization: `tma ${initData}` } })
-    if (!res.ok) return null
-    return ((await res.json()) as { url: string }).url
-  } catch {
-    return null
-  }
-}
-
-/** Tiny IndexedDB key-value store for the device credential (replace with @bot/car-recorder `./credentials`). */
-const DB = "car-web"
-const openDb = (): Promise<IDBDatabase> =>
-  new Promise((resolve, reject) => {
-    const r = indexedDB.open(DB, 1)
-    r.onupgradeneeded = () => r.result.createObjectStore("kv")
-    r.onsuccess = () => resolve(r.result)
-    r.onerror = () => reject(r.error)
-  })
-
 export const credentialStore = {
-  async load(): Promise<Credential | null> {
-    try {
-      const db = await openDb()
-      return await new Promise((resolve) => {
-        const r = db.transaction("kv").objectStore("kv").get("credential")
-        r.onsuccess = () => resolve((r.result as Credential | undefined) ?? null)
-        r.onerror = () => resolve(null)
-      })
-    } catch {
-      return null
-    }
-  },
-  async save(c: Credential): Promise<void> {
-    const db = await openDb()
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction("kv", "readwrite")
-      tx.objectStore("kv").put(c, "credential")
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-  }
+  load: async (): Promise<Credential | null> => (await Effect.runPromise(loadCredentials().pipe(Effect.orElseSucceed(() => undefined)))) ?? null,
+  save: (c: Credential): Promise<void> => Effect.runPromise(saveCredentials(c).pipe(Effect.orElseSucceed(() => undefined))),
+  clear: (): Promise<void> => Effect.runPromise(clearCredentials().pipe(Effect.orElseSucceed(() => undefined)))
 }

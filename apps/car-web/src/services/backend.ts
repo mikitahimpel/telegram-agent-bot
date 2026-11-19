@@ -1,9 +1,9 @@
 import type { Ref } from "vue"
 import type {
-  AppMode,
   Capabilities,
   ConnectionVm,
   DiagEvent,
+  FuelRateSource,
   PairedDevice,
   PairError,
   Platform,
@@ -30,7 +30,6 @@ export interface InterruptedTrip {
  * (see use-effect-state.ts) by the real adapter, or by simulation in the demo backend.
  */
 export interface CarBackend {
-  readonly mode: AppMode
   readonly platform: Platform
   readonly caps: Capabilities
   readonly demo: boolean
@@ -49,6 +48,7 @@ export interface CarBackend {
   readonly pairing: Ref<PairingState>
   readonly online: Ref<boolean>
   readonly clockOffsetMs: Ref<number>
+  readonly fuelSource: Ref<FuelRateSource>
   readonly wakeLock: Ref<boolean>
   readonly pollingMs: Ref<number>
 
@@ -63,10 +63,10 @@ export interface CarBackend {
   deleteLocal(tripId: string): Promise<void>
   requestPersistence(): Promise<boolean>
   setPollingMs(ms: number): void
-  /** Mini App: POST /pair/start and return the link for openLink. null on failure. */
-  pairStart(): Promise<string | null>
   refreshDevices(): Promise<void>
   revokeDevice(id: string): Promise<void>
   retryPairing(): Promise<void>
+  /** Called after a successful pairing: hand the device token to the API client and resume uploads. */
+  adoptCredential(c: { deviceToken: string }): Promise<void>
   dispose(): void
 }

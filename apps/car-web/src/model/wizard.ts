@@ -63,8 +63,8 @@ export const wizardSteps = (
 ): WizardStep[] => {
   const t = makeT(lang)
   const label = (id: StepId): string => {
-    if (id === "bluetooth") return transport === "serial" ? t("connect.step.usb") : t("connect.step.bluetooth")
     if (transport === "simulator" && (id === "browser" || id === "bluetooth")) return t("connect.step.demo")
+    if (id === "bluetooth") return transport === "serial" ? t("connect.step.usb") : t("connect.step.bluetooth")
     return t(`connect.step.${id}`)
   }
   const failed = conn._tag === "Failed" ? failedStep(conn.error.code, caps, transport) : null

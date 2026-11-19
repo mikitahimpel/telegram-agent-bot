@@ -55,9 +55,9 @@ export const fixtureTrips = (now: number = Date.now()): TripVm[] => [
   }
 ]
 
-export const fixtureReading: Reading = { speedKmh: 62, rpm: 2140, coolantC: 88, fuelRateLph: null, voltage: 13.9 }
+export const fixtureReading: Reading = { speedKmh: 62, rpm: 2140, coolantC: 88, fuelRateLph: null, voltageV: 13.9 }
 
-export const readyConn: ConnectionVm = { _tag: "Ready", adapterName: "OBDII", sensors: 4, supportedPids: ["0C", "0D", "05", "42"] }
+export const readyConn: ConnectionVm = { _tag: "Ready", adapterName: "OBDII", sensors: 4, supportedPids: ["0C", "0D", "05", "42"], fuelRateSource: "none" }
 
 export const fixtureDiag = (now: number = Date.now()): DiagEvent[] => [
   { at: now - 5000, kind: "elm", text: "> ATZ\n< ELM327 v1.5" },

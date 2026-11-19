@@ -25,7 +25,6 @@ export const en = {
   "action.retryNow": "Retry now",
   "action.start": "Start recording",
   "action.stop": "Stop recording",
-  "action.reopenFromBot": "Reopen from the bot",
   "action.exportFile": "Export file",
   "action.openSettings": "Open settings",
   "action.tryDemo": "Try the demo",
@@ -86,8 +85,6 @@ export const en = {
   "sync.syncing.text": "Trips are sent in small parts. You can keep using the app.",
   "sync.offline.title": "No internet",
   "sync.offline.text": "Trips are safe on the phone. Sending continues by itself when the network is back.",
-  "sync.reauth.title": "Session expired",
-  "sync.reauth.text": "Telegram access runs out after a day. Reopen the app from the bot to keep sending. Your data is safe on the phone.",
   "sync.plugin_disabled.title": "Car feature is switched off",
   "sync.plugin_disabled.text": "Sending is disabled for your account. Ask the bot admin to turn on the car plugin. Trips stay on the phone meanwhile.",
   "sync.forbidden.title": "No access",
@@ -135,10 +132,6 @@ export const en = {
   "trip.lost.text": "Parts {list} are missing in the cloud and were already deleted from the phone, so they cannot be restored. The rest of the trip is safe.",
   "trip.lost.summary": "Parts {list} are lost: gone from both the phone and the cloud",
 
-  "env.ios.title": "iPhone cannot connect to the car",
-  "env.ios.text": "Safari and Telegram on iPhone do not support Bluetooth for web apps. Open this app in Telegram on an Android phone with Chrome. You can look around with the demo.",
-  "env.desktop.title": "Telegram Desktop cannot connect to the car",
-  "env.desktop.text": "Telegram Desktop has no Bluetooth access for web apps. Open the bot on your Android phone and tap the button there. You can look around with the demo.",
   "env.noble.title": "This browser has no Bluetooth",
   "env.noble.text": "Web Bluetooth works in Chrome on Android. Open the link in Chrome and try again.",
   "env.serialonly.title": "Bluetooth is not supported here",
@@ -165,10 +158,6 @@ export const en = {
   "home.attention.title": "A trip needs attention",
   "home.recentTrips": "Recent trips",
   "home.noTrips": "No trips yet. Your first recording will appear here.",
-  "home.mainButton.connect": "Connect to the car",
-  "home.mainButton.start": "Start recording",
-  "home.mainButton.stop": "Stop recording",
-  "home.mainButton.busy": "Please wait…",
 
   "connect.title": "Connect to the car",
   "connect.transport": "How to connect",
@@ -289,7 +278,6 @@ export const en = {
   "interrupted.continue": "Continue recording",
   "interrupted.finish": "Finish the trip",
 
-  "banner.reopen": "Reopen from the bot",
   "banner.protect": "Protect my data",
 
   "settings.title": "Settings",
@@ -310,10 +298,7 @@ export const en = {
   "settings.diag.copy": "Copy log",
   "settings.about": "About",
   "settings.version": "Version {v}",
-  "settings.demoMode": "Demo data in use (no car packages connected)",
 
-  "action.openInChrome": "Open recorder in Chrome",
-  "action.howToPair": "How to pair this phone",
   "action.revokeDevice": "Disconnect",
   "action.install": "Install the app",
 
@@ -332,18 +317,12 @@ export const en = {
   "pair.network.text": "Check your internet connection and open the link again. The link is kept for 10 minutes.",
   "pair.unknown.title": "Pairing failed",
   "pair.unknown.text": "Something went wrong. Get a new link from the bot and try again.",
-  "pair.start.failed.title": "Could not create the link",
-  "pair.start.failed.text": "Check your internet connection and try again.",
 
-  "env.telegramWebview.title": "Recording is not possible inside Telegram",
-  "env.telegramWebview.text": "Telegram's built-in browser on Android cannot use Bluetooth. Tap \"Open recorder in Chrome\": recording happens there, and you can follow the status here.",
   "env.chromeIos.title": "iPhone cannot record trips",
   "env.chromeIos.text": "Browsers on iPhone have no Bluetooth access for web pages. Use Chrome on an Android phone. You can look around with the demo.",
   "env.chromeDesktop.title": "This computer cannot connect via Bluetooth",
   "env.chromeDesktop.text": "Bluetooth is not available in this browser. If your adapter has a USB cable, choose USB. Otherwise use Chrome on an Android phone.",
 
-  "home.openChrome.title": "Recording happens in Chrome",
-  "home.openChrome.text": "Telegram's browser cannot use Bluetooth. Open the recorder in Chrome. Trips appear here once they are uploaded.",
   "home.unpaired.hint": "Not paired yet",
 
   "devices.title": "Connected phones",
@@ -356,9 +335,29 @@ export const en = {
   "pwa.text": "Install the app to start recording even without internet. Trips upload when the network is back.",
   "pwa.offlineReady": "Ready to work offline",
   "settings.mode": "Mode",
-  "settings.mode.telegram": "Viewer inside Telegram",
   "settings.mode.chrome": "Recorder in Chrome",
-  "settings.mode.chromeUnpaired": "Chrome, not paired"
+  "settings.mode.chromeUnpaired": "Chrome, not paired",
+  "action.openInChrome": "Open in Chrome",
+  "env.webview.title": "Recording works only in Chrome",
+  "env.webview.text": "This browser cannot connect to the adapter. Open this page in Chrome on your Android phone. The pairing link is kept.",
+  "env.telegramWebview.title": "Recording works only in Chrome",
+  "env.telegramWebview.text": "Telegram's built-in browser cannot use Bluetooth. Tap \"Open in Chrome\". If Chrome does not open, use the steps below. The pairing link is kept.",
+  "chrome.fallback": "Chrome did not open?",
+  "chrome.steps": "1. Tap the ⋮ menu in the top corner.\n2. Choose \"Open in Chrome\" (or \"Open in browser\").\n3. No such item? Copy the link below and paste it into Chrome.",
+  "chrome.copyLink": "Copy link",
+  "chrome.linkCopied": "Link copied",
+  "action.howToPair": "How to pair this phone",
+  "estimate": "≈ estimate",
+  "recording.fuel.estimate": "Estimated from the air flow sensor, not measured directly",
+  "recording.gap.backgrounded": "The app was in the background. This time is marked as a gap.",
+  "err.CommandRejected.title": "Command refused",
+  "err.CommandRejected.text": "The adapter refused a request ({token}). Recording goes on; if it keeps happening, unplug the adapter and plug it back in.",
+  "rec.storage.title": "Cannot save to the phone",
+  "rec.storage.text": "Phone storage is full or blocked. New points wait in memory and saving is retried every few seconds. Free up space or stop the trip.",
+  "rec.sourceEnded.title": "The adapter stopped sending data",
+  "rec.sourceEnded.text": "The trip is still open, but nothing new is coming in. Reconnect the adapter or stop the recording. What is saved stays safe.",
+  "trip.legend.lost": "Lost",
+  "trip.chunk.reason.lost": "This part is missing in the cloud and on the phone. It cannot be restored."
 } as const
 
 export type MessageKey = keyof typeof en

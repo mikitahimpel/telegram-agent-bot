@@ -9,12 +9,15 @@ export type ObdErrorCode =
   | "AdapterNotResponding"
   | "EcuNotResponding"
   | "CommandTimeout"
+  | "CommandRejected"
   | "Disconnected"
 
 export interface ConnError {
   code: ObdErrorCode
   /** Init step that failed (AdapterNotResponding). */
   step?: string
+  /** BluetoothUnavailable reason / CommandRejected token. */
+  reason?: string
   /** Raw technical text for the "Details" block. */
   detail?: string
 }
@@ -28,7 +31,7 @@ export type ConnectionVm =
   | { _tag: "Connecting" }
   | { _tag: "InitializingAdapter"; step: number; total: number; label: string }
   | { _tag: "WaitingForEcu" }
-  | { _tag: "Ready"; adapterName?: string; sensors: number; supportedPids: string[] }
+  | { _tag: "Ready"; adapterName?: string; sensors: number; supportedPids: string[]; fuelRateSource: FuelRateSource }
   | { _tag: "Lost"; since: number; attempt: number; nextRetryAt: number }
   | { _tag: "Failed"; error: ConnError }
 
@@ -42,6 +45,8 @@ export type RecorderVm =
       chunks: number
       lastSampleAt: number
       gapOpen: boolean
+      sourceEnded?: boolean
+      storageError?: "quota" | "unavailable" | "unknown"
     }
   | { _tag: "Finishing" }
   | { _tag: "Error"; message: string }
@@ -52,7 +57,7 @@ export type SyncGlobalVm =
   | { _tag: "Idle" }
   | { _tag: "Syncing" }
   | { _tag: "Offline" }
-  | { _tag: "NeedsReauth"; reason: "session_expired" | "device_revoked" }
+  | { _tag: "NeedsReauth"; reason: "device_revoked" | "not_paired" }
   | { _tag: "Blocked"; code: ApiBlockCode }
   | { _tag: "Paused" }
 
@@ -74,7 +79,7 @@ export type TripSyncVm =
   | { _tag: "Incomplete"; missing: number[]; corrupt: number[]; conflict: number[]; localCopy: boolean }
   | { _tag: "CloudOnly" }
 
-export type ChunkState = "confirmed" | "sent" | "waiting" | "failed" | "conflict" | "corrupt"
+export type ChunkState = "confirmed" | "sent" | "waiting" | "failed" | "conflict" | "corrupt" | "lost"
 
 export interface ChunkVm {
   seq: number
@@ -115,7 +120,7 @@ export interface Reading {
   rpm: number | null
   coolantC: number | null
   fuelRateLph: number | null
-  voltage: number | null
+  voltageV: number | null
 }
 
 export type SensorKey = keyof Reading
@@ -140,7 +145,6 @@ export type ActionId =
   | "retryNow"
   | "start"
   | "stop"
-  | "reopenFromBot"
   | "exportFile"
   | "openSettings"
   | "tryDemo"
@@ -148,7 +152,6 @@ export type ActionId =
   | "openTrips"
   | "requestPersistence"
   | "deleteLocal"
-  | "openChrome"
   | "openInChrome"
   | "howToPair"
   | "revokeDevice"
@@ -156,8 +159,8 @@ export type ActionId =
 
 export type Tone = "ok" | "info" | "progress" | "warn" | "error"
 
-export type AppMode = "telegram" | "chrome"
 export type Platform = "android" | "ios" | "desktop" | "other"
+export type FuelRateSource = "pid_5e" | "maf_estimate" | "none"
 
 export interface PairedDevice {
   id: string

@@ -1,5 +1,6 @@
-import type { AppMode, Capabilities, Platform } from "../model/types.ts"
+import { detectCapabilities } from "@bot/car-obd/capabilities"
 import { detectLang, type Lang } from "../i18n/format.ts"
+import type { Capabilities, Platform } from "../model/types.ts"
 
 export const detectPlatform = (ua: string): Platform => {
   if (/iPhone|iPad|iPod/i.test(ua)) return "ios"
@@ -8,18 +9,18 @@ export const detectPlatform = (ua: string): Platform => {
   return "other"
 }
 
-export const detectMode = (initData: string): AppMode => (initData.length > 0 ? "telegram" : "chrome")
+export const isTelegramWebview = (ua: string, w: { TelegramWebviewProxy?: unknown } = globalThis as never): boolean =>
+  /Telegram/i.test(ua) || w.TelegramWebviewProxy !== undefined
 
-export const initialLang = (mode: AppMode, tgLang: string | undefined, navLang: string | undefined): Lang =>
-  detectLang(mode === "telegram" ? tgLang : navLang)
+/** Language comes from the browser; the user can override it in Settings. */
+export const initialLang = (navLang: string | undefined, saved: string | null | undefined): Lang =>
+  saved === "ru" || saved === "en" ? saved : detectLang(navLang)
 
-/** Local detection until @bot/car-obd `./capabilities` is wired. */
-export const localCapabilities = (inTelegram: boolean): Capabilities => {
-  const nav = typeof navigator === "undefined" ? undefined : (navigator as Navigator & { bluetooth?: unknown; serial?: unknown })
-  const reasons: string[] = []
-  const ble = !!nav?.bluetooth
-  const serial = !!nav?.serial
-  if (!ble) reasons.push("navigator.bluetooth is undefined")
-  if (!serial) reasons.push("navigator.serial is undefined")
-  return { ble, serial, secureContext: typeof isSecureContext === "undefined" ? true : isSecureContext, inTelegram, reasons }
-}
+export const localCapabilities = (): Capabilities => detectCapabilities()
+
+/**
+ * "intent://host/path#pair=CODE#Intent;scheme=https;package=com.android.chrome;end"
+ * Keeps the pair hash so Chrome can complete pairing.
+ */
+export const buildChromeIntentUrl = (loc: { host: string; pathname: string; search?: string; hash: string }): string =>
+  `intent://${loc.host}${loc.pathname}${loc.search ?? ""}${loc.hash}#Intent;scheme=https;package=com.android.chrome;end`

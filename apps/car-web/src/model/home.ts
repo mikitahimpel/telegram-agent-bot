@@ -1,15 +1,13 @@
 import type { Lang } from "../i18n/format.ts"
 import { makeT } from "../i18n/index.ts"
 import { describeStatus, type StatusView } from "./describe-status.ts"
-import type { AppMode, Capabilities, ConnectionVm, RecorderVm, SyncGlobalVm, TripVm } from "./types.ts"
+import type { ConnectionVm, RecorderVm, SyncGlobalVm, TripVm } from "./types.ts"
 
 export interface HomeInput {
-  mode: AppMode
   conn: ConnectionVm
   rec: RecorderVm
   sync: SyncGlobalVm
   trips: TripVm[]
-  caps: Pick<Capabilities, "ble">
 }
 
 const pendingTrips = (trips: TripVm[]) =>
@@ -45,15 +43,6 @@ export const describeHome = (i: HomeInput, lang: Lang, now: number = Date.now())
       title: t("home.pending.title", { sent, total }),
       text: t("home.pending.text", { trips: pending.length }),
       action: { id: "openTrips", label: t("action.openTrips") }
-    }
-  }
-  if (i.mode === "telegram" && !i.caps.ble) {
-    return {
-      tone: "info",
-      icon: "🌐",
-      title: t("home.openChrome.title"),
-      text: t("home.openChrome.text"),
-      action: { id: "openInChrome", label: t("action.openInChrome") }
     }
   }
   if (i.conn._tag === "Failed" || i.conn._tag === "Lost") return describeStatus({ kind: "connection", state: i.conn }, lang, now)

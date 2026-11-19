@@ -6,8 +6,8 @@ import { describeStatus } from "../model/describe-status.ts"
 import type { TripVm } from "../model/types.ts"
 
 const props = defineProps<{ trip: TripVm }>()
-const { t, lang, now, go } = useApp()
-const view = computed(() => describeStatus({ kind: "trip", state: props.trip.sync, localCopyLost: !props.trip.localCopy }, lang.value, now.value))
+const { t, lang, now, go, backend } = useApp()
+const view = computed(() => describeStatus({ kind: "trip", state: props.trip.sync, localCopyLost: !props.trip.localCopy, sync: backend.sync.value }, lang.value, now.value))
 const duration = computed(() => (props.trip.endedAt ? fmtClock(props.trip.endedAt - props.trip.startedAt) : null))
 </script>
 

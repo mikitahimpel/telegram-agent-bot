@@ -26,8 +26,14 @@ export const describeHome = (i: HomeInput, lang: Lang, now: number = Date.now())
     const v = describeStatus({ kind: "trip", state: attention.sync, localCopyLost: !attention.localCopy }, lang, now)
     return { ...v, action: { id: "openTrip", label: t("action.openTrip") } }
   }
-  if ((i.sync._tag === "NeedsReauth" && i.sync.reason !== "not_paired") || i.sync._tag === "Blocked") return describeStatus({ kind: "sync", state: i.sync }, lang, now)
   const pending = pendingTrips(i.trips)
+  if (pending.length > 0 && i.sync._tag !== "Idle" && i.sync._tag !== "Syncing") {
+    const v = describeStatus({ kind: "trip", state: pending[0]!.sync, sync: i.sync }, lang, now)
+    if (v.title !== describeStatus({ kind: "trip", state: pending[0]!.sync }, lang, now).title) {
+      return { ...v, title: v.title, action: v.action ?? { id: "openTrips", label: t("action.openTrips") } }
+    }
+  }
+  if ((i.sync._tag === "NeedsReauth" && i.sync.reason !== "not_paired") || i.sync._tag === "Blocked") return describeStatus({ kind: "sync", state: i.sync }, lang, now)
   if (pending.length > 0) {
     if (i.sync._tag === "Offline") return describeStatus({ kind: "sync", state: i.sync }, lang, now)
     let sent = 0

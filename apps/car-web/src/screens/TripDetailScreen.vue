@@ -12,7 +12,7 @@ const props = defineProps<{ tripId: string }>()
 const { backend, t, lang, now, back } = useApp()
 const trip = computed(() => backend.trips.value.find((x) => x.tripId === props.tripId) ?? null)
 const view = computed(() =>
-  trip.value ? describeStatus({ kind: "trip", state: trip.value.sync, localCopyLost: !trip.value.localCopy }, lang.value, now.value) : null
+  trip.value ? describeStatus({ kind: "trip", state: trip.value.sync, localCopyLost: !trip.value.localCopy, sync: backend.sync.value }, lang.value, now.value) : null
 )
 const counters = computed(() => (trip.value ? tripCounters(trip.value) : null))
 const confirmDelete = ref(false)

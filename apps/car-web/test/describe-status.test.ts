@@ -40,6 +40,7 @@ const trips: TripSyncVm[] = [
   { _tag: "Incomplete", missing: [], corrupt: [], conflict: [1], localCopy: true },
   { _tag: "Incomplete", missing: [1, 2], corrupt: [], conflict: [], localCopy: false }
 ]
+const tripSyncs: SyncGlobalVm[] = [...syncs]
 const pairs: Array<"unpaired" | "localOnly" | "progress" | "done" | PairError> = ["unpaired", "localOnly", "progress", "done", "invalid", "network", "blocked", "unknown"]
 
 const all: StatusInput[] = [
@@ -75,6 +76,40 @@ describe("describeStatus is exhaustive", () => {
     for (const lang of langs) {
       const titles = new Set(errorCodes.map((code) => describeStatus({ kind: "error", code }, lang).title))
       expect(titles.size).toBe(errorCodes.length)
+    }
+  })
+  it("per-trip status names the real global blocker (ru + en, every combination)", () => {
+    const expected: Record<string, { en: RegExp; ru: RegExp; action?: string }> = {
+      Idle: { en: /./, ru: /./ },
+      Syncing: { en: /./, ru: /./ },
+      Offline: { en: /internet/i, ru: /интернет/i },
+      "NeedsReauth:device_revoked": { en: /disconnected|pair/i, ru: /отключ/i, action: "howToPair" },
+      "NeedsReauth:not_paired": { en: /connected/i, ru: /подключени/i, action: "howToPair" },
+      "Blocked:plugin_disabled": { en: /admin/i, ru: /админ/i },
+      "Blocked:forbidden": { en: /access/i, ru: /доступ/i },
+      Paused: { en: /paused/i, ru: /пауз/i }
+    }
+    const queued: TripSyncVm[] = [
+      { _tag: "Queued" },
+      { _tag: "Uploading", sent: 1, total: 3, confirmed: 0 },
+      { _tag: "Waiting", sent: 1, total: 3, nextRetryAt: NOW + 1000, lastError: "network" }
+    ]
+    for (const lang of ["en", "ru"] as const) {
+      for (const g of tripSyncs) {
+        const key = g._tag === "NeedsReauth" ? `NeedsReauth:${g.reason}` : g._tag === "Blocked" ? `Blocked:${g.code}` : g._tag
+        for (const state of queued) {
+          const v = describeStatus({ kind: "trip", state, sync: g }, lang, NOW)
+          const blocking = !["Idle", "Syncing"].includes(g._tag)
+          const text = `${v.title} ${v.text} ${v.summary}`
+          expect(text).toMatch(expected[key]![lang])
+          if (blocking) expect(text).not.toMatch(/starts shortly|скоро начнётся/i)
+          if (expected[key]!.action) expect(v.action?.id).toBe(expected[key]!.action)
+        }
+        // finished states are never overridden
+        expect(describeStatus({ kind: "trip", state: { _tag: "Confirmed", at: NOW }, sync: g }, lang, NOW).title).toBe(
+          describeStatus({ kind: "trip", state: { _tag: "Confirmed", at: NOW } }, lang, NOW).title
+        )
+      }
     }
   })
   it("trip statuses always have a one-line summary", () => {

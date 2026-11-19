@@ -58,11 +58,23 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   await expect(row).toBeVisible({ timeout: 15_000 })
   await expect(row).toContainText("км")
   await expect(row).not.toContainText("расстояние неизвестно")
+  // Unpaired phone: the status names the real blocker, not "sending starts shortly".
+  await expect(row).toContainText("Ждёт подключения телефона к аккаунту")
+  await expect(row).not.toContainText("скоро начнётся")
   await page.screenshot({ path: `${SHOTS}/05-trips.png` })
   await row.click()
   await expect(page.getByTestId("trip-distance")).toContainText("км")
   const recorded = await page.locator('[data-testid="counters"] .counter b').first().innerText()
   expect(Number(recorded.replace(/\D/g, ""))).toBeGreaterThan(0)
+  await expect(page.getByTestId("status-card").first()).toContainText("Ждёт подключения телефона к аккаунту")
+  // Chunk grid is visible and nothing floats over it.
+  const grid = page.locator(".chunk-grid, [data-testid='chunk-grid']").first()
+  await grid.scrollIntoViewIfNeeded()
+  await expect(grid).toBeVisible()
+  await expect(page.getByTestId("primary")).toHaveCount(0)
+  const box = (await grid.boundingBox())!
+  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("nav.tabs, .primary-bar") !== null, { x: box.x + box.width / 2, y: box.y + box.height / 2 })
+  expect(hit).toBe(false)
   await page.screenshot({ path: `${SHOTS}/06-trip.png` })
 
   expect(errors).toEqual([])

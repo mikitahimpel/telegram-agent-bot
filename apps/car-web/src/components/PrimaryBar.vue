@@ -8,9 +8,8 @@ const primary = computed<{ id: "connect" | "start" | "stop"; text: string; disab
   if (r._tag === "Finishing") return { id: "stop", text: t.value("rec.finishing.title"), disabled: true }
   if (r._tag === "Recording") return { id: "stop", text: t.value("action.stop"), disabled: false }
   const n = route.value.name
-  if (n === "connect" || n === "settings" || n === "pair") return null
+  if (n === "connect" || n === "settings" || n === "pair" || n === "trip") return null
   if (backend.conn.value._tag === "Ready") return { id: "start", text: t.value("action.start"), disabled: false }
-  if (n === "trip") return null
   return { id: "connect", text: t.value("action.connect"), disabled: false }
 })
 const onClick = () => {

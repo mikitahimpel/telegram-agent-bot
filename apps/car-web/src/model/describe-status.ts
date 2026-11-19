@@ -37,7 +37,7 @@ export type StatusInput =
   | { kind: "error"; code: ObdErrorCode; step?: string; detail?: string; reason?: string }
   | { kind: "recorder"; state: RecorderVm }
   | { kind: "sync"; state: SyncGlobalVm }
-  | { kind: "trip"; state: TripSyncVm; localCopyLost?: boolean }
+  | { kind: "trip"; state: TripSyncVm; localCopyLost?: boolean; sync?: SyncGlobalVm }
   | { kind: "env"; caps: Pick<Capabilities, "ble" | "serial" | "secureContext">; platform: Platform; telegramWebview: boolean }
   | { kind: "storage"; level: "low" | "notPersistent"; usedPct?: number }
   | { kind: "clock"; offsetMs: number }
@@ -184,7 +184,35 @@ const syncView = (t: TFn, s: SyncGlobalVm): StatusView => {
   }
 }
 
-const tripView = (t: TFn, lang: Lang, s: TripSyncVm, now: number, localCopyLost: boolean): StatusView => {
+const blockerKey = (g: SyncGlobalVm | undefined): string | null => {
+  if (!g) return null
+  switch (g._tag) {
+    case "NeedsReauth":
+      return g.reason === "not_paired" ? "unpaired" : "revoked"
+    case "Blocked":
+      return g.code === "plugin_disabled" ? "plugin" : "forbidden"
+    case "Offline":
+      return "offline"
+    case "Paused":
+      return "paused"
+    default:
+      return null
+  }
+}
+
+const tripView = (t: TFn, lang: Lang, s: TripSyncVm, now: number, localCopyLost: boolean, global?: SyncGlobalVm): StatusView => {
+  const blocker = blockerKey(global)
+  if (blocker && (s._tag === "Queued" || s._tag === "Uploading" || s._tag === "Waiting")) {
+    const k = `trip.blocked.${blocker}`
+    return {
+      tone: blocker === "offline" || blocker === "paused" ? "warn" : "error",
+      icon: blocker === "offline" ? "📴" : "🔒",
+      title: t(`${k}.title` as MessageKey),
+      text: t(`${k}.text` as MessageKey),
+      summary: t(`${k}.summary` as MessageKey),
+      ...(blocker === "unpaired" || blocker === "revoked" ? { action: { id: "howToPair" as ActionId, label: t("banner.connectLink") } } : {})
+    }
+  }
   const v = (k: string, p?: Record<string, string | number>): { title: string; text: string; summary: string } => ({
     title: t(`trip.${k}.title` as MessageKey, p),
     text: t(`trip.${k}.text` as MessageKey, p),
@@ -311,7 +339,7 @@ export function describeStatus(input: StatusInput, lang: Lang, now: number = Dat
     case "sync":
       return syncView(t, input.state)
     case "trip":
-      return tripView(t, lang, input.state, now, input.localCopyLost ?? false)
+      return tripView(t, lang, input.state, now, input.localCopyLost ?? false, input.sync)
     case "env":
       return envView(t, input)
     case "storage":

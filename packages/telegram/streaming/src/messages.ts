@@ -7,7 +7,7 @@ export const messages = defineMessages({
     longAnswer: "The answer is long, so I attached it as a file.",
     longAnswerNote: "📎 Full answer attached as a file below.",
     emptyAnswer: "(empty answer)",
-    errorAnswer: "⚠️ The run failed."
+    errorAnswer: "⚠️ I could not answer that."
   },
   ru: {
     thinking: "Думаю…",
@@ -15,6 +15,29 @@ export const messages = defineMessages({
     longAnswer: "Ответ длинный, поэтому прикладываю его файлом.",
     longAnswerNote: "📎 Полный ответ приложен файлом ниже.",
     emptyAnswer: "(пустой ответ)",
-    errorAnswer: "⚠️ Запуск завершился с ошибкой."
+    errorAnswer: "⚠️ Не получилось ответить."
   }
 })
+
+export const statusLabels = {
+  en: {
+    search: "Searching the web…",
+    fetch: "Reading a page…",
+    readFile: "Reading a file…",
+    writeFile: "Preparing a file…",
+    compute: "Calculating…",
+    car: "Looking at the car data…",
+    reminder: "Setting a reminder…",
+    thinking: "Thinking…"
+  },
+  ru: {
+    search: "Ищу в интернете…",
+    fetch: "Читаю страницу…",
+    readFile: "Читаю файл…",
+    writeFile: "Готовлю файл…",
+    compute: "Считаю…",
+    car: "Смотрю данные машины…",
+    reminder: "Ставлю напоминание…",
+    thinking: "Думаю…"
+}
+} as const

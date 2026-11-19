@@ -2,7 +2,7 @@
 
 Image for the per-user container owned by the `UserAgent` Durable Object (`@bot/agent-runner`).
 
-Contents: node 24 (Debian trixie), `@anthropic-ai/claude-code` (pinned), python3 + duckdb/pandas/matplotlib,
+Contents: node 24 (Debian trixie), `@anthropic-ai/claude-code` (pinned), python3 + pandas/matplotlib,
 git/curl/jq, `sandbox-shim` (required by `@cloudflare/sandbox` `Files`/`DirectoryBackup`), user `node` (uid 1000),
 `/workspace` (cwd of every run) and `/workspace/out` (files the agent saves there are sent to the user).
 

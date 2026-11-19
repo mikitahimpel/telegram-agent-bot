@@ -78,8 +78,11 @@ export const recordingTelegram = (options: RecordingOptions = {}) => {
       sendMessageDraft: (...args) => run("sendMessageDraft", args, () => undefined),
       sendDocument: (...args) => run("sendDocument", args, () => ({ messageId: nextId++ })),
       sendChatAction: (...args) => run("sendChatAction", args, () => undefined),
+      getFile: (...args) => run("getFile", args, () => ({ filePath: "files/f.bin", fileSize: 1 })),
+      downloadFile: (...args) => run("downloadFile", args, () => new Uint8Array([1])),
       createForumTopic: (...args) => run("createForumTopic", args, () => ({ threadId: 100 as ThreadId })),
       answerCallbackQuery: (...args) => run("answerCallbackQuery", args, () => undefined),
+      setMessageReaction: (...args) => run("setMessageReaction", args, () => undefined),
       setMyCommands: (...args) => run("setMyCommands", args, () => undefined)
     })
   )

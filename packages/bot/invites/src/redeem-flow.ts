@@ -1,7 +1,8 @@
 import { Effect } from "effect"
 import { escapeHtml } from "@bot/bot-commands/html"
-import { renderHelp } from "@bot/bot-commands/help"
+import { newTopicKeyboard } from "@bot/bot-commands/messages"
 import { HelpRegistry } from "@bot/bot-core-commands/help-registry"
+import { renderWelcome } from "@bot/bot-core-commands/welcome"
 import { Allowlist } from "@bot/core-contracts/allowlist"
 import { ChatId, TgId } from "@bot/core-contracts/ids"
 import { Invites, type InviteInvalidReason } from "@bot/core-contracts/invites"
@@ -67,7 +68,10 @@ export const redeemInviteStart = ({ from, code, adminLang }: RedeemInput) =>
     yield* allowlist.allow(tgId, redeemed.createdBy, { ...who, invitedVia: redeemed.code })
     for (const pluginId of redeemed.plugins) yield* flags.setEnabled(pluginId, tgId, true)
 
-    yield* tg.sendMessage(to, [m.welcome(from.first_name), renderHelp(help, "user", lang)].join("\n\n"))
+    const blurbs = yield* help.blurbsFor(tgId, lang)
+    yield* tg.sendMessage(to, renderWelcome(from.first_name, lang, blurbs, false), {
+      replyKeyboard: newTopicKeyboard(lang)
+    })
 
     const am = messages[adminLang]
     const display = `${escapeHtml(from.first_name)} (${from.username === undefined ? "" : `@${escapeHtml(from.username)}, `}<code>${from.id}</code>)`

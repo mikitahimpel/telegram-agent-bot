@@ -27,6 +27,10 @@ const Envelope = Schema.Struct({
 })
 
 const SentMessageResult = Schema.Struct({ message_id: Schema.Number })
+const FileResult = Schema.Struct({
+  file_path: Schema.optionalKey(Schema.String),
+  file_size: Schema.optionalKey(Schema.Number)
+})
 const TopicResult = Schema.Struct({ message_thread_id: Schema.Number })
 
 export const inlineKeyboardToMarkup = (keyboard: InlineKeyboard) => ({
@@ -47,6 +51,15 @@ const targetParams = (to: SendTarget): Record<string, unknown> => ({
 })
 
 const optionParams = (options: SendOptions | undefined): Record<string, unknown> => ({
+  ...(options?.replyKeyboard !== undefined
+    ? {
+        reply_markup: {
+          keyboard: options.replyKeyboard.rows.map((row) => row.map((text) => ({ text }))),
+          is_persistent: true,
+          resize_keyboard: true
+        }
+      }
+    : {}),
   ...(options?.keyboard !== undefined ? { reply_markup: inlineKeyboardToMarkup(options.keyboard) } : {}),
   ...(options?.replyToMessageId !== undefined ? { reply_parameters: { message_id: options.replyToMessageId } } : {}),
   ...(options?.disablePreview === true ? { link_preview_options: { is_disabled: true } } : {})
@@ -161,6 +174,31 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
     const sendChatAction = (to: SendTarget, action: "typing" | "upload_document") =>
       call("sendChatAction", { ...targetParams(to), action }).pipe(Effect.asVoid)
 
+    const getFile = (fileId: string) =>
+      call("getFile", { file_id: fileId }).pipe(
+        Effect.flatMap(decode("getFile", FileResult)),
+        Effect.flatMap((f) =>
+          f.file_path === undefined
+            ? Effect.fail(badResponse("getFile", "file has no path"))
+            : Effect.succeed({ filePath: f.file_path, fileSize: f.file_size })
+        )
+      )
+
+    const downloadFile = (filePath: string): Effect.Effect<Uint8Array, TelegramError> =>
+      Effect.gen(function*() {
+        const request = HttpClientRequest.get(`${base}/file/bot${Redacted.value(token)}/${filePath}`)
+        const response = yield* http.execute(request).pipe(
+          Effect.mapError((e) => badResponse("downloadFile", `transport error (${e.reason._tag})`))
+        )
+        if (response.status !== 200) {
+          return yield* Effect.fail(badResponse("downloadFile", `HTTP ${response.status}`, response.status))
+        }
+        const buffer = yield* response.arrayBuffer.pipe(
+          Effect.mapError(() => badResponse("downloadFile", "unreadable response body", response.status))
+        )
+        return new Uint8Array(buffer)
+      })
+
     const createForumTopic = (chatId: ChatId, name: string) =>
       call("createForumTopic", { chat_id: chatId, name }).pipe(
         Effect.flatMap(decode("createForumTopic", TopicResult)),
@@ -169,6 +207,13 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
 
     const answerCallbackQuery = (id: string, text?: string) =>
       call("answerCallbackQuery", { callback_query_id: id, ...(text !== undefined ? { text } : {}) }).pipe(Effect.asVoid)
+
+    const setMessageReaction = (to: SendTarget & { readonly messageId: number }, emoji: string) =>
+      call("setMessageReaction", {
+        chat_id: to.chatId,
+        message_id: to.messageId,
+        reaction: [{ type: "emoji", emoji }]
+      }).pipe(Effect.asVoid)
 
     const setMyCommands = (
       commands: ReadonlyArray<{ readonly command: string; readonly description: string }>,
@@ -188,8 +233,11 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
       sendMessageDraft,
       sendDocument,
       sendChatAction,
+      getFile,
+      downloadFile,
       createForumTopic,
       answerCallbackQuery,
+      setMessageReaction,
       setMyCommands
     })
   })

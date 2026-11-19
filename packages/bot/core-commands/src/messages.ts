@@ -4,9 +4,6 @@ import { defineMessages } from "@bot/core-contracts/lang"
 
 export const messages = defineMessages({
   en: {
-    start: "Hi! I'm a Claude agent in Telegram. Just write me a message, or use /new to start a separate session in its own topic.",
-    startAdmin: "You are the <b>admin</b> of this bot: /help shows all commands, including admin ones.",
-    startLang: "The interface language can be changed with /lang.",
     newDefaultTitle: "New session",
     newCreated: (title: string) => `Session <b>${e(title)}</b> created. Write your first message here.`,
     topicsDisabled:
@@ -42,9 +39,6 @@ export const messages = defineMessages({
     tableUsage: "id | user | today | runs | cost | in/out tokens"
   },
   ru: {
-    start: "Привет! Я агент Claude в Telegram. Просто напишите мне сообщение или используйте /new, чтобы начать отдельную сессию в своём топике.",
-    startAdmin: "Вы <b>администратор</b> этого бота: /help покажет все команды, включая админские.",
-    startLang: "Язык интерфейса можно сменить командой /lang.",
     newDefaultTitle: "Новая сессия",
     newCreated: (title: string) => `Сессия <b>${e(title)}</b> создана. Напишите первое сообщение здесь.`,
     topicsDisabled:

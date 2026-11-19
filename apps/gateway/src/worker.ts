@@ -1,6 +1,5 @@
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { layer as allowlistLayer } from "@bot/bot-allowlist/allowlist"
-import { HelpRegistry } from "@bot/bot-core-commands/help-registry"
 import { redeemInviteStart } from "@bot/bot-invites/redeem-flow"
 import { handleCarApi } from "@bot/car-server/api"
 import { handleMcpRequest } from "@bot/plugins-registry/mcp-server"
@@ -9,7 +8,7 @@ import type { Env } from "./env.ts"
 import { pluginEnvironment } from "./layers.ts"
 import { invitesStubLayer } from "./invites-stub.ts"
 import { pluginRegistry } from "./plugins.ts"
-import { registry } from "./registry.ts"
+import { helpRegistryLayer } from "./help-registry.ts"
 import { screenWebhook } from "./webhook.ts"
 
 export { DirectoryBackupGateway } from "@cloudflare/sandbox"
@@ -50,7 +49,7 @@ const inviteRuntime = (env: Env) => {
           pluginEnvironment(env),
           allowlistLayer(env.KV),
           invitesStubLayer(env),
-          Layer.succeed(HelpRegistry, registry)
+          Layer.provide(helpRegistryLayer, pluginEnvironment(env))
         ),
         configLayer(env)
       )

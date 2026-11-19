@@ -23,6 +23,7 @@ const view = computed(() => describeStatus({ kind: "pair", state: state.value },
     <template v-if="showActions">
       <a v-if="bot" class="btn btn-primary btn-big" :href="bot" target="_blank" rel="noopener" data-testid="open-bot">{{ t("pair.openBot") }}</a>
       <button class="btn" type="button" data-testid="record-local" @click="recordLocally">{{ t("pair.recordLocal") }}</button>
+      <button class="btn" type="button" data-testid="open-onboarding" @click="go({ name: 'onboarding' })">{{ t("pair.firstTime") }}</button>
       <button class="btn btn-link" type="button" data-testid="pair-demo" @click="localMode = true; perform('tryDemo')">{{ t("pair.demo") }}</button>
     </template>
   </div>

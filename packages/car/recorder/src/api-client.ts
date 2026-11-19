@@ -10,19 +10,21 @@ import {
   TripList,
   TripStatus
 } from "@bot/car-format/api"
+import { type DtcReport, PutDtcResponse } from "@bot/car-format/insights"
 import type { TripManifest } from "@bot/car-format/manifest"
 import { ApiFailure } from "./errors.ts"
 
-export interface Credential {
+export type Credential = {
   readonly token: string
 }
 
 export const authorizationHeader = (c: Credential): string => `Device ${c.token}`
 
-export interface CarApiShape {
+export type CarApiShape = {
   readonly me: Effect.Effect<Me, ApiFailure>
   readonly putManifest: (manifest: TripManifest) => Effect.Effect<void, ApiFailure>
   readonly putChunk: (tripId: string, seq: number, csv: string, sha256: string) => Effect.Effect<ChunkReceipt, ApiFailure>
+  readonly putDtc: (report: DtcReport) => Effect.Effect<typeof PutDtcResponse.Type, ApiFailure>
   readonly status: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly finish: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly listTrips: (limit?: number) => Effect.Effect<TripList, ApiFailure>
@@ -35,7 +37,7 @@ export interface CarApiShape {
 
 export class CarApi extends Context.Service<CarApi, CarApiShape>()("@bot/car-recorder/CarApi") {}
 
-export interface CarApiOptions {
+export type CarApiOptions = {
   readonly apiBase: string
   readonly credential?: Credential | undefined
   readonly timeoutMs?: number
@@ -155,6 +157,14 @@ export const makeCarApi = (options: CarApiOptions) =>
               )
             ),
           ChunkReceipt
+        ),
+      putDtc: (report) =>
+        call(
+          (cred) =>
+            need(cred).pipe(
+              Effect.map((c) => authed(HttpClientRequest.put(url("/dtc")), c).pipe(HttpClientRequest.bodyJsonUnsafe(report)))
+            ),
+          PutDtcResponse
         ),
       status: (tripId) => call(get(`/trips/${id(tripId)}/status`), TripStatus),
       finish: (tripId) =>

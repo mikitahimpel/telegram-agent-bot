@@ -8,17 +8,20 @@ import {
   type ObdError,
   PermissionDenied,
   SerialUnavailable,
+  ReconnectUnavailable,
   UnsupportedDevice
 } from "./errors.ts"
 
 export { simulatorTransport } from "./simulator.ts"
-export type { SimulatorScenario, SimulatorOptions } from "./simulator.ts"
+export { crankingScript, makeSimCar } from "./simulator.ts"
+export type { SimCar, SimEcu, SimulatorScenario, SimulatorOptions } from "./simulator.ts"
 
 export type TransportKind = "ble" | "serial" | "simulator"
 
-export interface ObdTransport {
+export type ObdTransport = {
   readonly kind: TransportKind
   readonly name: string
+  readonly deviceId?: string
   readonly write: (line: string) => Effect.Effect<void, Disconnected>
   readonly incoming: Stream.Stream<string, Disconnected>
   readonly close: Effect.Effect<void>
@@ -62,7 +65,7 @@ const chunkBytes = (bytes: Uint8Array, size: number): Uint8Array[] => {
   return out
 }
 
-export const bleTransport = (options?: { readonly namePrefix?: string }): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+export const bleRequestDevice = (options?: { readonly namePrefix?: string }): Effect.Effect<BluetoothDevice, ObdError> =>
   Effect.gen(function*() {
     if (typeof navigator === "undefined" || navigator.bluetooth === undefined) {
       return yield* new BluetoothUnavailable({ reason: "unsupported" })
@@ -72,14 +75,76 @@ export const bleTransport = (options?: { readonly namePrefix?: string }): Effect
     }
     const bt = navigator.bluetooth
     const optionalServices = BLE_SERVICES.map((s) => s.service)
-    const device = yield* Effect.tryPromise({
+    return yield* Effect.tryPromise({
       try: () =>
         options?.namePrefix !== undefined
           ? bt.requestDevice({ filters: [{ namePrefix: options.namePrefix }], optionalServices })
           : bt.requestDevice({ acceptAllDevices: true, optionalServices }),
       catch: mapRequestError
     })
-    return yield* bleConnect(device)
+  })
+
+export const bleTransport = (options?: { readonly namePrefix?: string }): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+  Effect.flatMap(bleRequestDevice(options), (device) => bleConnect(device))
+
+export const bleOpenDevice = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdError, Scope.Scope> => bleConnect(device)
+
+export type BleSupport = { readonly ble: boolean; readonly getDevices: boolean; readonly watchAdvertisements: boolean }
+
+export const bleSupport = (): BleSupport => {
+  const bt = typeof navigator === "undefined" ? undefined : navigator.bluetooth
+  const proto = (globalThis as { BluetoothDevice?: { readonly prototype: object } }).BluetoothDevice?.prototype
+  return {
+    ble: bt !== undefined,
+    getDevices: bt !== undefined && typeof bt.getDevices === "function",
+    watchAdvertisements: proto !== undefined && "watchAdvertisements" in proto
+  }
+}
+
+const waitForAdvertisement = (device: BluetoothDevice, waitMs: number): Effect.Effect<boolean> =>
+  Effect.promise(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const controller = new AbortController()
+        let settled = false
+        const finish = (found: boolean) => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          device.removeEventListener("advertisementreceived", onAd)
+          controller.abort()
+          resolve(found)
+        }
+        const onAd = () => finish(true)
+        const timer = setTimeout(() => finish(false), waitMs)
+        device.addEventListener("advertisementreceived", onAd)
+        device.watchAdvertisements({ signal: controller.signal }).catch(() => finish(false))
+      })
+  )
+
+export const bleOpenRemembered = (
+  deviceId: string,
+  options: { readonly advertisementWaitMs?: number } = {}
+): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
+  Effect.gen(function*() {
+    if (typeof navigator === "undefined" || navigator.bluetooth === undefined) {
+      return yield* new BluetoothUnavailable({ reason: "unsupported" })
+    }
+    const bt = navigator.bluetooth
+    if (typeof bt.getDevices !== "function") return yield* new ReconnectUnavailable({ reason: "unsupported" })
+    const devices = yield* Effect.tryPromise({ try: () => bt.getDevices(), catch: () => new ReconnectUnavailable({ reason: "unsupported" }) })
+    const device = devices.find((d) => d.id === deviceId)
+    if (device === undefined) return yield* new ReconnectUnavailable({ reason: "forgotten" })
+    const direct = yield* Effect.result(bleConnect(device))
+    if (direct._tag === "Success") return direct.success
+    const failure = direct.failure
+    if (failure._tag === "PermissionDenied") return yield* new ReconnectUnavailable({ reason: "gesture_required" })
+    if (!bleSupport().watchAdvertisements) return yield* new ReconnectUnavailable({ reason: "out_of_range" })
+    const seen = yield* waitForAdvertisement(device, options.advertisementWaitMs ?? 20_000)
+    if (!seen) return yield* new ReconnectUnavailable({ reason: "out_of_range" })
+    return yield* bleConnect(device).pipe(
+      Effect.mapError((e): ObdError => (e._tag === "PermissionDenied" ? new ReconnectUnavailable({ reason: "gesture_required" }) : e))
+    )
   })
 
 const bleConnect = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
@@ -141,6 +206,7 @@ const bleConnect = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdErr
     const transport: ObdTransport = {
       kind: "ble",
       name: device.name ?? "Bluetooth OBD adapter",
+      deviceId: device.id,
       write: (line) =>
         Effect.tryPromise({
           try: async () => {
@@ -165,7 +231,7 @@ const bleConnect = (device: BluetoothDevice): Effect.Effect<ObdTransport, ObdErr
 
 const SERIAL_PROBE_MS = 1500
 
-interface OpenPort {
+type OpenPort = {
   readonly baud: number
   readonly reader: ReadableStreamDefaultReader<Uint8Array>
   readonly writer: WritableStreamDefaultWriter<Uint8Array>

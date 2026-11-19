@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { escapeHtml } from "@bot/bot-commands/html"
 import { renderHelp } from "@bot/bot-commands/help"
+import { newTopicKeyboard } from "@bot/bot-commands/messages"
 import type { CallbackDef, CommandContext, CommandDef } from "@bot/core-contracts/commands"
 import { AgentDirectory, type AgentInfo } from "@bot/core-contracts/agent-directory"
 import { Allowlist } from "@bot/core-contracts/allowlist"
@@ -13,6 +14,7 @@ import { Telegram, type InlineKeyboard, type SendTarget } from "@bot/core-contra
 import { Schema } from "effect"
 import { HelpRegistry } from "./help-registry.ts"
 import { formatDateTime, messages } from "./messages.ts"
+import { renderWelcome } from "./welcome.ts"
 
 export type CoreR = Telegram | Sessions | Allowlist | AgentDirectory | RunControl | HelpRegistry
 
@@ -59,11 +61,15 @@ const start: CommandDef<CoreR> = {
   name: "start",
   role: "user",
   description: { en: "Greeting and quick start", ru: "Приветствие и быстрый старт" },
-  handler: (ctx) => {
-    const m = messages[ctx.lang]
-    const parts = [m.start, ...(ctx.role === "admin" ? [m.startAdmin] : []), m.startLang]
-    return reply(ctx, parts.join("\n\n"))
-  }
+  handler: (ctx) =>
+    Effect.gen(function* () {
+      const registry = yield* HelpRegistry
+      const tg = yield* Telegram
+      const blurbs = yield* registry.blurbsFor(ctx.tgId, ctx.lang)
+      yield* tg.sendMessage(target(ctx), renderWelcome(undefined, ctx.lang, blurbs, ctx.role === "admin"), {
+        replyKeyboard: newTopicKeyboard(ctx.lang)
+      })
+    })
 }
 
 const help: CommandDef<CoreR> = {
@@ -81,7 +87,7 @@ const MAX_TOPIC_NAME = 128
 
 const newSession: CommandDef<CoreR> = {
   name: "new",
-  role: "user",
+  role: "admin",
   description: { en: "Start a new session in its own topic", ru: "Новая сессия в отдельном топике" },
   usage: { en: "[title]", ru: "[название]" },
   handler: (ctx) =>
@@ -105,7 +111,7 @@ const newSession: CommandDef<CoreR> = {
 
 const sessionsCmd: CommandDef<CoreR> = {
   name: "sessions",
-  role: "user",
+  role: "admin",
   description: { en: "List your sessions", ru: "Список ваших сессий" },
   handler: (ctx) =>
     Effect.gen(function* () {
@@ -123,6 +129,7 @@ const sessionsCmd: CommandDef<CoreR> = {
 const stop: CommandDef<CoreR> = {
   name: "stop",
   role: "user",
+  advanced: true,
   description: { en: "Stop the current run", ru: "Остановить текущий запуск" },
   handler: (ctx) =>
     Effect.gen(function* () {

@@ -5,15 +5,17 @@ import type { Lang } from "@bot/core-contracts/lang"
 import { Telegram, type SendTarget } from "@bot/core-contracts/telegram"
 import { escapeHtml, markdownToTelegramHtml, splitHtml } from "@bot/telegram-format/format"
 import { messages } from "./messages.ts"
+import { humanStatus } from "./status-labels.ts"
 
 export const TELEGRAM_LIMIT = 4096
 export const DOCUMENT_THRESHOLD = 12000
 const STATUS_RESERVE = 300
 
-export interface PresentOptions {
+export type PresentOptions = {
   readonly lang: Lang
   readonly draftId: number
   readonly throttleMs?: number
+  readonly statusStyle?: "technical" | "human"
 }
 
 export type CompletedEvent = Extract<AgentEvent, { readonly _tag: "Completed" }>
@@ -104,7 +106,10 @@ export const presentRun = <E, R = never>(
           status = ""
           return flush(false)
         case "ToolCall":
-          status = truncate(t.tool(event.name, truncate(event.summary, 80)), 160)
+          status =
+            opts.statusStyle === "human"
+              ? humanStatus(event.name, opts.lang)
+              : truncate(t.tool(event.name, truncate(event.summary, 80)), 160)
           return flush(false)
         case "FileProduced":
           files.push(event)

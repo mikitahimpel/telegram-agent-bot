@@ -49,6 +49,18 @@ describe("presentRun", () => {
     }).pipe(Effect.provide(layer))
   })
 
+  it.effect("shows human status for non-admins", () => {
+    const { layer, calls } = recordingTelegram()
+    return Effect.gen(function*() {
+      yield* presentRun(Stream.make(AgentEvent.ToolCall({ name: "WebSearch", summary: "cats" })), target, {
+        lang: "ru",
+        draftId: 1,
+        statusStyle: "human"
+      })
+      expect(calls[0]!.args[1]).toBe("<i>Ищу в интернете…</i>")
+    }).pipe(Effect.provide(layer))
+  })
+
   it.effect("splits long final answers into chunks", () => {
     const { layer, calls } = recordingTelegram()
     const text = Array.from({ length: 150 }, (_, i) => `para ${i} ${"x".repeat(30)}`).join("\n\n")

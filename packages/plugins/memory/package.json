@@ -1,0 +1,26 @@
+{
+  "name": "@bot/plugins-memory",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./memory": "./src/memory.ts",
+    "./messages": "./src/messages.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/bot-memory": "workspace:*",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/telegram-format": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

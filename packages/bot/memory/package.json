@@ -1,0 +1,24 @@
+{
+  "name": "@bot/bot-memory",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./memory-store": "./src/memory-store.ts",
+    "./user-memory": "./src/user-memory.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

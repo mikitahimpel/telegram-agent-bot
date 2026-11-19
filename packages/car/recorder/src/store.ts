@@ -2,12 +2,25 @@ import { Context, Effect, Layer, PubSub, Semaphore, Stream } from "effect"
 import { encodeCsv } from "@bot/car-format/csv"
 import { sha256Hex } from "@bot/car-format/checksum"
 import type { Sample } from "@bot/car-format/sample"
+import type { DtcExplanation, DtcReport } from "@bot/car-format/insights"
 import type { ChunkInfo, TripManifest } from "@bot/car-format/manifest"
 import { classifyStorageError, StorageFailure } from "./errors.ts"
 
+export type DtcUploadState = "pending" | "confirmed" | "rejected"
+
+export type DtcRecord = {
+  readonly id: string
+  readonly report: DtcReport
+  readonly createdAt: number
+  readonly uploadState: DtcUploadState
+  readonly confirmedAt?: number
+  readonly lastError?: string
+  readonly explanations: ReadonlyArray<DtcExplanation>
+}
+
 export type ChunkUploadState = "pending" | "sent" | "confirmed" | "conflict" | "corrupt"
 
-export interface ChunkRecord {
+export type ChunkRecord = {
   readonly tripId: string
   readonly seq: number
   readonly csv: string
@@ -20,7 +33,7 @@ export interface ChunkRecord {
   readonly lastError?: string
 }
 
-export interface TripRecord {
+export type TripRecord = {
   readonly tripId: string
   readonly manifest: TripManifest
   readonly manifestRev: number
@@ -33,13 +46,13 @@ export interface TripRecord {
   readonly createdAt: number
 }
 
-interface PendingBatch {
+type PendingBatch = {
   readonly tripId: string
   readonly n: number
   readonly samples: ReadonlyArray<Sample>
 }
 
-export interface StorageHealth {
+export type StorageHealth = {
   readonly supported: boolean
   readonly usage: number
   readonly quota: number
@@ -47,13 +60,13 @@ export interface StorageHealth {
   readonly low: boolean
 }
 
-export interface StorageApiLike {
+export type StorageApiLike = {
   readonly estimate?: () => Promise<{ usage?: number; quota?: number }>
   readonly persisted?: () => Promise<boolean>
   readonly persist?: () => Promise<boolean>
 }
 
-export interface TripStoreShape {
+export type TripStoreShape = {
   readonly createTrip: (manifest: TripManifest) => Effect.Effect<TripRecord, StorageFailure>
   readonly getTrip: (tripId: string) => Effect.Effect<TripRecord | undefined, StorageFailure>
   readonly listTrips: Effect.Effect<ReadonlyArray<TripRecord>, StorageFailure>
@@ -78,6 +91,10 @@ export interface TripStoreShape {
   ) => Effect.Effect<void, StorageFailure>
   readonly deleteTrip: (tripId: string) => Effect.Effect<void, StorageFailure>
   readonly deleteChunks: (tripId: string) => Effect.Effect<void, StorageFailure>
+  readonly putDtc: (record: DtcRecord) => Effect.Effect<void, StorageFailure>
+  readonly listDtc: Effect.Effect<ReadonlyArray<DtcRecord>, StorageFailure>
+  readonly updateDtc: (id: string, f: (r: DtcRecord) => DtcRecord) => Effect.Effect<DtcRecord | undefined, StorageFailure>
+  readonly deleteDtc: (id: string) => Effect.Effect<void, StorageFailure>
   readonly storageHealth: Effect.Effect<StorageHealth>
   readonly requestPersistence: Effect.Effect<boolean>
   readonly changes: Stream.Stream<string>
@@ -85,12 +102,12 @@ export interface TripStoreShape {
 
 export class TripStore extends Context.Service<TripStore, TripStoreShape>()("@bot/car-recorder/TripStore") {}
 
-type StoreName = "trips" | "chunks" | "pending"
+type StoreName = "trips" | "chunks" | "pending" | "dtc"
 type Op =
   | { readonly type: "put"; readonly store: StoreName; readonly value: unknown }
   | { readonly type: "delete"; readonly store: StoreName; readonly key: ReadonlyArray<unknown> | string }
 
-export interface Backend {
+export type Backend = {
   readonly get: (store: StoreName, key: ReadonlyArray<unknown> | string) => Promise<unknown>
   readonly all: (store: StoreName) => Promise<ReadonlyArray<unknown>>
   readonly byTrip: (store: "chunks" | "pending", tripId: string) => Promise<ReadonlyArray<unknown>>
@@ -100,11 +117,12 @@ export interface Backend {
 const keyPaths: Record<StoreName, ReadonlyArray<string> | string> = {
   trips: "tripId",
   chunks: ["tripId", "seq"],
-  pending: ["tripId", "n"]
+  pending: ["tripId", "n"],
+  dtc: "id"
 }
 
 export const makeMemoryBackend = (): Backend => {
-  const data: Record<StoreName, Map<string, unknown>> = { trips: new Map(), chunks: new Map(), pending: new Map() }
+  const data: Record<StoreName, Map<string, unknown>> = { trips: new Map(), chunks: new Map(), pending: new Map(), dtc: new Map() }
   const keyOf = (store: StoreName, v: unknown): string => {
     const p = keyPaths[store]
     const rec = v as Record<string, unknown>
@@ -127,7 +145,7 @@ export const makeMemoryBackend = (): Backend => {
   }
 }
 
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const makeIndexedDbBackend = (dbName: string, factory?: IDBFactory): Backend => {
   let opened: Promise<IDBDatabase> | undefined
@@ -141,9 +159,10 @@ export const makeIndexedDbBackend = (dbName: string, factory?: IDBFactory): Back
       const req = f.open(dbName, DB_VERSION)
       req.onupgradeneeded = () => {
         const db = req.result
-        db.createObjectStore("trips", { keyPath: "tripId" })
-        db.createObjectStore("chunks", { keyPath: ["tripId", "seq"] })
-        db.createObjectStore("pending", { keyPath: ["tripId", "n"] })
+        if (!db.objectStoreNames.contains("trips")) db.createObjectStore("trips", { keyPath: "tripId" })
+        if (!db.objectStoreNames.contains("chunks")) db.createObjectStore("chunks", { keyPath: ["tripId", "seq"] })
+        if (!db.objectStoreNames.contains("pending")) db.createObjectStore("pending", { keyPath: ["tripId", "n"] })
+        if (!db.objectStoreNames.contains("dtc")) db.createObjectStore("dtc", { keyPath: "id" })
       }
       req.onsuccess = () => {
         req.result.onversionchange = () => req.result.close()
@@ -361,6 +380,24 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
             yield* notify(tripId)
           })
         ),
+      putDtc: (record) =>
+        locked(io(() => backend.write([{ type: "put", store: "dtc", value: record }]))).pipe(
+          Effect.andThen(notify("dtc"))
+        ),
+      listDtc: io(() => backend.all("dtc") as Promise<ReadonlyArray<DtcRecord>>).pipe(
+        Effect.map((rs) => [...rs].sort((a, b) => b.report.readAt - a.report.readAt))
+      ),
+      updateDtc: (id, f) =>
+        locked(
+          Effect.gen(function*() {
+            const cur = (yield* io(() => backend.get("dtc", id))) as DtcRecord | undefined
+            if (cur === undefined) return undefined
+            const next = f(cur)
+            yield* io(() => backend.write([{ type: "put", store: "dtc", value: next }]))
+            return next
+          })
+        ).pipe(Effect.tap(() => notify("dtc"))),
+      deleteDtc: (id) => locked(io(() => backend.write([{ type: "delete", store: "dtc", key: id }]))),
       storageHealth: Effect.promise(async (): Promise<StorageHealth> => {
         const s = storage ?? (typeof navigator === "undefined" ? undefined : navigator.storage)
         if (s === undefined || s.estimate === undefined) {

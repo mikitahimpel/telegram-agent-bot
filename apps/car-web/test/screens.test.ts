@@ -128,8 +128,8 @@ describe("App gating and banners", () => {
     })
     const w = mount(App, { global })
     expect(w.findAll('[data-testid="banners"] [data-testid="status-card"]').length).toBe(4)
-    expect(ctx.route.value.name).toBe("home")
-    expect(w.find('[data-testid="primary"]').text()).toBe("Start recording")
+    expect(ctx.route.value.name).toBe("overview")
+    expect(w.find('[data-testid="strip-action"]').exists()).toBe(true)
   })
   it("starting a recording navigates to the recording screen", async () => {
     const { global, ctx } = make({ pairing: "paired", conn: readyConn })

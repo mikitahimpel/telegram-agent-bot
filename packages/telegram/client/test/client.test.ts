@@ -1,9 +1,11 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Effect, Exit, Fiber } from "effect"
+import { Effect, Exit, Fiber, Layer, Redacted } from "effect"
+import { HttpClient, HttpClientResponse } from "effect/http"
 import { TestClock } from "effect/testing"
 import { TelegramError } from "@bot/core-contracts/errors"
 import type { ChatId, ThreadId } from "@bot/core-contracts/ids"
 import { Telegram } from "@bot/core-contracts/telegram"
+import { makeTelegram } from "../src/client.ts"
 import { layerTest, recordingTelegram } from "../src/testing.ts"
 import { sendRichMessage } from "../src/rich.ts"
 
@@ -148,3 +150,43 @@ describe("recordingTelegram", () => {
   })
 })
 
+
+describe("Telegram files", () => {
+  it.effect("getFile maps file_path and file_size", () => {
+    const { layer, calls } = layerTest(() => ok({ file_id: "x", file_unique_id: "u", file_path: "voice/f.oga", file_size: 5 }))
+    return Effect.gen(function*() {
+      const tg = yield* Telegram
+      const info = yield* tg.getFile("x")
+      expect(info).toEqual({ filePath: "voice/f.oga", fileSize: 5 })
+      expect(calls[0]?.json).toEqual({ file_id: "x" })
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("downloadFile fetches /file/bot<token>/<path> bytes", () => {
+    const urls: Array<string> = []
+    const http = HttpClient.make((request) =>
+      Effect.sync(() => {
+        urls.push(request.url)
+        return HttpClientResponse.fromWeb(request, new Response(new Uint8Array([7, 8, 9]), { status: 200 }))
+      })
+    )
+    const layer = Layer.effect(Telegram, makeTelegram(Redacted.make("test-token"))).pipe(Layer.provide(Layer.succeed(HttpClient.HttpClient, http)))
+    return Effect.gen(function*() {
+      const bytes = yield* (yield* Telegram).downloadFile("voice/f.oga")
+      expect([...bytes]).toEqual([7, 8, 9])
+      expect(urls[0]).toBe("https://api.telegram.org/file/bottest-token/voice/f.oga")
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("downloadFile errors never contain the token", () => {
+    const http = HttpClient.make((request) =>
+      Effect.sync(() => HttpClientResponse.fromWeb(request, new Response("nope", { status: 404 })))
+    )
+    const layer = Layer.effect(Telegram, makeTelegram(Redacted.make("secret-token-123"))).pipe(Layer.provide(Layer.succeed(HttpClient.HttpClient, http)))
+    return Effect.gen(function*() {
+      const e = yield* Effect.flip((yield* Telegram).downloadFile("voice/f.oga"))
+      expect(e.errorCode).toBe(404)
+      expect(JSON.stringify(e)).not.toContain("secret-token-123")
+    }).pipe(Effect.provide(layer))
+  })
+})

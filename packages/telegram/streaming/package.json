@@ -4,7 +4,8 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./streaming": "./src/streaming.ts"
+    "./streaming": "./src/streaming.ts",
+    "./status-labels": "./src/status-labels.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

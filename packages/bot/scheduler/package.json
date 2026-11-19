@@ -1,0 +1,24 @@
+{
+  "name": "@bot/bot-scheduler",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./scheduler": "./src/scheduler.ts",
+    "./user-scheduler": "./src/user-scheduler.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

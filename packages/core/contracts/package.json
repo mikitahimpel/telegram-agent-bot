@@ -17,7 +17,8 @@
     "./plugin": "./src/plugin.ts",
     "./run-control": "./src/run-control.ts",
     "./invites": "./src/invites.ts",
-    "./scheduler": "./src/scheduler.ts"
+    "./scheduler": "./src/scheduler.ts",
+    "./user-prefs": "./src/user-prefs.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

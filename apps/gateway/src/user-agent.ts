@@ -4,9 +4,7 @@ import { Clock, Effect, Layer, ManagedRuntime } from "effect"
 import { layer as runnerLayer, type RunnerDeps } from "@bot/agent-runner/runner"
 import { layer as sessionsLayer } from "@bot/agent-sessions/sessions"
 import { layer as allowlistLayer } from "@bot/bot-allowlist/allowlist"
-import { HelpRegistry } from "@bot/bot-core-commands/help-registry"
 import { layer as adminNotifierLayer, AdminNotifier } from "@bot/bot-dispatcher/admin-notifier"
-import { makeDispatcher, type DocumentHook, type PresentRun } from "@bot/bot-dispatcher/dispatcher"
 import { McpAccess } from "@bot/bot-dispatcher/mcp-access"
 import { layer as runControlLayer } from "@bot/bot-dispatcher/run-control"
 import { AgentRunner } from "@bot/core-contracts/agent-runner"
@@ -14,39 +12,36 @@ import { Allowlist } from "@bot/core-contracts/allowlist"
 import type { AgentInfo } from "@bot/core-contracts/agent-directory"
 import { TgId, ChatId } from "@bot/core-contracts/ids"
 import { RunControl } from "@bot/core-contracts/run-control"
+import { Scheduler, type ScheduledJob } from "@bot/core-contracts/scheduler"
 import { Sessions } from "@bot/core-contracts/sessions"
+import { layerLocal as userMemoryLayer } from "@bot/bot-memory/user-memory"
+import { layerLocal as userSchedulerLayer } from "@bot/bot-scheduler/user-scheduler"
 import { Telegram } from "@bot/core-contracts/telegram"
+import type { Fact, WriteResult } from "@bot/bot-memory/memory-store"
 import { makeSqlite } from "@bot/bot-invites/sqlite"
 import { Invites, InviteInvalid, type Invite, type InviteInvalidReason } from "@bot/core-contracts/invites"
-import { importDocument, isCsvDocument } from "@bot/plugins-car/import"
+import { layer as speechLayer, type AiLike } from "@bot/infra-speech/speech"
 import { McpToken } from "@bot/plugins-registry/mcp-token"
 import { PluginFlags } from "@bot/plugins-registry/flags"
 import { decodeUpdate } from "@bot/telegram-schema/schema"
-import { presentRun } from "@bot/telegram-streaming/streaming"
+import { localCarBackend, runCarOp } from "./car-backend.ts"
 import { agentDirectoryLayer } from "./agent-directory.ts"
 import { configLayer } from "./config.ts"
 import type { Env } from "./env.ts"
 import { invitesStubLayer } from "./invites-stub.ts"
+import { dispatch } from "./dispatch.ts"
+import { enabledJobHandlers } from "./jobs.ts"
+import { userMemoryStore } from "./memory-store.ts"
+import { userStore } from "./scheduler-store.ts"
+import { localUserPrefs, readStoredLang } from "./user-prefs.ts"
 import { pluginEnvironment } from "./layers.ts"
 import { pluginRegistry, type PluginR } from "./plugins.ts"
 import type { CoreR } from "@bot/bot-core-commands/core-commands"
-import { registry } from "./registry.ts"
+import { helpRegistryLayer } from "./help-registry.ts"
 import { daysLeft, healthMessages, parseIssuedAt, reminderStage } from "./token-expiry.ts"
 
 export const RUNNER_IMAGE = "Runner"
 const MCP_TOKEN_TTL_SECONDS = 2 * 60 * 60
-
-const present: PresentRun = ({ to, lang, stream }) =>
-  presentRun(stream, to, { lang, draftId: 1 + Math.floor(Math.random() * 2_000_000_000) }).pipe(Effect.asVoid)
-
-const importCsvDocument: DocumentHook<CoreR | PluginR> = ({ document, tgId, chatId, threadId, lang }) =>
-  Effect.gen(function* () {
-    if (!isCsvDocument(document)) return false
-    if (!(yield* (yield* PluginFlags).isEnabled("car", tgId))) return false
-    return yield* importDocument({ tgId, chatId, threadId, lang }, document)
-  })
-
-const { dispatch } = makeDispatcher({ registry, present, onDocument: importCsvDocument })
 
 export interface AgentInfoDto extends Omit<AgentInfo, "tgId"> {
   readonly tgId: number
@@ -111,10 +106,19 @@ const makeRuntime = (
   }
 
   const base = Layer.mergeAll(
-    pluginEnvironment(env, origin()),
+    pluginEnvironment(
+      env,
+      origin(),
+      userSchedulerLayer(TgId.make(tgId), userStore(ctx).service),
+      userMemoryLayer(TgId.make(tgId), userMemoryStore(ctx)),
+      localUserPrefs(env, TgId.make(tgId), ctx.storage.sql),
+      localCarBackend(ctx)
+    ),
+    Layer.succeed(Scheduler, userStore(ctx).service),
     allowlistLayer(env.KV),
     sessionsLayer(ctx.storage.sql),
     runnerLayer(deps),
+    speechLayer(env.AI as unknown as AiLike),
     runControlLayer,
     tgId === Number(env.ADMIN_TG_ID) ? Layer.succeed(Invites, invites) : invitesStubLayer(env)
   )
@@ -143,7 +147,7 @@ const makeRuntime = (
     adminNotifierLayer(),
     agentDirectoryLayer(env),
     mcpAccess,
-    Layer.succeed(HelpRegistry, registry)
+    helpRegistryLayer
   ).pipe(Layer.provideMerge(base), Layer.provide(configLayer(env, origin())))
 
   return ManagedRuntime.make(derived)
@@ -170,11 +174,80 @@ export class UserAgent extends DurableObject<Env> {
 
   async handleUpdate(tgId: number, raw: unknown, origin: string): Promise<void> {
     const runtime = this.#runtime(tgId, origin)
+    void this.ctx.storage.put("tgId", tgId)
     await runtime.runPromise(
       decodeUpdate(raw).pipe(
         Effect.flatMap(dispatch),
         Effect.catchCause((cause) => Effect.logError("user-agent update failed", cause)),
         Effect.withSpan("user-agent.handleUpdate", { attributes: { tgId } })
+      )
+    )
+  }
+
+  async #rememberOwner(tgId: number): Promise<void> {
+    await this.ctx.storage.put("tgId", tgId)
+  }
+
+  async scheduleJob(tgId: number, job: ScheduledJob): Promise<void> {
+    await this.#rememberOwner(tgId)
+    await Effect.runPromise(userStore(this.ctx).service.schedule(job))
+  }
+
+  async cancelJob(_tgId: number, id: string): Promise<void> {
+    await Effect.runPromise(userStore(this.ctx).service.cancel(id))
+  }
+
+  async getJob(_tgId: number, id: string): Promise<ScheduledJob | undefined> {
+    return Effect.runPromise(userStore(this.ctx).service.get(id))
+  }
+
+  async listJobs(_tgId: number, kind: string): Promise<Array<ScheduledJob>> {
+    return [...(await Effect.runPromise(userStore(this.ctx).service.list(kind)))]
+  }
+
+  async car(tgId: number, op: string, args: Array<unknown>): Promise<unknown> {
+    await this.#rememberOwner(tgId)
+    return runCarOp(this.ctx, op, args)
+  }
+
+  async memoryList(): Promise<Array<Fact>> {
+    return [...(await Effect.runPromise(userMemoryStore(this.ctx).list))]
+  }
+
+  async memoryRemember(text: string): Promise<WriteResult> {
+    return Effect.runPromise(userMemoryStore(this.ctx).remember(text))
+  }
+
+  async memoryUpdate(id: number, text: string): Promise<WriteResult> {
+    return Effect.runPromise(userMemoryStore(this.ctx).update(id, text))
+  }
+
+  async memoryForget(id: number): Promise<boolean> {
+    return Effect.runPromise(userMemoryStore(this.ctx).forget(id))
+  }
+
+  async memoryForgetAll(): Promise<number> {
+    return Effect.runPromise(userMemoryStore(this.ctx).forgetAll)
+  }
+
+  async memoryRender(): Promise<string> {
+    return Effect.runPromise(userMemoryStore(this.ctx).render)
+  }
+
+  async storedLang(): Promise<"ru" | "en" | undefined> {
+    return readStoredLang(this.ctx.storage.sql)
+  }
+
+  override async alarm(): Promise<void> {
+    const tgId = await this.ctx.storage.get<number>("tgId")
+    if (tgId === undefined) return
+    const id = TgId.make(tgId)
+    const store = userStore(this.ctx)
+    await this.#runtime(tgId).runPromise(
+      enabledJobHandlers(id).pipe(
+        Effect.flatMap((handlers) => store.runDue(handlers, id)),
+        Effect.catchCause((cause) => Effect.logError("user-agent alarm failed", cause)),
+        Effect.withSpan("user-agent.alarm", { attributes: { tgId } })
       )
     )
   }

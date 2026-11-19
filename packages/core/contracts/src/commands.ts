@@ -20,6 +20,7 @@ export interface CommandDef<R = never> {
   readonly description: Localized
   readonly usage?: Localized
   readonly hidden?: boolean
+  readonly advanced?: boolean
   readonly handler: (ctx: CommandContext) => Effect.Effect<void, BotError, R>
 }
 

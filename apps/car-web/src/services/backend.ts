@@ -1,6 +1,10 @@
 import type { Ref } from "vue"
+import type { Alert, CarOverview, TripInsight, TripSeries } from "@bot/car-format/insights"
+import type { Lang } from "../i18n/format.ts"
 import type {
+  AutoVm,
   Capabilities,
+  DtcScanOutcome,
   ConnectionVm,
   DiagEvent,
   FuelRateSource,
@@ -19,13 +23,14 @@ import type {
 
 export type PairingState = "paired" | "unpaired" | "progress" | PairError
 
-export interface InterruptedTrip {
+export type InterruptedTrip = {
   tripId: string
   interruptedAt: number
   points: number
 }
 
-export interface CarBackend {
+
+export type CarBackend = {
   readonly platform: Platform
   readonly caps: Capabilities
   readonly demo: boolean
@@ -46,6 +51,18 @@ export interface CarBackend {
   readonly fuelSource: Ref<FuelRateSource>
   readonly wakeLock: Ref<boolean>
   readonly pollingMs: Ref<number>
+  readonly insightsDemo: Ref<boolean>
+  readonly auto: Ref<AutoVm>
+
+  overview(lang: Lang): Promise<CarOverview>
+  tripInsight(tripId: string, lang: Lang): Promise<TripInsight>
+  tripSeries(tripId: string): Promise<TripSeries>
+  alerts(lang: Lang): Promise<ReadonlyArray<Alert>>
+  scanDtc(): Promise<DtcScanOutcome>
+  enableAuto(): Promise<void>
+  connectAdapter(): Promise<void>
+  forgetAdapter(): Promise<void>
+  dismissAutoStopped(): Promise<void>
 
   connect(kind: TransportKind, scenario?: SimScenario): Promise<void>
   cancelConnect(): void

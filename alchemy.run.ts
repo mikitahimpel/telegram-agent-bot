@@ -61,6 +61,7 @@ export default Alchemy.Stack(
       env: {
         USER_AGENT: Cloudflare.DurableObject("UserAgent", { containers: [runner] }),
         KV: kv,
+        AI: Cloudflare.Workers.AI(),
         BACKUPS: data,
         R2_S3: Cloudflare.R2.S3Credentials(data, { access: "read-write" }),
         TELEGRAM_BOT_TOKEN: telegramBotToken,

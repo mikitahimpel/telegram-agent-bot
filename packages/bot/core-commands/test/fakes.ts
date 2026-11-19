@@ -32,6 +32,9 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
 
   const telegram = Layer.succeed(Telegram, {
     call: never,
+    getFile: never,
+    downloadFile: never,
+    setMessageReaction: never,
     sendMessage: (to, html, options) => {
       sent.push({ kind: "send", threadId: to.threadId, html, keyboard: options?.keyboard })
       return Effect.succeed({ messageId: 1 })
@@ -95,7 +98,7 @@ export const makeWorld = (opts: { topicsEnabled?: boolean; allowed?: ReadonlyArr
   })
 
   const registry = makeRegistry(coreCommands, coreCallbacks)
-  const help = Layer.succeed(HelpRegistry, registry)
+  const help = Layer.succeed(HelpRegistry, { ...registry, blurbsFor: () => Effect.succeed(["track your car trips"]) })
 
   return {
     sent, answers, allowed, state, registry,

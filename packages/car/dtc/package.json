@@ -1,0 +1,23 @@
+{
+  "name": "@bot/car-dtc",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./lookup": "./src/lookup.ts",
+    "./catalog": "./src/catalog.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/car-format": "workspace:*"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "effect": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -10,7 +10,11 @@ import { Telegram } from "@bot/core-contracts/telegram"
 import type { InlineKeyboard, SendTarget } from "@bot/core-contracts/telegram"
 import { METRIC_NAMES, combineMetrics, type TripMetrics } from "./analytics.ts"
 import { DEVICE_CALLBACK_PREFIX, listDevices, PAIR_TTL_SECONDS, pairUrl, revokeDevice, startPair } from "./devices.ts"
+import { CarBackend } from "@bot/car-store/backend"
+import { insightTools } from "./insight-tools.ts"
+import { ensureWeekly, weeklyJob } from "./notify.ts"
 import { CarKv } from "./kv.ts"
+import { CarWebUrl } from "./web-url.ts"
 import { escapeHtml, formatDuration, formatKm, formatStamp, messages } from "./messages.ts"
 import { parsePeriod } from "./period.ts"
 import { DEFAULT_UPLOAD_TTL_SECONDS, Presigner, layerConfig } from "./presigner.ts"
@@ -18,9 +22,9 @@ import { CarBucket } from "./r2.ts"
 import { listOverview, parseTripId, tripIdTime, tripMetrics, tripStatus, type TripOverview } from "./trip-store.ts"
 import { headTrip, isValidExt, newUploadKey, prefixOf } from "./trips.ts"
 
-export class CarWebUrl extends Context.Service<CarWebUrl, string>()("@bot/plugins-car/CarWebUrl") {}
+export { CarWebUrl }
 
-export type CarR = CarBucket | Presigner | Telegram | CarKv | CarWebUrl
+export type CarR = CarBucket | Presigner | Telegram | CarKv | CarWebUrl | CarBackend
 
 const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
   ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
@@ -69,6 +73,7 @@ const sendApp = (ctx: CommandContext) =>
     const webUrl = yield* CarWebUrl
     if (webUrl === "") return yield* tg.sendMessage(target(ctx), m.appNotConfigured).pipe(Effect.asVoid)
     const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: ctx.lang })
+    yield* ensureWeekly(ctx.tgId)
     const keyboard: InlineKeyboard = [[{ text: m.openApp, url: pairUrl(webUrl, code) }]]
     yield* tg.sendMessage(target(ctx), m.appText, { keyboard }).pipe(Effect.asVoid)
   })
@@ -223,6 +228,7 @@ const GET_TTL = 600
 const iso = (ms: number) => new Date(ms).toISOString()
 
 const tools: ReadonlyArray<AgentTool<CarR>> = [
+  ...insightTools,
   {
     name: "car_list_trips",
     description:
@@ -377,7 +383,11 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
   }
 ]
 
-const systemPrompt = `Car data plugin. The user records trips with the car app (OBD-II adapter + phone). Tools:
+const systemPrompt = `Car data plugin. The user records trips with the car app (OBD-II adapter + phone). The server already computes trip insights, alerts, battery and fault-code explanations deterministically; you answer free-form questions on top of that. Prefer these tools:
+- car_overview {}: totals, weekly/monthly stats, battery status and trend, engine status with explained fault codes, open alerts. Start here for questions about the car's condition.
+- car_sql {query}: one read-only SELECT/WITH over the user's car_* tables (trips, samples, battery events, fault code history, alerts) for exact numbers, trends and comparisons. The table schema is in the tool description. Always use it instead of downloading CSVs for aggregates.
+- car_dtc {}: current fault codes with explanations, severity and advice.
+Older tools, use them only when the above cannot answer:
 - car_list_trips {from?, to?, limit?}: trips newest first (tripId, complete flag, chunk counts, points) plus raw uploads.
 - car_get_trip {tripId}: manifest, computed metrics and presigned GET URLs for the manifest and every chunk CSV (curl them in the sandbox, concatenate chunks in seq order). {key} for a raw uploaded file.
 - car_query {from?, to?, metric?}: real aggregates (distance, duration, avg/max speed, idle time, fuel, L/100km, coolant). metrics: ${METRIC_NAMES.join(", ")}.
@@ -386,7 +396,8 @@ const systemPrompt = `Car data plugin. The user records trips with the car app (
 Data layout: R2 car/<tgId>/trips/<tripId>/manifest.json + chunks/000000.csv ...; imported files in car/<tgId>/imports/. Only the user's own prefix is reachable.
 CSV columns (header row, missing value = empty cell, never zero): ts (epoch ms), lat, lon, gps_accuracy_m, gps_speed_kmh, speed_kmh (OBD 0D), rpm, coolant_c, intake_c, load_pct, throttle_pct, maf_gps, map_kpa, fuel_rate_lph, fuel_level_pct, voltage_v.
 Rules: analyse segments separately; never interpolate across manifest.gaps or time jumps over 10 s. Distance: integrate speed_kmh, fall back to GPS haversine. Fuel is an estimate when manifest.fuelRateSource = "maf_estimate". Only complete trips are fully reliable; mention incomplete ones.
-Heavy analytics belongs in the sandbox (python/duckdb). Return tables and save charts as PNG under /workspace/out/.`
+Use Python in the sandbox (pandas, matplotlib) only to draw charts: fetch the numbers with car_sql, then plot and save PNGs under /workspace/out/. Do not use Python for aggregates car_sql can compute.
+The user is not technical: explain in plain language, give the numbers, say what to do.`
 
 const pass = <I, S>(tag: Context.Service<I, S>): Layer.Layer<I, never, I> =>
   Layer.effect(tag, Effect.gen(function*() { return yield* tag }) as Effect.Effect<S, never, I>)
@@ -396,20 +407,26 @@ const webUrlLayer = Layer.effect(
   Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
 )
 
-export const layer: Layer.Layer<CarR, Config.ConfigError, CarBucket | Telegram | CarKv> = Layer.mergeAll(
+export const layer: Layer.Layer<CarR, Config.ConfigError, CarBucket | Telegram | CarKv | CarBackend> = Layer.mergeAll(
   layerConfig,
   webUrlLayer,
   pass(CarBucket),
   pass(Telegram),
-  pass(CarKv)
+  pass(CarKv),
+  pass(CarBackend)
 )
 
-export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram | CarKv> = {
+export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram | CarKv | CarBackend> = {
   id: "car",
   title: { en: "Car analytics", ru: "Аналитика машины" },
+  blurb: {
+    en: "show how your car is doing: trips, fuel use and trends",
+    ru: "показывать, как дела у вашей машины: поездки, расход и динамика"
+  },
   commands: [carCommand],
   callbacks: [revokeCallback],
   tools,
+  jobs: [weeklyJob],
   layer,
   systemPrompt,
   enabledByDefault: false

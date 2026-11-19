@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, PubSub, Queue, Ref, Stream } from "effect"
 
-export interface GeoFix {
+export type GeoFix = {
   readonly ts: number
   readonly lat: number
   readonly lon: number
@@ -9,7 +9,7 @@ export interface GeoFix {
 }
 
 export type GeoFailureReason = "denied" | "unavailable" | "timeout"
-export interface GeoFailure {
+export type GeoFailure = {
   readonly _tag: "GeoFailure"
   readonly reason: GeoFailureReason
 }
@@ -49,7 +49,7 @@ export const geoBrowserLayer: Layer.Layer<GeoSource> = Layer.succeed(GeoSource, 
   )
 })
 
-export interface FakeGeo {
+export type FakeGeo = {
   readonly layer: Layer.Layer<GeoSource>
   readonly emit: (fix: GeoFix) => Effect.Effect<void>
 }
@@ -62,38 +62,45 @@ export const makeFakeGeo = Effect.gen(function*() {
 export class WakeLock extends Context.Service<WakeLock, {
   readonly acquire: Effect.Effect<boolean>
   readonly release: Effect.Effect<void>
+  readonly hold: Effect.Effect<boolean>
+  readonly unhold: Effect.Effect<void>
 }>()("@bot/car-recorder/WakeLock") {}
 
 export const wakeLockBrowserLayer: Layer.Layer<WakeLock> = Layer.sync(WakeLock, () => {
   let sentinel: WakeLockSentinel | undefined
-  return {
-    acquire: Effect.promise(async () => {
-      if (sentinel !== undefined && !sentinel.released) return true
-      try {
-        const api = typeof navigator === "undefined" ? undefined : navigator.wakeLock
-        if (api === undefined) return false
-        sentinel = await api.request("screen")
-        return true
-      } catch {
-        return false
-      }
-    }),
-    release: Effect.promise(async () => {
-      const s = sentinel
-      sentinel = undefined
-      try {
-        await s?.release()
-      } catch {
-      }
-    })
-  }
+  const owners = new Set<string>()
+  const ensure = Effect.promise(async () => {
+    if (sentinel !== undefined && !sentinel.released) return true
+    try {
+      const api = typeof navigator === "undefined" ? undefined : navigator.wakeLock
+      if (api === undefined) return false
+      sentinel = await api.request("screen")
+      return true
+    } catch {
+      return false
+    }
+  })
+  const drop = Effect.promise(async () => {
+    if (owners.size > 0) return
+    const s = sentinel
+    sentinel = undefined
+    try {
+      await s?.release()
+    } catch {
+    }
+  })
+  const take = (owner: string) => Effect.suspend(() => (owners.add(owner), ensure))
+  const give = (owner: string) => Effect.suspend(() => (owners.delete(owner), drop))
+  return { acquire: take("recorder"), release: give("recorder"), hold: take("connection"), unhold: give("connection") }
 })
 
 export const wakeLockFake = Effect.sync(() => {
-  const log: Array<"acquire" | "release"> = []
+  const log: Array<"acquire" | "release" | "hold" | "unhold"> = []
   const layer = Layer.succeed(WakeLock, {
     acquire: Effect.sync(() => (log.push("acquire"), true)),
-    release: Effect.sync(() => void log.push("release"))
+    release: Effect.sync(() => void log.push("release")),
+    hold: Effect.sync(() => (log.push("hold"), true)),
+    unhold: Effect.sync(() => void log.push("unhold"))
   })
   return { layer, log }
 })
@@ -133,7 +140,7 @@ export const lifecycleBrowserLayer: Layer.Layer<AppLifecycle> = Layer.succeed(Ap
   )
 })
 
-export interface FakeLifecycle {
+export type FakeLifecycle = {
   readonly layer: Layer.Layer<AppLifecycle>
   readonly setOnline: (online: boolean) => Effect.Effect<void>
   readonly setVisible: (visible: boolean) => Effect.Effect<void>

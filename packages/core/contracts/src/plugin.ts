@@ -24,6 +24,7 @@ export interface BotPlugin<R = never, LayerE = never, LayerR = never> {
   readonly tools: ReadonlyArray<AgentTool<R>>
   readonly jobs?: ReadonlyArray<JobHandler<R>>
   readonly layer: Layer.Layer<R, LayerE, LayerR>
+  readonly blurb?: Localized
   readonly systemPrompt?: string
   readonly enabledByDefault: boolean
 }

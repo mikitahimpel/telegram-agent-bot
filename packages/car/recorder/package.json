@@ -12,12 +12,25 @@
     "./api-client": "./src/api-client.ts",
     "./sync": "./src/sync.ts",
     "./export": "./src/export.ts",
-    "./runtime": "./src/runtime.ts"
+    "./runtime": "./src/runtime.ts",
+    "./auto": "./src/auto.ts",
+    "./connector": "./src/connector.ts",
+    "./adapter-memory": "./src/adapter-memory.ts",
+    "./engine-detector": "./src/engine-detector.ts"
   },
-  "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
-  "dependencies": { "effect": "catalog:", "@bot/car-format": "workspace:*" },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "@bot/car-format": "workspace:*",
+    "@bot/car-obd": "workspace:*"
+  },
   "devDependencies": {
     "@effect/vitest": "catalog:",
+    "@types/w3c-web-serial": "1.0.9",
+    "@types/web-bluetooth": "0.0.22",
     "fake-indexeddb": "6.2.8",
     "typescript": "catalog:",
     "vitest": "catalog:"

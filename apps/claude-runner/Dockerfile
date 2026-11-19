@@ -15,7 +15,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # Debian's python is "externally managed"; this is a throwaway container, so install system-wide.
-RUN pip3 install --no-cache-dir --break-system-packages duckdb pandas matplotlib
+RUN pip3 install --no-cache-dir --break-system-packages pandas matplotlib
 
 # Keep in sync with docs/architecture.md (claude 2.1.328).
 ARG CLAUDE_CODE_VERSION=2.1.328

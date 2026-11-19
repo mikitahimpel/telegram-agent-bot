@@ -26,6 +26,27 @@ export const Gap = Schema.Struct({
 })
 export type Gap = typeof Gap.Type
 
+export const BatteryEvents = Schema.Struct({
+  restingV: Schema.optional(Schema.Number),
+  restingAt: Schema.optional(Schema.Number),
+  crankMinV: Schema.optional(Schema.Number),
+  crankAt: Schema.optional(Schema.Number),
+  crankDurationMs: Schema.optional(Schema.Number),
+  crankSamples: Schema.optional(Schema.Int),
+  chargingV: Schema.optional(Schema.Number),
+  chargingMinV: Schema.optional(Schema.Number),
+  chargingMaxV: Schema.optional(Schema.Number),
+  chargingSamples: Schema.optional(Schema.Int),
+  chargingAt: Schema.optional(Schema.Number)
+})
+export type BatteryEvents = typeof BatteryEvents.Type
+
+export const TripTrigger = Schema.Literals(["auto", "manual"])
+export type TripTrigger = typeof TripTrigger.Type
+
+export const TripEndReason = Schema.Literals(["manual", "engine_off", "ecu_silent", "adapter_lost", "interrupted"])
+export type TripEndReason = typeof TripEndReason.Type
+
 export const TripManifest = Schema.Struct({
   formatVersion: Schema.Literal(1),
   tripId: TripId,
@@ -45,6 +66,9 @@ export const TripManifest = Schema.Struct({
     vin: Schema.optional(Schema.String)
   }),
   fuelRateSource: Schema.Literals(["pid_5e", "maf_estimate", "none"]),
-  note: Schema.optional(Schema.String)
+  note: Schema.optional(Schema.String),
+  battery: Schema.optional(BatteryEvents),
+  trigger: Schema.optional(TripTrigger),
+  endReason: Schema.optional(TripEndReason)
 })
 export type TripManifest = typeof TripManifest.Type

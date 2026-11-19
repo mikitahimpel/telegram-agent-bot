@@ -4,7 +4,7 @@ import { useApp } from "../app-context.ts"
 import { fmtBytes, fmtDateTime, fmtTime } from "../i18n/format.ts"
 import type { Lang } from "../i18n/index.ts"
 
-const { backend, t, lang, setLang } = useApp()
+const { backend, t, lang, setLang, go } = useApp()
 const version = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev"
 const denied = ref(false)
 const copied = ref(false)
@@ -32,6 +32,7 @@ const revoke = async (id: string, name: string) => {
 
 <template>
   <div class="screen">
+    <button class="btn" type="button" data-testid="open-onboarding" @click="go({ name: 'onboarding' })">{{ t("settings.howItWorks") }}</button>
     <section class="card">
       <label>{{ t("settings.language") }}
         <select :value="lang" data-testid="lang" @change="onLang">

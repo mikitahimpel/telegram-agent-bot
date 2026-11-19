@@ -17,6 +17,9 @@ import { encodeCsv } from "@bot/car-format/csv"
 import { listOverview } from "../src/trip-store.ts"
 import { listDevices } from "../src/devices.ts"
 import { presignUrl } from "../src/sigv4.ts"
+import { layerEngine } from "@bot/car-store/backend"
+import { makeEngine } from "@bot/car-store/engine"
+import { makeNodeSql } from "@bot/car-store/testing"
 import { newUploadKey, validateKey } from "../src/trips.ts"
 
 const sent: Array<{ html: string; options?: any }> = []
@@ -33,6 +36,7 @@ const env = Layer.mergeAll(
   Layer.succeed(CarBucket, r2),
   Layer.succeed(CarKv, kv),
   Layer.succeed(CarWebUrl, "https://bot.test/car/"),
+  layerEngine(makeEngine(makeNodeSql())),
   layerWith({ accountId: "acc", accessKeyId: "AK", secretAccessKey: "SK", bucketName: "bkt" }),
   telegram
 )

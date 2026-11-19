@@ -6,6 +6,9 @@ import { sha256Hex } from "@bot/car-format/checksum"
 import { makeTripId, type TripManifest } from "@bot/car-format/manifest"
 import type { Sample } from "@bot/car-format/sample"
 import * as CarApiModule from "../src/api-client.ts"
+import { adapterMemoryFake, type RememberedAdapter } from "../src/adapter-memory.ts"
+import * as AutoModule from "../src/auto.ts"
+import { connectorFake, type FakeConnectorControl } from "../src/connector.ts"
 import { makeFakeGeo, makeFakeLifecycle, wakeLockFake } from "../src/platform.ts"
 import * as RecorderModule from "../src/recorder.ts"
 import type { ReadingEvent, ReadingInfo, ReadingSource } from "../src/recorder.ts"
@@ -34,7 +37,7 @@ export const pump = <A, E, R>(f: Effect.Effect<A, E, R>, ok: (a: A) => boolean, 
     return last
   })
 
-export interface Req {
+export type Req = {
   readonly method: string
   readonly path: string
   readonly auth: string | undefined
@@ -58,6 +61,7 @@ export class FakeServer {
   serverTime = 0
   pluginEnabled = true
   trips: Array<unknown> = []
+  dtc: Array<unknown> = []
 
   count(prefix: string) {
     return this.log.filter((r) => `${r.method} ${r.path}`.startsWith(prefix)).length
@@ -98,6 +102,10 @@ export class FakeServer {
     const parts = url.pathname.split("/").filter(Boolean)
     if (r.method === "GET" && parts[0] === "me") {
       return { status: 200, body: { tgId: 1, firstName: "T", lang: "en", pluginEnabled: this.pluginEnabled, serverTime: this.serverTime } }
+    }
+    if (r.method === "PUT" && parts[0] === "dtc") {
+      this.dtc.push(JSON.parse(r.body))
+      return { status: 200, body: { ok: true, explanations: [] } }
     }
     if (r.method === "GET" && parts[0] === "trips" && parts.length === 1) return { status: 200, body: { trips: this.trips } }
     if (parts[0] === "trips" && parts.length >= 3) {
@@ -156,6 +164,8 @@ export class FakeServer {
   )
 }
 
+export const rememberedAdapter: RememberedAdapter = { deviceId: "sim-1", name: "Simulated ELM327", rememberedAt: 0 }
+
 export const info: ReadingInfo = { supportedPids: ["0C"], fuelRateSource: "none", transport: "simulator", adapterName: "sim" }
 
 export const makeSource = Effect.gen(function*() {
@@ -166,15 +176,17 @@ export const makeSource = Effect.gen(function*() {
 
 export const sample = (ts: number, extra: Partial<Sample> = {}): ReadingEvent => ({ _tag: "Reading", sample: { ts, speedKmh: 50, rpm: 2000, ...extra } })
 
-export interface Env {
+export type Env = {
   readonly server: FakeServer
   readonly factory: IDBFactory
   readonly lifecycle: Effect.Success<typeof makeFakeLifecycle>
   readonly geo: Effect.Success<typeof makeFakeGeo>
   readonly wl: Effect.Success<typeof wakeLockFake>
   readonly layer: (credential?: CarApiModule.Credential | null) => Layer.Layer<
-    TripStore | CarApiModule.CarApi | RecorderModule.Recorder | SyncModule.SyncEngine
+    TripStore | CarApiModule.CarApi | RecorderModule.Recorder | SyncModule.SyncEngine | AutoModule.AutoRecorder
   >
+  readonly connector: { readonly control: FakeConnectorControl }
+  readonly memory: { readonly box: { value: RememberedAdapter | undefined } }
 }
 
 export const makeEnv = Effect.gen(function*() {
@@ -183,18 +195,23 @@ export const makeEnv = Effect.gen(function*() {
   const lifecycle = yield* makeFakeLifecycle
   const geo = yield* makeFakeGeo
   const wl = yield* wakeLockFake
+  const connector = yield* connectorFake()
+  const memory = yield* adapterMemoryFake(rememberedAdapter)
   const layer = (credential: CarApiModule.Credential | null = { token: "tok-1" }) => {
     const api = CarApiModule.layer({ apiBase: "http://x/car/api", credential: credential ?? undefined, timeoutMs: 10_000 }).pipe(
       Layer.provide(Layer.succeed(HttpClient.HttpClient, server.client))
     )
-    const base = Layer.mergeAll(layerIndexedDb("t", factory), api, lifecycle.layer, geo.layer, wl.layer)
+    const base = Layer.mergeAll(layerIndexedDb("t", factory), api, lifecycle.layer, geo.layer, wl.layer, connector.layer, memory.layer)
+    const recorder = RecorderModule.layer.pipe(Layer.provide(base))
+    const sync = SyncModule.layer.pipe(Layer.provide(base))
     return Layer.mergeAll(
       base,
-      RecorderModule.layer.pipe(Layer.provide(base)),
-      SyncModule.layer.pipe(Layer.provide(base))
+      recorder,
+      sync,
+      AutoModule.layer.pipe(Layer.provide(Layer.mergeAll(base, recorder, sync)))
     )
   }
-  return { server, factory, lifecycle, geo, wl, layer } satisfies Env
+  return { server, factory, lifecycle, geo, wl, layer, connector, memory } satisfies Env
 })
 
 export const seedTrip = (n: number, opts: { finished?: boolean; at?: number } = {}) =>

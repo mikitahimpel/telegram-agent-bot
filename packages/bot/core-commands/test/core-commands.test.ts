@@ -23,7 +23,11 @@ describe("role visibility", () => {
       expect(w.registry.find(n, "user")).toBeUndefined()
       expect(w.registry.find(n, "admin")).toBeDefined()
     }
-    expect(w.registry.visibleFor("user").map((c) => c.name)).toEqual(["start", "help", "new", "sessions", "stop", "lang"])
+    expect(w.registry.visibleFor("user").map((c) => c.name)).toEqual(["start", "help", "lang"])
+    expect(w.registry.visibleFor("admin").map((c) => c.name).slice(0, 6)).toEqual(["start", "help", "stop", "lang", "new", "sessions"])
+    expect(w.registry.find("new", "user")).toBeUndefined()
+    expect(w.registry.find("sessions", "user")).toBeUndefined()
+    expect(w.registry.find("stop", "user")).toBeDefined()
     expect(w.registry.findCallback("kill:5", "user")).toBeUndefined()
     expect(w.registry.findCallback("lang:ru", "user")).toBeDefined()
     expect(coreCommands.length).toBe(12)
@@ -38,8 +42,10 @@ describe("/start and /help", () => {
       yield* runCmd(w, "start", "admin")
       yield* runCmd(w, "start", "user")
       expect(w.sent[0]?.html).toContain("admin")
-      expect(w.sent[0]?.html).toContain("/lang")
       expect(w.sent[1]?.html).not.toContain("admin")
+      expect(w.sent[1]?.html).not.toMatch(/\/[a-z]+/)
+      expect(w.sent[1]?.html).toContain("voice")
+      expect(w.sent[1]?.html).toContain("track your car trips")
     })
   })
 
@@ -60,8 +66,8 @@ describe("/new, /sessions, /stop", () => {
   it.effect("creates topic, ensures session, replies inside topic", () => {
     const w = makeWorld()
     return Effect.gen(function* () {
-      yield* runCmd(w, "new", "user", "My <chat>")
-      yield* runCmd(w, "sessions", "user")
+      yield* runCmd(w, "new", "admin", "My <chat>")
+      yield* runCmd(w, "sessions", "admin")
       expect(w.sent[0]?.threadId).toBe(77)
       expect(w.sent[0]?.html).toContain("My &lt;chat&gt;")
       expect(w.sent[1]?.html).toContain("My &lt;chat&gt;")
@@ -73,7 +79,7 @@ describe("/new, /sessions, /stop", () => {
   it.effect("explains when topics are disabled", () => {
     const w = makeWorld({ topicsEnabled: false })
     return Effect.gen(function* () {
-      yield* runCmd(w, "new", "user")
+      yield* runCmd(w, "new", "admin")
       expect(w.sent).toHaveLength(1)
       expect(w.sent[0]?.html).toContain("BotFather")
       expect(w.sent[0]?.threadId).toBeUndefined()

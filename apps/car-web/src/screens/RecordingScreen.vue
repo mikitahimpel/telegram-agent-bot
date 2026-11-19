@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { useApp } from "../app-context.ts"
+import RecorderStrip from "../components/insights/RecorderStrip.vue"
 import StatusCard from "../components/StatusCard.vue"
 import { fmtNumber } from "../i18n/format.ts"
 import { describeStatus, fmtDuration } from "../model/describe-status.ts"
@@ -37,6 +38,7 @@ const estimate = computed(() => backend.fuelSource.value === "maf_estimate")
 
 <template>
   <div class="screen">
+    <RecorderStrip v-if="backend.auto.value._tag !== 'Off'" />
     <StatusCard v-if="connView" :view="connView" />
     <StatusCard :view="recView" big />
 

@@ -7,7 +7,8 @@
     "./dispatcher": "./src/dispatcher.ts",
     "./run-control": "./src/run-control.ts",
     "./admin-notifier": "./src/admin-notifier.ts",
-    "./mcp-access": "./src/mcp-access.ts"
+    "./mcp-access": "./src/mcp-access.ts",
+    "./ingest": "./src/ingest.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
@@ -15,9 +16,11 @@
   },
   "dependencies": {
     "@bot/bot-commands": "workspace:*",
+    "@bot/bot-memory": "workspace:*",
     "@bot/core-contracts": "workspace:*",
     "@bot/telegram-schema": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "@bot/infra-speech": "workspace:*"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

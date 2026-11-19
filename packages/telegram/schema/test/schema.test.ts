@@ -72,3 +72,42 @@ describe("parseCommand", () => {
     expect(parseCommand({ text: "/ask\nline1\nline2" })).toEqual({ name: "ask", args: "line1\nline2" })
   })
 })
+
+describe("media messages", () => {
+  const msg = (extra: Record<string, unknown>) => ({
+    update_id: 9,
+    message: { message_id: 1, date: 1, chat: { id: 1, type: "private" }, from: { id: 1, is_bot: false, first_name: "A" }, ...extra }
+  })
+  it("decodes voice, audio, video_note", async () => {
+    const u = await Effect.runPromise(
+      decodeUpdate(
+        msg({
+          voice: { file_id: "v", file_unique_id: "u", duration: 3, mime_type: "audio/ogg", file_size: 100 },
+          audio: { file_id: "a", file_unique_id: "u2", duration: 5, file_name: "s.mp3" },
+          video_note: { file_id: "n", file_unique_id: "u3", length: 240, duration: 4 }
+        })
+      )
+    )
+    expect(u.message?.voice?.file_size).toBe(100)
+    expect(u.message?.audio?.file_name).toBe("s.mp3")
+    expect(u.message?.video_note?.length).toBe(240)
+  })
+  it("decodes photo sizes, documents and media_group_id", async () => {
+    const u = await Effect.runPromise(
+      decodeUpdate(
+        msg({
+          photo: [
+            { file_id: "s", file_unique_id: "s1", width: 90, height: 60, file_size: 10 },
+            { file_id: "l", file_unique_id: "l1", width: 800, height: 600 }
+          ],
+          document: { file_id: "d", file_unique_id: "d1", file_name: "a.pdf", mime_type: "application/pdf" },
+          media_group_id: "g1",
+          caption: "look"
+        })
+      )
+    )
+    expect(u.message?.photo?.length).toBe(2)
+    expect(u.message?.document?.mime_type).toBe("application/pdf")
+    expect(u.message?.media_group_id).toBe("g1")
+  })
+})

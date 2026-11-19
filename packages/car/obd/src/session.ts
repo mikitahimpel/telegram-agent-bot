@@ -2,6 +2,7 @@ import type { Cause } from "effect"
 import { Clock, Data, Exit, Effect, Queue, Scope, Stream, SubscriptionRef } from "effect"
 import type { Gap } from "@bot/car-format/manifest"
 import type { Sample } from "@bot/car-format/sample"
+import { type DtcScan, type DtcWireStyle, readDtcScan } from "./dtc.ts"
 import {
   connectEcu,
   type Elm327,
@@ -9,22 +10,24 @@ import {
   INIT_TOTAL,
   makeElm327,
   readSupportedPids,
-  readVin
+  readVin,
+  readVoltage
 } from "./elm327.ts"
-import { Disconnected, type ObdError } from "./errors.ts"
+import { Disconnected, type EcuNotResponding, type ObdError } from "./errors.ts"
 import {
   type FuelRateSource,
   fuelLphFromMaf,
   fuelRateSourceFor,
+  isCanProtocol,
   parseVoltage,
   PIDS,
   protocolName
 } from "./pids.ts"
 import { ConnectionState } from "./state.ts"
-import { bleTransport, type ObdTransport, serialTransport, simulatorTransport } from "./transport.ts"
-import type { SimulatorScenario } from "./transport.ts"
+import { bleOpenDevice, bleOpenRemembered, bleTransport, type ObdTransport, serialTransport, simulatorTransport } from "./transport.ts"
+import type { SimCar, SimulatorScenario } from "./transport.ts"
 
-export interface SessionInfo {
+export type SessionInfo = {
   readonly adapterName: string
   readonly elmVersion: string
   readonly obdProtocol: string
@@ -43,13 +46,31 @@ export type ObdEvent = Data.TaggedEnum<{
 }>
 export const ObdEvent = Data.taggedEnum<ObdEvent>()
 
-export interface ObdSession {
-  readonly info: SessionInfo
-  readonly state: SubscriptionRef.SubscriptionRef<ConnectionState>
-  readonly readings: (opts?: { readonly intervalMs?: number }) => Stream.Stream<ObdEvent, ObdError>
+export type WatchTick = {
+  readonly ts: number
+  readonly rpm: number | undefined
+  readonly ecuResponding: boolean
+  readonly voltages: ReadonlyArray<{ readonly ts: number; readonly volts: number }>
 }
 
-export interface ConnectOptions {
+export type WatchOptions = { readonly intervalMs?: number; readonly voltageBurst?: number }
+
+export type ObdSession = {
+  readonly info: SessionInfo
+  readonly ecuIdentified: boolean
+  readonly state: SubscriptionRef.SubscriptionRef<ConnectionState>
+  readonly readings: (opts?: { readonly intervalMs?: number }) => Stream.Stream<ObdEvent, ObdError>
+  readonly watch: (opts?: WatchOptions) => Stream.Stream<WatchTick, ObdError>
+  readonly scanDtc: Effect.Effect<DtcScan, EcuNotResponding | Disconnected>
+  readonly readVoltage: Effect.Effect<number | undefined, Disconnected>
+}
+
+export type ConnectOptions = {
+  readonly waitForEcu?: boolean
+  readonly open?: Effect.Effect<ObdTransport, ObdError, Scope.Scope>
+  readonly device?: BluetoothDevice
+  readonly car?: SimCar
+  readonly remembered?: { readonly deviceId: string; readonly advertisementWaitMs?: number }
   readonly onState?: (s: ConnectionState) => void
   readonly scenario?: SimulatorScenario
   readonly unsupported?: ReadonlyArray<string>
@@ -78,7 +99,7 @@ export const connect = (
         return SubscriptionRef.set(state, s)
       })
 
-    interface Link {
+    type Link = {
       readonly scope: Scope.Closeable
       readonly transport: ObdTransport
       readonly elm: Elm327
@@ -99,43 +120,101 @@ export const connect = (
 
     const body = Effect.gen(function*() {
       yield* setState(ConnectionState.RequestingDevice())
-      const open =
-        kind === "ble"
+      const open: Effect.Effect<ObdTransport, ObdError, Scope.Scope> =
+        options.open !== undefined
+          ? options.open
+          : options.remembered !== undefined
+          ? bleOpenRemembered(
+            options.remembered.deviceId,
+            options.remembered.advertisementWaitMs !== undefined
+              ? { advertisementWaitMs: options.remembered.advertisementWaitMs }
+              : {}
+          )
+          : options.device !== undefined
+          ? bleOpenDevice(options.device)
+          : kind === "ble"
           ? bleTransport(options.namePrefix !== undefined ? { namePrefix: options.namePrefix } : undefined)
           : kind === "serial"
           ? serialTransport(options.baudRate !== undefined ? { baudRate: options.baudRate } : undefined)
-          : simulatorTransport(options.scenario ?? "normal", { unsupported: options.unsupported ?? [] })
+          : simulatorTransport(options.scenario ?? "normal", {
+            unsupported: options.unsupported ?? [],
+            ...(options.car !== undefined ? { car: options.car } : {})
+          })
       let link = yield* openLink(open)
       yield* setState(ConnectionState.Connecting({ deviceName: link.transport.name }))
 
       const init = yield* initAdapter(link.elm, (step, total, label) =>
         setState(ConnectionState.InitializingAdapter({ step, total, label })))
       yield* setState(ConnectionState.WaitingForEcu())
-      const first = yield* connectEcu(link.elm)
-      const supportedPids = yield* readSupportedPids(link.elm, first)
-      const dpn = yield* link.elm.send("ATDPN").pipe(
-        Effect.map((l) => l[0] ?? ""),
-        Effect.catchTag("CommandTimeout", () => Effect.succeed(""))
-      )
-      const vin = yield* readVin(link.elm)
 
-      const info: SessionInfo = {
+      let dpn = ""
+      const identify = (ecu: { readonly attempts?: number; readonly timeoutMs?: number }) =>
+        Effect.gen(function*() {
+          const first = yield* connectEcu(link.elm, ecu)
+          const supportedPids = yield* readSupportedPids(link.elm, first)
+          dpn = yield* link.elm.send("ATDPN").pipe(
+            Effect.map((l) => l[0] ?? ""),
+            Effect.catchTag("CommandTimeout", () => Effect.succeed(""))
+          )
+          const vin = yield* readVin(link.elm)
+          return {
+            adapterName: link.transport.name,
+            elmVersion: init.elmVersion,
+            obdProtocol: protocolName(dpn),
+            vin,
+            supportedPids,
+            fuelRateSource: fuelRateSourceFor(supportedPids),
+            transport: kind
+          } satisfies SessionInfo
+        })
+
+      let info: SessionInfo = {
         adapterName: link.transport.name,
         elmVersion: init.elmVersion,
-        obdProtocol: protocolName(dpn),
-        vin,
-        supportedPids,
-        fuelRateSource: fuelRateSourceFor(supportedPids),
+        obdProtocol: "",
+        supportedPids: [],
+        fuelRateSource: "none",
         transport: kind
       }
-      yield* setState(ConnectionState.Ready({ info }))
+      let identified = false
+      const identifyNow = options.waitForEcu === true ? identify({ attempts: 1, timeoutMs: 6000 }) : identify({})
+      const first = yield* Effect.result(identifyNow)
+      if (first._tag === "Success") {
+        info = first.success
+        identified = true
+        yield* setState(ConnectionState.Ready({ info }))
+      } else if (options.waitForEcu !== true || first.failure._tag !== "EcuNotResponding") {
+        return yield* first.failure
+      }
+
+      const ensureIdentified: Effect.Effect<void, ObdError> = Effect.suspend(() => {
+        if (identified) return Effect.void
+        return identify({ attempts: 1, timeoutMs: 6000 }).pipe(
+          Effect.flatMap((next) =>
+            Effect.suspend(() => {
+              info = next
+              identified = true
+              return setState(ConnectionState.Ready({ info }))
+            })
+          )
+        )
+      })
+
+      const lockProtocol = Effect.suspend(() => {
+        const code = dpn.trim().toUpperCase().replace(/^A(?=[0-9A-C]$)/, "")
+        return /^[1-9A-C]$/.test(code)
+          ? link.elm.send(`ATSP${code}`, { timeoutMs: 2000 }).pipe(Effect.ignore)
+          : Effect.void
+      })
+
+      const wireStyle = (): DtcWireStyle => (dpn === "" ? "auto" : isCanProtocol(dpn) ? "can" : "legacy")
 
       const reconnectOnce = Effect.gen(function*() {
         yield* Scope.close(link.scope, Exit.void)
         const next = yield* openLink(link.transport.reopen)
         const ready = yield* Effect.gen(function*() {
           yield* initAdapter(next.elm)
-          yield* connectEcu(next.elm)
+          if (options.waitForEcu !== true) yield* connectEcu(next.elm)
         }).pipe(Effect.onError(() => Scope.close(next.scope, Exit.void)))
         void ready
         link = next
@@ -176,8 +255,9 @@ export const connect = (
 
       const poll = (queue: Queue.Queue<ObdEvent, ObdError | Cause.Done>, baseInterval: number) =>
         Effect.gen(function*() {
+          yield* ensureIdentified
           const emit: Emit = (e) => Queue.offer(queue, e)
-          const supported = new Set(supportedPids)
+          const supported = new Set(info.supportedPids)
           const polled = PIDS.filter((p) => supported.has(p.pid))
           const fast = polled.filter((p) => !p.slow)
           const wantsRv = !supported.has("42")
@@ -246,15 +326,71 @@ export const connect = (
           }
         })
 
+      const watchLoop = (queue: Queue.Queue<WatchTick, ObdError | Cause.Done>, opts: WatchOptions) =>
+        Effect.gen(function*() {
+          const interval = opts.intervalMs ?? 500
+          const burst = opts.voltageBurst ?? 3
+          const none: Emit = () => Effect.void
+          let locked = false
+          while (true) {
+            const t0 = yield* Clock.currentTimeMillis
+            const step = Effect.gen(function*() {
+              if (!identified) {
+                const attempt = yield* Effect.result(ensureIdentified)
+                if (attempt._tag === "Failure" && attempt.failure._tag === "Disconnected") return yield* attempt.failure
+              }
+              if (identified && !locked) {
+                yield* lockProtocol
+                locked = true
+              }
+              const voltages: Array<{ ts: number; volts: number }> = []
+              const readV = Effect.gen(function*() {
+                const v = yield* readVoltage(link.elm)
+                if (v !== undefined) voltages.push({ ts: yield* Clock.currentTimeMillis, volts: v })
+              })
+              yield* readV
+              let rpm: number | undefined
+              if (identified) {
+                const bytes = yield* link.elm.mode01("0C", { timeoutMs: 2000 }).pipe(
+                  Effect.catch((e) => (e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)))
+                )
+                if (bytes !== undefined && bytes.length >= 2) rpm = ((bytes[0] as number) * 256 + (bytes[1] as number)) / 4
+              }
+              for (let i = 1; i < burst; i++) yield* readV
+              return { ts: t0, rpm, ecuResponding: rpm !== undefined, voltages } satisfies WatchTick
+            }).pipe(Effect.catchTag("Disconnected", () => Effect.succeed(undefined)))
+            const tick = yield* step
+            if (tick === undefined) {
+              yield* recover(none)
+              locked = false
+              continue
+            }
+            yield* Queue.offer(queue, tick)
+            const elapsed = (yield* Clock.currentTimeMillis) - t0
+            if (elapsed < interval) yield* Effect.sleep(interval - elapsed)
+          }
+        })
+
       const session: ObdSession = {
-        info,
+        get info() {
+          return info
+        },
+        get ecuIdentified() {
+          return identified
+        },
         state,
         readings: (opts) =>
           Stream.callback<ObdEvent, ObdError>((queue) =>
             Effect.forkScoped(
               poll(queue, opts?.intervalMs ?? 1000).pipe(Effect.catch((e: ObdError) => Queue.fail(queue, e)))
             )
-          )
+          ),
+        watch: (opts = {}) =>
+          Stream.callback<WatchTick, ObdError>((queue) =>
+            Effect.forkScoped(watchLoop(queue, opts).pipe(Effect.catch((e: ObdError) => Queue.fail(queue, e))))
+          ),
+        scanDtc: Effect.suspend(() => readDtcScan(link.elm, wireStyle())),
+        readVoltage: Effect.suspend(() => readVoltage(link.elm))
       }
       return session
     })

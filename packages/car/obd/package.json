@@ -10,7 +10,9 @@
     "./transport": "./src/transport.ts",
     "./elm327": "./src/elm327.ts",
     "./pids": "./src/pids.ts",
-    "./session": "./src/session.ts"
+    "./session": "./src/session.ts",
+    "./dtc": "./src/dtc.ts",
+    "./battery": "./src/battery.ts"
   },
   "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
   "dependencies": { "@bot/car-format": "workspace:*", "effect": "catalog:" },

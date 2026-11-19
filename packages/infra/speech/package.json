@@ -1,0 +1,21 @@
+{
+  "name": "@bot/infra-speech",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./speech": "./src/speech.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

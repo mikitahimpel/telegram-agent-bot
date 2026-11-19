@@ -1,6 +1,8 @@
+import { enInsights } from "./insights-en.ts"
+
 export const en = {
   "app.name": "Car",
-  "nav.home": "Home",
+  "nav.home": "Record",
   "nav.trips": "Trips",
   "nav.settings": "Settings",
   "common.back": "Back",
@@ -386,7 +388,8 @@ export const en = {
   "rec.sourceEnded.title": "The adapter stopped sending data",
   "rec.sourceEnded.text": "The trip is still open, but nothing new is coming in. Reconnect the adapter or stop the recording. What is saved stays safe.",
   "trip.legend.lost": "Lost",
-  "trip.chunk.reason.lost": "This part is missing in the cloud and on the phone. It cannot be restored."
+  "trip.chunk.reason.lost": "This part is missing in the cloud and on the phone. It cannot be restored.",
+  ...enInsights
 } as const
 
 export type MessageKey = keyof typeof en

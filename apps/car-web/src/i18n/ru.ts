@@ -1,8 +1,9 @@
 import type { MessageKey } from "./en.ts"
+import { ruInsights } from "./insights-ru.ts"
 
 export const ru: Record<MessageKey, string> = {
   "app.name": "Авто",
-  "nav.home": "Главная",
+  "nav.home": "Запись",
   "nav.trips": "Поездки",
   "nav.settings": "Настройки",
   "common.back": "Назад",
@@ -388,5 +389,6 @@ export const ru: Record<MessageKey, string> = {
   "rec.sourceEnded.title": "Адаптер перестал передавать данные",
   "rec.sourceEnded.text": "Поездка ещё открыта, но новых данных нет. Переподключите адаптер или остановите запись. Всё сохранённое в безопасности.",
   "trip.legend.lost": "Потеряно",
-  "trip.chunk.reason.lost": "Этой части нет ни в облаке, ни на телефоне. Восстановить её нельзя."
+  "trip.chunk.reason.lost": "Этой части нет ни в облаке, ни на телефоне. Восстановить её нельзя.",
+  ...ruInsights
 }

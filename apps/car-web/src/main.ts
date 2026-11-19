@@ -4,6 +4,7 @@ import { AppKey, createAppContext } from "./app-context.ts"
 import { initialLang } from "./services/env.ts"
 import { runPairing } from "./services/pairing-flow.ts"
 import { API_BASE, createBackend } from "./services/runtime.ts"
+import "@fontsource-variable/manrope/index.css"
 import "./styles.css"
 
 const LANG_KEY = "car-lang"
@@ -34,7 +35,10 @@ const pair = () =>
     apiBase: API_BASE,
     stripHash: () => history.replaceState(null, "", location.pathname + location.search)
   })
-void pair()
+void pair().then(() => {
+  if (backend.pairing.value === "paired" || ctx.localMode.value) void backend.enableAuto()
+})
+watch(ctx.localMode, (on) => on && void backend.enableAuto())
 
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault()

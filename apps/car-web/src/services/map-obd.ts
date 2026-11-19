@@ -19,6 +19,8 @@ export const mapObdError = (e: ObdError): ConnError => {
       return { code: e._tag, detail: `tried services: ${e.triedServices.join(", ")}` }
     case "PermissionDenied":
       return { code: e._tag, ...(e.detail ? { detail: e.detail } : {}) }
+    case "ReconnectUnavailable":
+      return { code: "DeviceNotSelected", reason: e.reason }
     case "SerialUnavailable":
     case "DeviceNotSelected":
     case "Disconnected":

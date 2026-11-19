@@ -12,8 +12,34 @@ export type Route =
   | { name: "trip"; tripId: string }
   | { name: "settings" }
   | { name: "pair" }
+  | { name: "overview" }
+  | { name: "engine" }
+  | { name: "battery" }
+  | { name: "stats" }
+  | { name: "alerts" }
+  | { name: "onboarding" }
 
-export interface AppContext {
+export const parseRouteHash = (hash: string): Route | null => {
+  const h = hash.replace(/^#/, "")
+  if (h === "") return null
+  const trip = /^trip=([^&]+)/.exec(h)
+  if (trip?.[1]) return { name: "trip", tripId: decodeURIComponent(trip[1]) }
+  switch (h.split("&")[0]) {
+    case "overview":
+    case "engine":
+    case "battery":
+    case "stats":
+    case "alerts":
+    case "onboarding":
+      return { name: h.split("&")[0] as "overview" }
+    default:
+      return null
+  }
+}
+
+export const insightRoutes: ReadonlyArray<Route["name"]> = ["overview", "engine", "battery", "stats", "alerts", "trip", "onboarding"]
+
+export type AppContext = {
   backend: CarBackend
   lang: Ref<Lang>
   t: ComputedRef<TFn>
@@ -22,6 +48,7 @@ export interface AppContext {
   go(r: Route): void
   back(): void
   canGoBack: ComputedRef<boolean>
+  hashRouted: boolean
   setLang(l: Lang): void
   perform(id: ActionId, arg?: { tripId?: string; scenario?: SimScenario }): Promise<void>
   localMode: Ref<boolean>
@@ -48,7 +75,8 @@ export const createAppContext = (opts: {
   const t = computed(() => makeT(lang.value))
   const now = ref(Date.now())
   if (opts.tickMs !== 0) setInterval(() => (now.value = Date.now()), opts.tickMs ?? 1000)
-  const route = ref<Route>({ name: "home" })
+  const route = ref<Route>(parseRouteHash(typeof location === "undefined" ? "" : location.hash) ?? { name: "home" })
+  const hashRouted = route.value.name !== "home"
   const stack: Route[] = []
   const LOCAL_KEY = "car-local-mode"
   const stored = (): boolean => {
@@ -66,6 +94,18 @@ export const createAppContext = (opts: {
     } catch {
     }
   })
+  const DEMO_KEY = "car-demo-insights"
+  try {
+    if (localStorage.getItem(DEMO_KEY) === "1") backend.insightsDemo.value = true
+  } catch {
+  }
+  watch(backend.insightsDemo, (on) => {
+    try {
+      if (on) localStorage.setItem(DEMO_KEY, "1")
+      else localStorage.removeItem(DEMO_KEY)
+    } catch {
+    }
+  })
   const dismissed = ref<string[]>([])
   const installPrompt = ref<{ prompt(): Promise<void> } | null>(null)
   const depth = ref(0)
@@ -80,6 +120,12 @@ export const createAppContext = (opts: {
     route.value = stack.pop() ?? { name: "home" }
     depth.value = stack.length
   }
+  if (typeof window !== "undefined") {
+    window.addEventListener("hashchange", () => {
+      const r = parseRouteHash(location.hash)
+      if (r) go(r)
+    })
+  }
   const ctx: AppContext = {
     backend,
     lang,
@@ -89,6 +135,7 @@ export const createAppContext = (opts: {
     go,
     back,
     canGoBack: computed(() => depth.value > 0),
+    hashRouted,
     setLang(l) {
       lang.value = l
       opts.onSetLang?.(l)
@@ -104,6 +151,7 @@ export const createAppContext = (opts: {
           return go({ name: "connect" })
         case "tryDemo":
           localMode.value = true
+          backend.insightsDemo.value = true
           return go({ name: "connect", preset: "simulator" })
         case "start":
           localMode.value = true

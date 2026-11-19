@@ -4,7 +4,7 @@ import type { CallbackDef, CommandDef } from "@bot/core-contracts/commands"
 import { AgentBusy, ContainerDown, DailyLimitReached, StorageError, SubscriptionLimitReached, Unauthorized } from "@bot/core-contracts/errors"
 import { ChatId, TgId } from "@bot/core-contracts/ids"
 import { renderHelp } from "../src/help.ts"
-import { errorMessage, formatDateTime, messages } from "../src/messages.ts"
+import { errorMessage, formatClock, formatDateTime, isNewTopicText, messages } from "../src/messages.ts"
 import { makeRegistry } from "../src/registry.ts"
 
 const cmd = (name: string, role: "user" | "admin", extra: Partial<CommandDef> = {}): CommandDef => ({
@@ -108,5 +108,46 @@ describe("messages", () => {
     expect(errorMessage(new SubscriptionLimitReached({}), "en")).toBe(messages.en.subscriptionLimit(undefined))
     expect(errorMessage(new ContainerDown({ reason: "secret detail" }), "en")).not.toContain("secret")
     expect(errorMessage(new StorageError({ operation: "x" }), "ru")).toBe(messages.ru.genericError)
+  })
+})
+
+describe("minimal user menu", () => {
+  const r = makeRegistry(
+    [
+      cmd("start", "user"),
+      cmd("help", "user"),
+      cmd("lang", "user"),
+      cmd("stop", "user", { advanced: true }),
+      cmd("new", "admin"),
+      cmd("sessions", "admin")
+    ],
+    []
+  )
+
+  it("default scope has only start, help, lang; admin chat scope has everything", () => {
+    const menus = r.menus(ChatId.make(7))
+    expect(menus[0]?.commands.map((c) => c.command)).toEqual(["start", "help", "lang"])
+    expect(menus[1]?.commands.map((c) => c.command)).toEqual(["start", "help", "lang"])
+    expect(menus[2]?.commands.map((c) => c.command)).toEqual(["start", "help", "lang", "stop", "new", "sessions"])
+    expect(r.find("stop", "user")).toBeDefined()
+    expect(r.find("new", "user")).toBeUndefined()
+  })
+})
+
+describe("clock and button helpers", () => {
+  it("formats the reset time in UTC, with the date only when it is another day", () => {
+    const now = Date.UTC(2026, 10, 19, 10, 0)
+    expect(formatClock(Date.UTC(2026, 10, 19, 14, 5), now, "ru")).toBe("14:05 UTC")
+    expect(formatClock(Date.UTC(2026, 10, 20, 1, 30), now, "ru")).toBe("20 ноя в 01:30 UTC")
+    expect(formatClock(Date.UTC(2026, 10, 20, 1, 30), now, "en")).toBe("Nov 20 at 01:30 UTC")
+    expect(formatClock(Date.UTC(2026, 10, 19, 14, 5), now, "ru", "Europe/Warsaw")).toBe("15:05")
+    expect(formatClock(Date.UTC(2026, 10, 19, 23, 30), now, "en", "Europe/Warsaw")).toBe("Nov 20 at 00:30")
+    expect(formatClock(Date.UTC(2026, 10, 19, 14, 5), now, "ru", "Not/AZone")).toBe("14:05 UTC")
+  })
+
+  it("recognises the new topic button in both languages", () => {
+    expect(isNewTopicText("🆕 Новая тема")).toBe(true)
+    expect(isNewTopicText("🆕 New topic")).toBe(true)
+    expect(isNewTopicText("new topic")).toBe(false)
   })
 })

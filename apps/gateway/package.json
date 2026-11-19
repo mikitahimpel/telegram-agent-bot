@@ -14,20 +14,26 @@
   "dependencies": {
     "@bot/agent-runner": "workspace:*",
     "@bot/agent-sessions": "workspace:*",
+    "@bot/infra-speech": "workspace:*",
     "@bot/bot-allowlist": "workspace:*",
     "@bot/car-server": "workspace:*",
     "@bot/bot-commands": "workspace:*",
     "@bot/bot-core-commands": "workspace:*",
     "@bot/bot-invites": "workspace:*",
+    "@bot/bot-memory": "workspace:*",
     "@bot/bot-dispatcher": "workspace:*",
+    "@bot/bot-scheduler": "workspace:*",
     "@bot/core-contracts": "workspace:*",
     "@bot/plugins-car": "workspace:*",
+    "@bot/plugins-memory": "workspace:*",
     "@bot/plugins-registry": "workspace:*",
+    "@bot/plugins-reminders": "workspace:*",
     "@bot/telegram-client": "workspace:*",
     "@bot/telegram-schema": "workspace:*",
     "@bot/telegram-streaming": "workspace:*",
     "@cloudflare/sandbox": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "@bot/car-store": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",

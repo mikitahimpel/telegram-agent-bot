@@ -111,6 +111,20 @@ describe("AgentRunner", () => {
     expect(argv[2]).toBe(" -rf")
   })
 
+  it("appends the memory block after the stable system prompt and nothing after it", () => {
+    const cfg = { maxTurns: 30, model: Option.none<string>() }
+    const memory = "MEMORY [3/2000 tokens]\n[1] Name is Mikita"
+    const withMemory = buildClaudeArgv(input({ memory, resume: undefined }), cfg)
+    const without = buildClaudeArgv(input(), cfg)
+    const at = withMemory.indexOf("--append-system-prompt")
+    const stable = without[without.indexOf("--append-system-prompt") + 1]!
+    const appended = withMemory[at + 1]!
+    expect(appended.startsWith(stable)).toBe(true)
+    expect(appended).toBe(`${stable}\n\n${memory}`)
+    expect(appended.indexOf(memory)).toBeGreaterThan(appended.indexOf("/workspace/out/"))
+    expect(buildClaudeArgv(input({ memory: "" }), cfg)).toEqual(without)
+  })
+
   it.effect("interrupting the consumer kills the process and still snapshots", () => {
     const { fake, l } = setup({ claudeLines: [init], hang: true })
     return Effect.gen(function* () {
@@ -185,6 +199,37 @@ describe("AgentRunner", () => {
       expect(bad).toBeInstanceOf(ContainerDown)
       yield* r.destroy(tgId)
       expect(fake.events).toContain("destroy")
+    }).pipe(Effect.provide(l))
+  })
+})
+
+describe("attachments", () => {
+  it("sanitizes names and builds the prompt suffix", async () => {
+    const { safeFileName, withAttachmentPaths, attachmentPath } = await import("../src/runner.ts")
+    expect(safeFileName("../../etc/pass wd.pdf")).toBe("pass_wd.pdf")
+    expect(safeFileName("..")).toBe("file")
+    expect(safeFileName("отчёт 1.xlsx")).toBe("отчёт_1.xlsx")
+    expect(attachmentPath({ fileName: "a/b.png", mimeType: "image/png", bytes: new Uint8Array() }, 1, "abc")).toBe("/workspace/in/abc-2-b.png")
+    expect(withAttachmentPaths("hi", [])).toBe("hi")
+    expect(withAttachmentPaths("hi", [{ path: "/workspace/in/x.png", mimeType: "image/png" }])).toContain("/workspace/in/x.png (image/png)")
+  })
+
+  it.effect("writes attachments under /workspace/in before running claude", () => {
+    const { fake, l } = setup({ claudeLines: [init, result()] })
+    const bytes = new Uint8Array([1, 2, 3])
+    return Effect.gen(function* () {
+      yield* collect(input({ prompt: "look", attachments: [{ fileName: "../x y.png", mimeType: "image/png", bytes }] }))
+      const writeIdx = fake.execs.findIndex((e) => e.cmd[0] === "sh" && e.cmd[2] === 'cat > "$1"')
+      const claudeIdx = fake.execs.findIndex((e) => e.cmd[0] === "claude" && e.cmd.includes("-p"))
+      expect(writeIdx).toBeGreaterThan(-1)
+      expect(writeIdx).toBeLessThan(claudeIdx)
+      const path = fake.execs[writeIdx]!.cmd[4]!
+      expect(path).toMatch(/^\/workspace\/in\/[0-9a-f]{8}-1-x_y\.png$/)
+      expect(fake.execs[writeIdx]!.opts?.stdin).toBeDefined()
+      expect(fake.execs.some((e) => e.cmd[0] === "mkdir" && e.cmd.includes("/workspace/in"))).toBe(true)
+      const claude = fake.execs[claudeIdx]!.cmd
+      expect(claude[2]).toContain(path)
+      expect(claude[2]!.startsWith("look")).toBe(true)
     }).pipe(Effect.provide(l))
   })
 })

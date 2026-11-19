@@ -166,3 +166,22 @@ export interface PairedDevice {
 }
 
 export type PairError = "invalid" | "network" | "blocked" | "unknown"
+
+export type AutoNeedsTap = "first_use" | "unsupported" | "forgotten" | "gesture_required" | "permission_denied"
+
+export type AutoVm =
+  | { _tag: "Off" }
+  | { _tag: "NeedsTap"; reason: AutoNeedsTap }
+  | { _tag: "Reconnecting"; attempt: number; since: number }
+  | { _tag: "AdapterNotFound"; since: number; attempts: number; nextRetryAt: number }
+  | { _tag: "Connecting"; step: number; total: number }
+  | { _tag: "Unavailable"; code: string }
+  | { _tag: "EcuNotResponding"; since: number; adapterName: string }
+  | { _tag: "WaitingForEngine"; adapterName: string }
+  | { _tag: "Recording"; tripId: string; startedAt: number; adapterName: string; linkLostSince: number | null }
+  | { _tag: "AutoStopped"; tripId: string; startedAt: number; endedAt: number }
+
+export type DtcScanOutcome =
+  | { _tag: "Done"; at: number; codes: string[]; milOn: boolean }
+  | { _tag: "NeedsConnection" }
+  | { _tag: "Failed"; reason: string }

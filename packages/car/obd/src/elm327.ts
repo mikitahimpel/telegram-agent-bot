@@ -7,14 +7,16 @@ import {
   EcuNotResponding,
   type ObdError
 } from "./errors.ts"
-import { parseSupportedMask } from "./pids.ts"
+import { hexToBytes } from "./hex.ts"
+import { groupMessages } from "./messages.ts"
+import { parseSupportedMask, parseVoltage } from "./pids.ts"
 import type { ObdTransport } from "./transport.ts"
 
-export interface SendOptions {
+export type SendOptions = {
   readonly timeoutMs?: number
 }
 
-export interface Elm327 {
+export type Elm327 = {
   readonly transport: ObdTransport
   readonly send: (command: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected>
   readonly query: (command: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected | CommandRejected>
@@ -46,15 +48,7 @@ export const cleanReply = (raw: string, command: string): string[] => {
     .filter((l) => l !== "" && norm(l) !== cmd && !/^SEARCHING/i.test(l))
 }
 
-export const hexToBytes = (hex: string): number[] => {
-  const out: number[] = []
-  for (let i = 0; i + 1 < hex.length; i += 2) {
-    const v = parseInt(hex.slice(i, i + 2), 16)
-    if (Number.isNaN(v)) break
-    out.push(v)
-  }
-  return out
-}
+export { hexToBytes }
 
 export const parseMode01 = (lines: ReadonlyArray<string>, pid: string): number[] | undefined => {
   const prefix = "41" + pid.toUpperCase()
@@ -66,28 +60,23 @@ export const parseMode01 = (lines: ReadonlyArray<string>, pid: string): number[]
   return undefined
 }
 
-export const parseVin = (lines: ReadonlyArray<string>): string | undefined => {
-  const n = lines.map(norm)
-  let bytes: number[]
-  const frames = n.filter((l) => /^[0-9A-F]:/.test(l)).sort((a, b) => (a[0] as string).localeCompare(b[0] as string))
-  if (frames.length > 0) {
-    const all = hexToBytes(frames.map((f) => f.slice(2)).join(""))
-    const at = all.findIndex((b, i) => b === 0x49 && all[i + 1] === 0x02)
-    if (at < 0) return undefined
-    bytes = all.slice(at + 3)
-  } else {
-    const rows = n
-      .filter((l) => l.startsWith("4902") && /^[0-9A-F]+$/.test(l))
-      .map((l) => hexToBytes(l))
-      .sort((a, b) => (a[2] ?? 0) - (b[2] ?? 0))
-    bytes = rows.flatMap((r) => r.slice(3))
-  }
-  const vin = bytes
+const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/
+
+const vinText = (bytes: ReadonlyArray<number>): string =>
+  bytes
     .filter((b) => b >= 0x30 && b <= 0x5a && b !== 0x3a)
     .map((b) => String.fromCharCode(b))
     .join("")
-    .slice(-17)
-  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : undefined
+
+export const parseVin = (lines: ReadonlyArray<string>): string | undefined => {
+  const msgs = groupMessages(lines).filter((m) => m[0] === 0x49 && m[1] === 0x02)
+  for (const m of msgs) {
+    const text = vinText(m.slice(3)).slice(-17)
+    if (VIN_PATTERN.test(text)) return text
+  }
+  const rows = [...msgs].sort((a, b) => (a[2] ?? 0) - (b[2] ?? 0))
+  const joined = vinText(rows.flatMap((r) => r.slice(3))).slice(-17)
+  return VIN_PATTERN.test(joined) ? joined : undefined
 }
 
 export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never, Scope.Scope> =>
@@ -191,7 +180,7 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
     return { transport, send, query, mode01 }
   })
 
-export interface AdapterInit {
+export type AdapterInit = {
   readonly elmVersion: string
 }
 
@@ -253,12 +242,17 @@ export const initAdapter = (
 const RETRYABLE = /^(NODATA|UNABLETOCONNECT|STOPPED|CANERROR|BUSBUSY|BUSERROR|DATAERROR|FBERROR|BUSINIT.*)$/
 const ECU_ATTEMPTS = 3
 
-export const connectEcu = (elm: Elm327): Effect.Effect<ReadonlyArray<string>, EcuNotResponding | AdapterNotResponding | Disconnected> =>
+export type ConnectEcuOptions = { readonly attempts?: number; readonly timeoutMs?: number }
+
+export const connectEcu = (
+  elm: Elm327,
+  options: ConnectEcuOptions = {}
+): Effect.Effect<ReadonlyArray<string>, EcuNotResponding | AdapterNotResponding | Disconnected> =>
   Effect.gen(function*() {
     let last = ""
-    for (let attempt = 1; attempt <= ECU_ATTEMPTS; attempt++) {
+    for (let attempt = 1; attempt <= (options.attempts ?? ECU_ATTEMPTS); attempt++) {
       if (attempt > 1) yield* Effect.sleep("1 second")
-      const outcome: { bytes?: ReadonlyArray<number>; token?: string } = yield* elm.mode01("00", { timeoutMs: 10_000 }).pipe(
+      const outcome: { bytes?: ReadonlyArray<number>; token?: string } = yield* elm.mode01("00", { timeoutMs: options.timeoutMs ?? 10_000 }).pipe(
         Effect.map((bytes): { bytes?: ReadonlyArray<number>; token?: string } => ({ bytes })),
         Effect.catch((e: CommandTimeout | Disconnected | CommandRejected): Effect.Effect<{ bytes?: ReadonlyArray<number>; token?: string }, Disconnected> => {
           if (e._tag === "Disconnected") return Effect.fail(e)
@@ -299,6 +293,17 @@ export const readSupportedPids = (elm: Elm327, first: ReadonlyArray<string>): Ef
 export const readVin = (elm: Elm327): Effect.Effect<string | undefined, Disconnected> =>
   elm.query("0902", { timeoutMs: 6000 }).pipe(
     Effect.map(parseVin),
+    Effect.catch((e: CommandTimeout | Disconnected | CommandRejected) =>
+      e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)
+    )
+  )
+
+export const readVoltage = (elm: Elm327): Effect.Effect<number | undefined, Disconnected> =>
+  elm.query("ATRV", { timeoutMs: 2000 }).pipe(
+    Effect.map((l) => {
+      const v = parseVoltage(l.join(" "))
+      return v !== undefined && v > 3 && v < 40 ? v : undefined
+    }),
     Effect.catch((e: CommandTimeout | Disconnected | CommandRejected) =>
       e._tag === "Disconnected" ? Effect.fail(e) : Effect.succeed(undefined)
     )

@@ -14,10 +14,15 @@ import { CarKv } from "@bot/plugins-car/kv"
 import { formatDuration, formatKm, formatStamp } from "@bot/plugins-car/messages"
 import { CarBucket } from "@bot/plugins-car/r2"
 import { listOverview, parseTripId, summarize, tripMetrics, tripStatus } from "@bot/plugins-car/trip-store"
+import { CarBackend } from "@bot/car-store/backend"
+import { DtcReport } from "@bot/car-format/insights"
+import { clampPoints, DEFAULT_POINTS, parseColumns } from "@bot/car-store/series"
+import { ensureWeekly, notifyPending, tripSummary } from "@bot/plugins-car/notify"
+import { rebuildFromR2 } from "@bot/plugins-car/rebuild"
 import { PluginFlags } from "@bot/plugins-registry/flags"
 import { messages } from "./messages.ts"
 
-export type CarApiR = CarBucket | CarKv | Allowlist | PluginFlags | Telegram
+export type CarApiR = CarBucket | CarKv | Allowlist | PluginFlags | Telegram | CarBackend
 
 class ApiFail extends Data.TaggedError("ApiFail")<{
   readonly status: number
@@ -110,6 +115,20 @@ const readBody = (request: Request, max: number, lang: Lang) =>
 
 const decodeManifest = Schema.decodeUnknownSync(TripManifest)
 
+const webUrlOf = (request: Request) =>
+  Effect.gen(function*() {
+    const configured = yield* Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
+    return configured === "" ? new URL("/car/", request.url).href : configured
+  })
+
+const forward = <A, E>(label: string, effect: Effect.Effect<A, E, CarBackend>) =>
+  effect.pipe(Effect.tapError((e) => Effect.logWarning(`car store ${label} failed`, e)), Effect.option)
+
+const langOf = (p: Principal, url: URL): Lang => {
+  const q = url.searchParams.get("lang")
+  return q === "ru" || q === "en" ? q : p.lang
+}
+
 const storageOp = <A>(f: () => Promise<A>) =>
   Effect.tryPromise({ try: f, catch: () => apiFail("internal", messages.en.internal) })
 
@@ -140,6 +159,11 @@ const putManifest = (p: Principal, tripId: TripId, request: Request) =>
       }
     }
     yield* storageOp(() => bucket.put(key, JSON.stringify(manifest)))
+    const backend = yield* CarBackend
+    const ingested = yield* forward("manifest", backend.ingestManifest(p.tgId, manifest))
+    if (ingested._tag === "Some" && ingested.value.complete) {
+      yield* notifyPending(p.tgId, p.lang, yield* webUrlOf(request)).pipe(Effect.ignore)
+    }
     return { ok: true as const }
   })
 
@@ -167,7 +191,10 @@ const putChunk = (p: Principal, tripId: TripId, seq: number, request: Request) =
     const key = chunkKey(p.tgId, tripId, seq)
     const existing = yield* storageOp(() => bucket.head(key))
     if (existing !== null) {
-      if (existing.customMetadata?.["sha256"] === actual) return { seq, stored: "already" as const, sha256: actual }
+      if (existing.customMetadata?.["sha256"] === actual) {
+        yield* forward("chunk", (yield* CarBackend).ingestChunk(p.tgId, tripId, seq, actual, text))
+        return { seq, stored: "already" as const, sha256: actual }
+      }
       return yield* Effect.fail(apiFail("chunk_conflict", m.conflict))
     }
     const ts = parsed.map((s) => s.ts)
@@ -181,6 +208,10 @@ const putChunk = (p: Principal, tripId: TripId, seq: number, request: Request) =
         }
       })
     )
+    const ingested = yield* forward("chunk", (yield* CarBackend).ingestChunk(p.tgId, tripId, seq, actual, text))
+    if (ingested._tag === "Some" && ingested.value.complete) {
+      yield* notifyPending(p.tgId, p.lang, yield* webUrlOf(request)).pipe(Effect.ignore)
+    }
     return { seq, stored: "new" as const, sha256: actual }
   })
 
@@ -198,6 +229,18 @@ const notifyFinished = (p: Principal, tripId: TripId, status: TripStatus, webUrl
     const tg = yield* Telegram
     const to = { chatId: ChatId.make(p.tgId) }
     if (status.complete) {
+      const backend = yield* CarBackend
+      let insight = yield* backend.tripInsight(p.tgId, tripId).pipe(Effect.catch(() => Effect.succeed(null)))
+      if (insight === null || !insight.complete) {
+        yield* rebuildFromR2(p.tgId, 120).pipe(Effect.ignore)
+        insight = yield* backend.tripInsight(p.tgId, tripId).pipe(Effect.catch(() => Effect.succeed(null)))
+      }
+      if (insight !== null && insight.complete) {
+        const summary = tripSummary(insight, p.lang, webUrl)
+        yield* tg.sendMessage(to, summary.html, summary.keyboard.length === 0 ? {} : { keyboard: summary.keyboard })
+        yield* storageOp(() => bucket.put(marker, state))
+        return
+      }
       const metrics = yield* tripMetrics(p.tgId, tripId, status).pipe(Effect.catch(() => Effect.succeed(undefined)))
       const seconds = metrics?.durationSeconds ?? ((manifest.endedAt ?? manifest.startedAt) - manifest.startedAt) / 1000
       const distance = metrics?.distanceKm === undefined ? "" : m.distance(formatKm(metrics.distanceKm, p.lang))
@@ -263,6 +306,31 @@ const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
 
     yield* requirePlugin(p)
 
+    if (a === "dtc" && segments.length === 1 && method === "PUT") {
+      const raw = yield* Effect.tryPromise({ try: () => request.json(), catch: () => apiFail("bad_request", messages[p.lang].badRequest("invalid JSON")) })
+      const report = yield* Schema.decodeUnknownEffect(DtcReport)(raw).pipe(
+        Effect.mapError(() => apiFail("bad_request", messages[p.lang].badRequest("invalid DTC report")))
+      )
+      if (report.codes.length > 200) return yield* Effect.fail(apiFail("too_large", messages[p.lang].tooLarge))
+      const backend = yield* CarBackend
+      const explanations = yield* backend.putDtc(p.tgId, report, langOf(p, url)).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      yield* notifyPending(p.tgId, p.lang, yield* webUrlOf(request)).pipe(Effect.ignore)
+      return json({ ok: true, explanations })
+    }
+    if (a === "overview" && segments.length === 1 && method === "GET") {
+      const backend = yield* CarBackend
+      const counts = yield* backend.counts(p.tgId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+      if (counts.trips === 0) yield* rebuildFromR2(p.tgId).pipe(Effect.ignore)
+      return json(yield* backend.overview(p.tgId, langOf(p, url)).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal))))
+    }
+    if (a === "alerts" && segments.length === 1 && method === "GET") {
+      const backend = yield* CarBackend
+      return json({ alerts: yield* backend.alerts(p.tgId, langOf(p, url)).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal))) })
+    }
+    if (a === "rebuild" && segments.length === 1 && method === "POST") {
+      return json(yield* rebuildFromR2(p.tgId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal))))
+    }
+
     if (a === "trips" && segments.length === 1 && method === "GET") {
       const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? "50") || 50))
       const all = yield* listOverview(p.tgId, { limit })
@@ -276,13 +344,30 @@ const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
         if (!/^\d{1,6}$/.test(d ?? "")) return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("invalid seq")))
         return json(yield* putChunk(p, tripId, Number(d), request))
       }
+      if (c === "insight" && segments.length === 3 && method === "GET") {
+        const backend = yield* CarBackend
+        const insight = yield* backend.tripInsight(p.tgId, tripId).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+        if (insight === null) return yield* Effect.fail(apiFail("not_found", messages[p.lang].notFound))
+        return json(insight)
+      }
+      if (c === "series" && segments.length === 3 && method === "GET") {
+        const columns = parseColumns(url.searchParams.get("columns"))
+        if (columns === undefined) return yield* Effect.fail(apiFail("bad_request", messages[p.lang].badRequest("unknown column")))
+        const pointsRaw = url.searchParams.get("points")
+        const points = pointsRaw === null ? DEFAULT_POINTS : clampPoints(Number(pointsRaw))
+        const backend = yield* CarBackend
+        const series = yield* backend.tripSeries(p.tgId, tripId, points, columns).pipe(Effect.mapError(() => apiFail("internal", messages[p.lang].internal)))
+        if (series === null) return yield* Effect.fail(apiFail("not_found", messages[p.lang].notFound))
+        return json(series)
+      }
       if (c === "status" && segments.length === 3 && method === "GET") return json(yield* tripStatus(p.tgId, tripId))
       if (c === "finish" && segments.length === 3 && method === "POST") {
         const status = yield* tripStatus(p.tgId, tripId)
         if (status.manifest === null) return yield* Effect.fail(apiFail("not_found", messages[p.lang].notFound))
-        const configured = yield* Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
-        const webUrl = configured === "" ? new URL("/car/", request.url).href : configured
+        const webUrl = yield* webUrlOf(request)
         yield* notifyFinished(p, tripId, status, webUrl).pipe(Effect.ignore)
+        yield* notifyPending(p.tgId, p.lang, webUrl).pipe(Effect.ignore)
+        yield* ensureWeekly(p.tgId)
         return json(status)
       }
     }

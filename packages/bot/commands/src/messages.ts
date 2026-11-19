@@ -15,29 +15,84 @@ export const formatDateTime = (ms: number, lang: Lang): string => {
     : `${MONTHS_EN[d.getUTCMonth()]} ${day}, ${time}`
 }
 
+type ClockParts = { readonly year: number; readonly month: number; readonly day: number; readonly hour: number; readonly minute: number }
+
+const partsIn = (ms: number, tz: string): ClockParts | undefined => {
+  try {
+    const out: Record<string, number> = {}
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric"
+    }).formatToParts(new Date(ms))
+    for (const part of parts) if (part.type !== "literal") out[part.type] = Number(part.value)
+    return {
+      year: out["year"] ?? 1970,
+      month: out["month"] ?? 1,
+      day: out["day"] ?? 1,
+      hour: (out["hour"] ?? 0) % 24,
+      minute: out["minute"] ?? 0
+    }
+  } catch {
+    return undefined
+  }
+}
+
+export const formatClock = (ms: number, now: number, lang: Lang, timeZone?: string): string => {
+  const local = timeZone === undefined ? undefined : partsIn(ms, timeZone)
+  const zone = local === undefined ? "UTC" : (timeZone as string)
+  const at = local ?? partsIn(ms, "UTC")!
+  const today = partsIn(now, zone)!
+  const clock = `${pad(at.hour)}:${pad(at.minute)}`
+  const sameDay = at.year === today.year && at.month === today.month && at.day === today.day
+  const month = lang === "ru" ? MONTHS_RU[at.month - 1] : MONTHS_EN[at.month - 1]
+  const base = sameDay ? clock : lang === "ru" ? `${at.day} ${month} в ${clock}` : `${month} ${at.day} at ${clock}`
+  return local === undefined ? `${base} UTC` : base
+}
+
 export const messages = defineMessages({
   en: {
     unknownCommand: "Unknown command. Send /help to see what I can do.",
-    busy: "I'm still working on the previous message in this session. Wait for it to finish or send /stop.",
+    busy: "Please wait, I'm still answering.",
+    queuedAck: "Noted ✍️",
+    newTopicButton: "🆕 New topic",
+    newTopicDone: "Done, let's start fresh. What would you like to talk about?",
+    limitDeferred: (time: string) => `There are a lot of questions right now. I'll answer at about ${time}.`,
+    limitDeferredSoon: "There are a lot of questions right now. I'll answer a bit later.",
+    apiCreditsUser: "I can't answer right now, we're already fixing it. Please try again later.",
+    apiCreditsAdmin: (tgId: number) => `The Anthropic API credits ran out (user ${tgId}). Top them up.`,
+    technicalFailure: (tgId: number, detail: string) => `Run failed twice for user ${tgId}: ${detail}`,
     dailyLimit: (limit: number) => `Daily limit reached: ${limit} requests per day. Try again tomorrow.`,
     subscriptionLimit: (resetsAt: number | undefined) =>
       resetsAt === undefined
-        ? "The Claude usage limit is exhausted. Please try again later."
-        : `The Claude usage limit is exhausted. It resets at ${formatDateTime(resetsAt, "en")}.`,
-    apiCredits: "The Anthropic API credits for this bot have run out. The admin has been notified.",
-    containerDown: "The agent's environment is not available right now. Please try again in a minute.",
+        ? "There are a lot of questions right now. Please try again later."
+        : `There are a lot of questions right now. I'll be able to answer at ${formatDateTime(resetsAt, "en")}.`,
+    apiCredits: "I can't answer right now, we're already fixing it. Please try again later.",
+    containerDown: "Something went wrong, please try again a bit later.",
     genericError: "Something went wrong. Please try again later."
   },
   ru: {
     unknownCommand: "Неизвестная команда. Отправьте /help, чтобы увидеть, что я умею.",
-    busy: "Я ещё обрабатываю предыдущее сообщение в этой сессии. Дождитесь ответа или отправьте /stop.",
+    busy: "Подождите, я ещё отвечаю.",
+    queuedAck: "Учту ✍️",
+    newTopicButton: "🆕 Новая тема",
+    newTopicDone: "Хорошо, начнём с чистого листа. О чём поговорим?",
+    limitDeferred: (time: string) => `Сейчас много вопросов, отвечу примерно в ${time}.`,
+    limitDeferredSoon: "Сейчас много вопросов, отвечу чуть позже.",
+    apiCreditsUser: "Сейчас я не могу ответить, мы уже разбираемся. Попробуйте чуть позже.",
+    apiCreditsAdmin: (tgId: number) => `Закончились кредиты Anthropic API (пользователь ${tgId}). Пополните их.`,
+    technicalFailure: (tgId: number, detail: string) => `Запуск дважды завершился ошибкой у ${tgId}: ${detail}`,
     dailyLimit: (limit: number) => `Дневной лимит исчерпан: ${limit} запросов в день. Попробуйте завтра.`,
     subscriptionLimit: (resetsAt: number | undefined) =>
       resetsAt === undefined
-        ? "Лимит использования Claude исчерпан. Попробуйте позже."
-        : `Лимит использования Claude исчерпан. Он сбросится ${formatDateTime(resetsAt, "ru")}.`,
-    apiCredits: "Закончились кредиты Anthropic API для этого бота. Админ уже получил уведомление.",
-    containerDown: "Окружение агента сейчас недоступно. Попробуйте через минуту.",
+        ? "Сейчас много вопросов. Попробуйте позже."
+        : `Сейчас много вопросов. Смогу ответить ${formatDateTime(resetsAt, "ru")}.`,
+    apiCredits: "Сейчас я не могу ответить, мы уже разбираемся. Попробуйте чуть позже.",
+    containerDown: "Что-то пошло не так, попробуйте чуть позже.",
     genericError: "Что-то пошло не так. Попробуйте позже."
   }
 })
@@ -63,3 +118,10 @@ export const errorMessage = (err: BotError, lang: Lang): string | undefined => {
       return m.genericError
   }
 }
+
+export const isNewTopicText = (text: string): boolean => {
+  const t = text.trim()
+  return t === messages.en.newTopicButton || t === messages.ru.newTopicButton
+}
+
+export const newTopicKeyboard = (lang: Lang) => ({ rows: [[messages[lang].newTopicButton]] })

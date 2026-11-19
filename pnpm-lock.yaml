@@ -89,6 +89,9 @@ importers:
       '@bot/car-recorder':
         specifier: workspace:*
         version: link:../../packages/car/recorder
+      '@fontsource-variable/manrope':
+        specifier: ^5.3.0
+        version: 5.3.0
       effect:
         specifier: 'catalog:'
         version: 4.1.4
@@ -150,18 +153,36 @@ importers:
       '@bot/bot-invites':
         specifier: workspace:*
         version: link:../../packages/bot/invites
+      '@bot/bot-memory':
+        specifier: workspace:*
+        version: link:../../packages/bot/memory
+      '@bot/bot-scheduler':
+        specifier: workspace:*
+        version: link:../../packages/bot/scheduler
       '@bot/car-server':
         specifier: workspace:*
         version: link:../../packages/car/server
+      '@bot/car-store':
+        specifier: workspace:*
+        version: link:../../packages/car/store
       '@bot/core-contracts':
         specifier: workspace:*
         version: link:../../packages/core/contracts
+      '@bot/infra-speech':
+        specifier: workspace:*
+        version: link:../../packages/infra/speech
       '@bot/plugins-car':
         specifier: workspace:*
         version: link:../../packages/plugins/car
+      '@bot/plugins-memory':
+        specifier: workspace:*
+        version: link:../../packages/plugins/memory
       '@bot/plugins-registry':
         specifier: workspace:*
         version: link:../../packages/plugins/registry
+      '@bot/plugins-reminders':
+        specifier: workspace:*
+        version: link:../../packages/plugins/reminders
       '@bot/telegram-client':
         specifier: workspace:*
         version: link:../../packages/telegram/client
@@ -325,9 +346,15 @@ importers:
       '@bot/bot-commands':
         specifier: workspace:*
         version: link:../commands
+      '@bot/bot-memory':
+        specifier: workspace:*
+        version: link:../memory
       '@bot/core-contracts':
         specifier: workspace:*
         version: link:../../core/contracts
+      '@bot/infra-speech':
+        specifier: workspace:*
+        version: link:../../infra/speech
       '@bot/telegram-schema':
         specifier: workspace:*
         version: link:../../telegram/schema
@@ -388,6 +415,69 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/bot/memory:
+    dependencies:
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/bot/scheduler:
+    dependencies:
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/car/dtc:
+    dependencies:
+      '@bot/car-format':
+        specifier: workspace:*
+        version: link:../format
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/car/format:
     dependencies:
       effect:
@@ -434,6 +524,9 @@ importers:
       '@bot/car-format':
         specifier: workspace:*
         version: link:../format
+      '@bot/car-obd':
+        specifier: workspace:*
+        version: link:../obd
       effect:
         specifier: 'catalog:'
         version: 4.1.4
@@ -441,6 +534,12 @@ importers:
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/w3c-web-serial':
+        specifier: 1.0.9
+        version: 1.0.9
+      '@types/web-bluetooth':
+        specifier: 0.0.22
+        version: 0.0.22
       fake-indexeddb:
         specifier: 6.2.8
         version: 6.2.8
@@ -456,6 +555,9 @@ importers:
       '@bot/car-format':
         specifier: workspace:*
         version: link:../format
+      '@bot/car-store':
+        specifier: workspace:*
+        version: link:../store
       '@bot/core-contracts':
         specifier: workspace:*
         version: link:../../core/contracts
@@ -475,6 +577,37 @@ importers:
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/car/store:
+    dependencies:
+      '@bot/car-dtc':
+        specifier: workspace:*
+        version: link:../dtc
+      '@bot/car-format':
+        specifier: workspace:*
+        version: link:../format
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -491,6 +624,22 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+
+  packages/infra/speech:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/infra/telegram-webhook:
     dependencies:
@@ -516,9 +665,18 @@ importers:
 
   packages/plugins/car:
     dependencies:
+      '@bot/bot-scheduler':
+        specifier: workspace:*
+        version: link:../../bot/scheduler
+      '@bot/car-dtc':
+        specifier: workspace:*
+        version: link:../../car/dtc
       '@bot/car-format':
         specifier: workspace:*
         version: link:../../car/format
+      '@bot/car-store':
+        specifier: workspace:*
+        version: link:../../car/store
       '@bot/core-contracts':
         specifier: workspace:*
         version: link:../../core/contracts
@@ -539,6 +697,34 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/plugins/memory:
+    dependencies:
+      '@bot/bot-memory':
+        specifier: workspace:*
+        version: link:../../bot/memory
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      '@bot/telegram-format':
+        specifier: workspace:*
+        version: link:../../telegram/format
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/plugins/registry:
     dependencies:
       '@bot/core-contracts':
@@ -551,6 +737,34 @@ importers:
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/plugins/reminders:
+    dependencies:
+      '@bot/bot-scheduler':
+        specifier: workspace:*
+        version: link:../../bot/scheduler
+      '@bot/core-contracts':
+        specifier: workspace:*
+        version: link:../../core/contracts
+      '@bot/telegram-format':
+        specifier: workspace:*
+        version: link:../../telegram/format
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.4
+    devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.1(@types/node@24.19.2)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -1024,6 +1238,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource-variable/manrope@5.3.0':
+    resolution: {integrity: sha512-6D5dgokHsWDDMtmXHznKa0hK229NN+1a4BLPmUCLqcO1Pw5EEhWY5RFt0AcXnVRAljFFPfRtLkJePQj6LSsV6g==}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -2531,6 +2748,8 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.16.0': {}
+
+  '@fontsource-variable/manrope@5.3.0': {}
 
   '@img/colour@1.1.0': {}
 

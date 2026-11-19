@@ -1,7 +1,10 @@
 import { ref } from "vue"
+import { buildOverviewFixture, buildTripFixture, type InsightScenario } from "../fixtures/insights.ts"
 import { fixtureDiag, fixtureReading, fixtureTrips, readyConn } from "../fixtures/index.ts"
 import type {
+  AutoVm,
   Capabilities,
+  DtcScanOutcome,
   ConnectionVm,
   DiagEvent,
   FuelRateSource,
@@ -18,7 +21,11 @@ import type {
 } from "../model/types.ts"
 import type { CarBackend, InterruptedTrip, PairingState } from "./backend.ts"
 
-export interface DemoOptions {
+export type DemoOptions = {
+  insights?: InsightScenario
+  auto?: AutoVm
+  insightsDemo?: boolean
+  scanDelayMs?: number
   platform?: Platform
   caps?: Capabilities
   conn?: ConnectionVm
@@ -57,6 +64,11 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
   const wakeLock = ref(false)
   const fuelSource = ref<FuelRateSource>(o.fuelSource ?? "none")
   const pollingMs = ref(500)
+  const wait = (ms: number) => (o.static ? Promise.resolve() : sleep(ms))
+  const auto = ref<AutoVm>(o.auto ?? { _tag: "Off" })
+  const insightsDemo = ref(o.insightsDemo ?? true)
+  const scenario: InsightScenario = o.insights ?? "issues"
+  let scannedAt: number | null = null
   let cancelled = false
   let timer: ReturnType<typeof setInterval> | undefined
 
@@ -75,6 +87,13 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
       fuelRateLph: supported.value?.includes("fuelRateLph") ? +(4 + Math.random()).toFixed(1) : null,
       voltageV: 13.9
     }
+  }
+
+  const shapeOf = (tripId: string) => {
+    const t = trips.value.find((x) => x.tripId === tripId)
+    const startedAt = t?.startedAt ?? Date.now() - 3_600_000
+    const endedAt = t?.endedAt ?? startedAt + 20 * 60_000
+    return { tripId, startedAt, durationS: Math.max(60, Math.round((endedAt - startedAt) / 1000)) }
   }
 
   return {
@@ -97,6 +116,42 @@ export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
     fuelSource,
     wakeLock,
     pollingMs,
+    insightsDemo,
+    auto,
+
+    async overview(lang) {
+      await wait(250)
+      const base = buildOverviewFixture(scenario, lang, Date.now())
+      return scannedAt === null ? base : { ...base, engine: { ...base.engine, lastScanAt: scannedAt } }
+    },
+    async tripInsight(tripId) {
+      await wait(250)
+      return buildTripFixture(shapeOf(tripId)).insight
+    },
+    async tripSeries(tripId) {
+      await wait(350)
+      return buildTripFixture(shapeOf(tripId)).series
+    },
+    async alerts(lang) {
+      return buildOverviewFixture(scenario, lang, Date.now()).alerts
+    },
+    async scanDtc(): Promise<DtcScanOutcome> {
+      await wait(o.scanDelayMs ?? 1800)
+      scannedAt = Date.now()
+      return { _tag: "Done", at: scannedAt, codes: scenario === "issues" ? ["P0420", "P0171"] : [], milOn: scenario === "issues" }
+    },
+    async enableAuto() {
+      auto.value = { _tag: "WaitingForEngine", adapterName: "Demo" }
+    },
+    async connectAdapter() {
+      auto.value = { _tag: "WaitingForEngine", adapterName: "Demo" }
+    },
+    async forgetAdapter() {
+      auto.value = { _tag: "NeedsTap", reason: "forgotten" }
+    },
+    async dismissAutoStopped() {
+      auto.value = { _tag: "WaitingForEngine", adapterName: "Demo" }
+    },
 
     async connect(kind: TransportKind, scenario: SimScenario = "normal") {
       cancelled = false

@@ -61,6 +61,10 @@ export const TripInsight = Schema.Struct({
   restingVoltageV: Schema.NullOr(Schema.Number),
   hardAccelerations: Schema.Int,
   hardBrakings: Schema.Int,
+  crankMinV: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  chargingAvgV: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  startCoolantC: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  endFuelLevelPct: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   speedBands: Schema.Array(Schema.Struct({ fromKmh: Schema.Number, toKmh: Schema.Number, seconds: Schema.Number, fuelPer100Km: Schema.NullOr(Schema.Number) })),
   route: Schema.Struct({
     startLat: Schema.NullOr(Schema.Number),

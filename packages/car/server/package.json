@@ -15,12 +15,14 @@
     "@bot/core-contracts": "workspace:*",
     "@bot/plugins-car": "workspace:*",
     "@bot/plugins-registry": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "@bot/car-store": "workspace:*"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "@bot/bot-allowlist": "workspace:*"
+    "@bot/bot-allowlist": "workspace:*",
+    "@types/node": "catalog:"
   }
 }

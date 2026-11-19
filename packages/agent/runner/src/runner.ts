@@ -1,5 +1,5 @@
 import { Config, ConfigProvider, Duration, Effect, Layer, Option, Redacted, Schedule, Schema, Semaphore, Stream } from "effect"
-import { AgentRunner, type RunInput } from "@bot/core-contracts/agent-runner"
+import { AgentRunner, type Attachment, type RunInput } from "@bot/core-contracts/agent-runner"
 import { AgentEvent } from "@bot/core-contracts/agent-event"
 import { type ApiCreditsExhausted, ContainerDown, type SubscriptionLimitReached } from "@bot/core-contracts/errors"
 import type { TgId } from "@bot/core-contracts/ids"
@@ -19,20 +19,40 @@ export interface RunnerDeps {
 
 const WORKSPACE = "/workspace"
 const OUT_DIR = "/workspace/out"
+export const IN_DIR = "/workspace/in"
 const PATH_ENV = "/usr/local/bin:/usr/bin:/bin"
 const SIGTERM = 15
 
 const BASE_TOOLS = ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch"]
 const MCP_SERVER = "bot"
 
-const systemPrompt = (lang: Lang): string =>
+export const systemPrompt = (lang: Lang): string =>
   [
-    "You are a personal assistant running inside a Telegram bot, with a Linux sandbox at /workspace.",
-    "Reply in the language of the user's message (Russian or English); if unsure, use " +
+    "You are a friendly personal assistant chatting with an ordinary, non-technical person in Telegram. Talk like a helpful, warm human, not like software.",
+    "Use plain everyday language. Never use jargon. Never mention tools, files, folders, the sandbox, commands, models, tokens, sessions, MCP or Claude Code, and never describe how you work internally; just do the work and say what you found or did.",
+    "Give the short answer first, a few sentences at most, and offer more detail only if the user asks for it. The answer is read on a phone.",
+    "Always answer in the language of the user's latest message (Russian or English); if unsure, use " +
       (lang === "ru" ? "Russian" : "English") + ".",
-    "Be concise: the answer is read on a phone.",
-    "Any file the user should receive (charts, tables, exports, documents) MUST be saved in /workspace/out/ — files elsewhere are not delivered."
+    "When the user shares a stable personal fact (name, family, health, preferences, car model, city), save it with the memory_remember tool as one short fact. Before saving, check the MEMORY block at the end of these instructions: update an existing fact with memory_update instead of duplicating it, and if memory is full, merge or forget facts. Use the remembered facts naturally without asking again. Never mention the memory tool or that you are saving something, and do not save passwords or one-off details.",
+    "Anything the user should receive as a file (documents, tables, charts, exports) must be saved in /workspace/out/ with a human-friendly name in the user's language, such as \"Отчёт за октябрь.pdf\" or \"Shopping list.docx\"; files anywhere else are not delivered. Mention the file naturally, for example \"I attached the report\"."
   ].join(" ")
+
+export const appendedPrompt = (input: Pick<RunInput, "lang" | "memory">): string =>
+  input.memory === undefined || input.memory === "" ? systemPrompt(input.lang) : `${systemPrompt(input.lang)}\n\n${input.memory}`
+
+export const safeFileName = (name: string): string => {
+  const base = name.split(/[\\/]/).pop() ?? ""
+  const cleaned = base.replace(/[^\p{L}\p{N}._-]+/gu, "_").replace(/^[.-]+/, "").slice(-80)
+  return cleaned === "" ? "file" : cleaned
+}
+
+export const attachmentPath = (attachment: Attachment, index: number, nonce: string): string =>
+  `${IN_DIR}/${nonce}-${index + 1}-${safeFileName(attachment.fileName)}`
+
+export const withAttachmentPaths = (prompt: string, entries: ReadonlyArray<{ readonly path: string; readonly mimeType: string }>): string =>
+  entries.length === 0
+    ? prompt
+    : `${prompt}\n\nFiles from the user (read them with your tools): ${entries.map((e) => `${e.path} (${e.mimeType})`).join(", ")}`
 
 export const INSTANCE_TYPES = ["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"] as const
 export type InstanceType = (typeof INSTANCE_TYPES)[number]
@@ -104,7 +124,7 @@ export const buildClaudeArgv = (input: RunInput, cfg: { readonly maxTurns: numbe
     "--permission-mode", "dontAsk",
     "--allowedTools", tools.join(","),
     "--max-turns", String(cfg.maxTurns),
-    "--append-system-prompt", systemPrompt(input.lang)
+    "--append-system-prompt", appendedPrompt(input)
   ]
   if (Option.isSome(cfg.model)) argv.push("--model", cfg.model.value)
   if (input.resume !== undefined) argv.push("--resume", input.resume)
@@ -275,12 +295,37 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
         )
       )
 
+    const writeAttachments = (attachments: ReadonlyArray<Attachment>) =>
+      Effect.gen(function* () {
+        const nonce = crypto.randomUUID().slice(0, 8)
+        yield* sh(["mkdir", "-p", IN_DIR])
+        const entries: Array<{ readonly path: string; readonly mimeType: string }> = []
+        for (const [index, attachment] of attachments.entries()) {
+          const path = attachmentPath(attachment, index, nonce)
+          yield* wrap(`write ${path}`, async () => {
+            const p = await container.exec(["sh", "-c", 'cat > "$1"', "sh", path], {
+              cwd: WORKSPACE,
+              user,
+              stdin: new Response(attachment.bytes as unknown as ArrayBuffer).body as ReadableStream<Uint8Array>,
+              stdout: "pipe",
+              stderr: "pipe",
+              env: { HOME: home, PATH: PATH_ENV }
+            })
+            const out = await p.output()
+            if (out.exitCode !== 0) throw new Error(`exit ${out.exitCode}: ${textOf(out.stderr).trim()}`)
+          })
+          entries.push({ path, mimeType: attachment.mimeType })
+        }
+        return entries
+      })
+
     const run = (input: RunInput): Stream.Stream<AgentEvent, ContainerDown | SubscriptionLimitReached | ApiCreditsExhausted> =>
       Stream.unwrap(
         Effect.gen(function* () {
           yield* ensureStarted(input.tgId)
           const before = yield* listOut
-          const argv = buildClaudeArgv(input, cfg)
+          const written = yield* writeAttachments(input.attachments ?? [])
+          const argv = buildClaudeArgv({ ...input, prompt: withAttachmentPaths(input.prompt, written) }, cfg)
           const ac = new AbortController()
           let finished = false
           let sawCompleted = false

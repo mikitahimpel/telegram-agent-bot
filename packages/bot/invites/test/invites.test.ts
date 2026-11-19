@@ -56,6 +56,9 @@ const world = (invitesLayer: Layer.Layer<Invites>, now?: { t: number }) => {
     sendChatAction: never,
     createForumTopic: never,
     answerCallbackQuery: (_id, text) => Effect.sync(() => void answers.push(text)),
+    getFile: never,
+    downloadFile: never,
+    setMessageReaction: never,
     setMyCommands: () => Effect.void
   })
   const plugins = [{ id: "car", title: { en: "Car", ru: "Авто" }, enabledByDefault: false }]
@@ -67,7 +70,7 @@ const world = (invitesLayer: Layer.Layer<Invites>, now?: { t: number }) => {
     allowlistMemory(admin),
     flagsMemory(plugins),
     invitesLayer,
-    Layer.succeed(HelpRegistry, registry)
+    Layer.succeed(HelpRegistry, { ...registry, blurbsFor: () => Effect.succeed([]) })
   )
   return { sent, answers, edits, layer, registry, invite }
 }
@@ -252,7 +255,7 @@ describe("redeem flow", () => {
       expect(entry).toMatchObject({ name: "Masha", username: "masha", invitedVia: code, addedBy: admin })
       expect(yield* (yield* PluginFlags).isEnabled("car", alice)).toBe(true)
       const toUser = w.sent.find((s) => s.chatId === alice)!
-      expect(toUser.html).toContain("Добро пожаловать")
+      expect(toUser.html).toContain("Привет, Masha")
       const toAdmin = w.sent.find((s) => s.chatId === admin)!
       expect(toAdmin.html).toContain("Masha (@masha, <code>2</code>) joined via invite «Masha»")
       expect(toAdmin.keyboard?.[0]?.[0]).toMatchObject({ callbackData: "revask:2", style: "danger" })

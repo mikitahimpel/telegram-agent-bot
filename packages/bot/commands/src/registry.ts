@@ -61,7 +61,9 @@ export const makeRegistry = <R>(
   }
 
   const visibleFor = (role: Role): ReadonlyArray<CommandDef<R>> => {
-    const shown = commands.filter((c) => c.hidden !== true && allowed(c.role, role))
+    const shown = commands.filter(
+      (c) => c.hidden !== true && allowed(c.role, role) && (c.advanced !== true || role === "admin")
+    )
     return [...shown.filter((c) => c.role === "user"), ...shown.filter((c) => c.role === "admin")]
   }
 

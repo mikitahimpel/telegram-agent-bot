@@ -49,6 +49,42 @@ export const PhotoSize = Schema.Struct({
 })
 export type PhotoSize = typeof PhotoSize.Type
 
+export const Voice = Schema.Struct({
+  file_id: Schema.String,
+  file_unique_id: Schema.String,
+  duration: Schema.Number,
+  mime_type: Opt(Schema.String),
+  file_size: Opt(Schema.Number)
+})
+export type Voice = typeof Voice.Type
+
+export const Audio = Schema.Struct({
+  file_id: Schema.String,
+  file_unique_id: Schema.String,
+  duration: Schema.Number,
+  file_name: Opt(Schema.String),
+  mime_type: Opt(Schema.String),
+  file_size: Opt(Schema.Number)
+})
+export type Audio = typeof Audio.Type
+
+export const VideoNote = Schema.Struct({
+  file_id: Schema.String,
+  file_unique_id: Schema.String,
+  length: Schema.Number,
+  duration: Schema.Number,
+  file_size: Opt(Schema.Number)
+})
+export type VideoNote = typeof VideoNote.Type
+
+export const TelegramFile = Schema.Struct({
+  file_id: Schema.String,
+  file_unique_id: Schema.String,
+  file_size: Opt(Schema.Number),
+  file_path: Opt(Schema.String)
+})
+export type TelegramFile = typeof TelegramFile.Type
+
 export const ForumTopicCreated = Schema.Struct({
   name: Schema.String,
   icon_color: Opt(Schema.Number),
@@ -70,6 +106,10 @@ const messageFields = {
   caption_entities: Opt(Schema.Array(MessageEntity)),
   document: Opt(Document),
   photo: Opt(Schema.Array(PhotoSize)),
+  voice: Opt(Voice),
+  audio: Opt(Audio),
+  video_note: Opt(VideoNote),
+  media_group_id: Opt(Schema.String),
   forum_topic_created: Opt(ForumTopicCreated)
 }
 

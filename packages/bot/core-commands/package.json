@@ -5,7 +5,8 @@
   "sideEffects": false,
   "exports": {
     "./core-commands": "./src/core-commands.ts",
-    "./help-registry": "./src/help-registry.ts"
+    "./help-registry": "./src/help-registry.ts",
+    "./welcome": "./src/welcome.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

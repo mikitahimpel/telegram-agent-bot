@@ -18,8 +18,13 @@ export interface SendTarget {
   readonly threadId?: ThreadId
 }
 
+export type ReplyKeyboard = {
+  readonly rows: ReadonlyArray<ReadonlyArray<string>>
+}
+
 export interface SendOptions {
   readonly keyboard?: InlineKeyboard
+  readonly replyKeyboard?: ReplyKeyboard
   readonly replyToMessageId?: number
   readonly disablePreview?: boolean
 }
@@ -27,6 +32,13 @@ export interface SendOptions {
 export interface SentMessage {
   readonly messageId: number
 }
+
+export type TelegramFileInfo = {
+  readonly filePath: string
+  readonly fileSize: number | undefined
+}
+
+export const MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
 
 export interface BotCommandEntry {
   readonly command: string
@@ -55,9 +67,15 @@ export class Telegram extends Context.Service<
       to: SendTarget,
       file: { readonly fileName: string; readonly bytes: Uint8Array; readonly caption?: string }
     ) => Effect.Effect<SentMessage, TelegramError>
+    readonly getFile: (fileId: string) => Effect.Effect<TelegramFileInfo, TelegramError>
+    readonly downloadFile: (filePath: string) => Effect.Effect<Uint8Array, TelegramError>
     readonly sendChatAction: (to: SendTarget, action: "typing" | "upload_document") => Effect.Effect<void, TelegramError>
     readonly createForumTopic: (chatId: ChatId, name: string) => Effect.Effect<{ readonly threadId: ThreadId }, TelegramError>
     readonly answerCallbackQuery: (id: string, text?: string) => Effect.Effect<void, TelegramError>
+    readonly setMessageReaction: (
+      to: SendTarget & { readonly messageId: number },
+      emoji: string
+    ) => Effect.Effect<void, TelegramError>
     readonly setMyCommands: (
       commands: ReadonlyArray<BotCommandEntry>,
       scope: CommandScope,

@@ -4,6 +4,7 @@ export interface Env {
   readonly USER_AGENT: DurableObjectNamespace<UserAgent>
   readonly KV: KVNamespace
   readonly BACKUPS: R2Bucket
+  readonly AI: Ai
   readonly R2_S3: string
   readonly TELEGRAM_BOT_TOKEN: string
   readonly TELEGRAM_WEBHOOK_SECRET: string

@@ -56,7 +56,14 @@ export class Disconnected extends Data.TaggedError("Disconnected")<{}> {
   readonly code = "disconnected" as const
 }
 
+export class ReconnectUnavailable extends Data.TaggedError("ReconnectUnavailable")<{
+  readonly reason: "unsupported" | "forgotten" | "out_of_range" | "gesture_required"
+}> {
+  readonly code = "reconnect_unavailable" as const
+}
+
 export type ObdError =
+  | ReconnectUnavailable
   | BluetoothUnavailable
   | SerialUnavailable
   | PermissionDenied

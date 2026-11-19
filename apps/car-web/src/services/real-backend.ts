@@ -2,6 +2,7 @@ import { Effect, Exit, Fiber, Scope, Stream, SubscriptionRef } from "effect"
 import { connect as obdConnect, type ObdEvent, type ObdSample, type ObdSession } from "@bot/car-obd/session"
 import type { ConnectionState } from "@bot/car-obd/state"
 import type { ObdError } from "@bot/car-obd/errors"
+import { AutoRecorder } from "@bot/car-recorder/auto"
 import { CarApi } from "@bot/car-recorder/api-client"
 import { exportTrip, shareFiles } from "@bot/car-recorder/export"
 import { Recorder, type ReadingSource } from "@bot/car-recorder/recorder"
@@ -9,10 +10,12 @@ import type { makeCarRuntime } from "@bot/car-recorder/runtime"
 import { TripStore } from "@bot/car-recorder/store"
 import { SyncEngine } from "@bot/car-recorder/sync"
 import type { Gap } from "@bot/car-format/manifest"
-import type { DiagEvent, Reading, SimScenario, TransportKind } from "../model/types.ts"
+import type { DiagEvent, DtcScanOutcome, Reading, SimScenario, TransportKind } from "../model/types.ts"
 import type { CarBackend } from "./backend.ts"
+import { InsightsError, insightsApi } from "./insights-api.ts"
+import { API_BASE } from "./api-base.ts"
 import { mapConnectionState, mapObdError, sensorsFromInfo } from "./map-obd.ts"
-import { mapRecorderState, mapSyncStatus, mapSyncTrips } from "./map-recorder.ts"
+import { mapAutoState, mapRecorderState, mapSyncStatus, mapSyncTrips } from "./map-recorder.ts"
 
 type CarRuntime = ReturnType<typeof makeCarRuntime>
 
@@ -138,6 +141,16 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       )
     })
   )
+  runtime.runFork(
+    Effect.gen(function*() {
+      const a = yield* AutoRecorder
+      yield* Stream.runForEach(SubscriptionRef.changes(a.state), (s) =>
+        Effect.sync(() => {
+          base.auto.value = mapAutoState(s)
+        })
+      )
+    })
+  )
   void runtime
     .runPromise(Recorder.use((r) => r.recoverUnfinished))
     .then((list) => {
@@ -161,9 +174,48 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
     }
   }
 
+  const insights = async <A>(demo: () => Promise<A>, remote: (api: ReturnType<typeof insightsApi>) => Promise<A>): Promise<A> => {
+    if (base.pairing.value !== "paired") {
+      if (base.insightsDemo.value) return demo()
+      throw new InsightsError("not_paired")
+    }
+    const cred = await runtime.runPromise(CarApi.use((a) => a.credential))
+    if (!cred) throw new InsightsError("unauthorized")
+    return remote(insightsApi(API_BASE, cred.token))
+  }
+
   return {
     ...base,
+    overview: (lang) => insights(() => base.overview(lang), (api) => api.overview()),
+    tripInsight: (id, lang) => insights(() => base.tripInsight(id, lang), (api) => api.tripInsight(id)),
+    tripSeries: (id) => insights(() => base.tripSeries(id), (api) => api.tripSeries(id)),
+    alerts: (lang) => insights(() => base.alerts(lang), (api) => api.alerts()),
+    scanDtc: () =>
+      runtime.runPromise(
+        AutoRecorder.use((a) =>
+          a.scanNow.pipe(
+            Effect.match({
+              onFailure: (e): DtcScanOutcome => (e._tag === "AutoNotConnected" ? { _tag: "NeedsConnection" } : { _tag: "Failed", reason: e._tag }),
+              onSuccess: (r): DtcScanOutcome => ({ _tag: "Done", at: r.readAt, codes: r.codes.map((c) => c.code), milOn: r.milOn })
+            })
+          )
+        )
+      ),
+    async enableAuto() {
+      if (!base.caps.ble) return
+      await runtime.runPromise(AutoRecorder.use((a) => a.enable({ geo: true, appVersion })))
+    },
+    async connectAdapter() {
+      await runtime.runPromise(AutoRecorder.use((a) => a.connectNew.pipe(Effect.ignore)))
+    },
+    async forgetAdapter() {
+      await runtime.runPromise(AutoRecorder.use((a) => a.forgetAdapter))
+    },
+    async dismissAutoStopped() {
+      await runtime.runPromise(AutoRecorder.use((a) => a.dismissStopped))
+    },
     async connect(kind: TransportKind, scenario?: SimScenario) {
+      await runtime.runPromise(AutoRecorder.use((a) => a.disable))
       await closeSession()
       const gen = generation
       const sc = Scope.makeUnsafe()
@@ -208,6 +260,10 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       base.conn.value = { _tag: "Idle" }
     },
     async startRecording() {
+      if (!session && base.auto.value._tag === "WaitingForEngine") {
+        await runtime.runPromise(AutoRecorder.use((a) => a.startNow.pipe(Effect.ignore)))
+        return
+      }
       if (!session) return
       stopPreview()
       const info = session.info
@@ -223,6 +279,10 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       }
     },
     async stopRecording() {
+      if (base.auto.value._tag === "Recording") {
+        await runtime.runPromise(AutoRecorder.use((a) => a.stopNow.pipe(Effect.ignore)))
+        return
+      }
       try {
         await runtime.runPromise(Recorder.use((r) => r.stop))
       } catch (e) {

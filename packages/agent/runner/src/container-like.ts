@@ -13,6 +13,7 @@ export interface ContainerExecOptionsLike {
   env?: Record<string, string>
   user?: string
   signal?: AbortSignal
+  stdin?: ReadableStream<Uint8Array>
   stdout?: "pipe" | "ignore"
   stderr?: "pipe" | "ignore" | "combined"
 }

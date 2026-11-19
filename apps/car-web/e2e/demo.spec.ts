@@ -58,7 +58,8 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   await expect(row).not.toContainText("скоро начнётся")
   await page.screenshot({ path: `${SHOTS}/05-trips.png` })
   await row.click()
-  await expect(page.getByTestId("trip-distance")).toContainText("км")
+  await expect(page.getByTestId("trip-distance")).toContainText("км", { timeout: 15_000 })
+  await page.getByTestId("transfer").locator("summary").click()
   const recorded = await page.locator('[data-testid="counters"] .counter b').first().innerText()
   expect(Number(recorded.replace(/\D/g, ""))).toBeGreaterThan(0)
   await expect(page.getByTestId("status-card").first()).toContainText("Ждёт подключения телефона к аккаунту")
@@ -120,4 +121,105 @@ test.describe("WebView", () => {
     await page.screenshot({ path: `${SHOTS}/08-webview.png` })
     expect(errors).toEqual([])
   })
+})
+
+const openDemo = async (page: Page) => {
+  await page.goto("/car/")
+  await page.getByTestId("pair-demo").click()
+  await expect(page.getByTestId("connect-title")).toBeVisible()
+}
+
+test("demo insights: overview, trip charts, engine, battery, stats", async ({ page }) => {
+  const errors = trackErrors(page)
+  await openDemo(page)
+  await page.getByTestId("tab-overview").click()
+  await expect(page.getByTestId("verdict")).toBeVisible()
+  await expect(page.getByTestId("demo-chip")).toBeVisible()
+  await expect(page.getByTestId("card-engine")).toContainText("2 ошибки")
+  await expect(page.getByTestId("card-battery")).toContainText("В")
+  await expect(page.getByTestId("card-fuel")).toContainText("л/100 км")
+  await page.screenshot({ path: `${SHOTS}/10-overview.png`, fullPage: true })
+
+  await page.getByTestId("card-trip").click()
+  await expect(page.getByTestId("trip-numbers")).toBeVisible()
+  await expect(page.getByTestId("trip-distance")).toContainText("км")
+  await expect(page.getByTestId("route")).toBeVisible()
+  const speed = page.getByTestId("chart-speed")
+  await speed.scrollIntoViewIfNeeded()
+  await expect(speed.getByTestId("chart-gap")).toHaveCount(1)
+  const box = (await speed.locator("svg").boundingBox())!
+  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height / 2)
+  await expect(page.locator('[data-chart-hover="on"]')).toHaveCount(5)
+  await expect(page.getByTestId("chart-readout").first()).toContainText("км/ч")
+  await page.screenshot({ path: `${SHOTS}/11-trip-charts.png` })
+  await expect(page.getByTestId("transfer")).toHaveCount(0)
+  await page.screenshot({ path: `${SHOTS}/12-trip-full.png`, fullPage: true })
+
+  await page.getByTestId("tab-overview").click()
+  await page.getByTestId("card-engine").click()
+  await expect(page.getByTestId("dtc")).toHaveCount(2)
+  await expect(page.getByTestId("can-drive").first()).toContainText("Ехать можно")
+  await page.getByTestId("scan").click()
+  await expect(page.getByTestId("scan-info")).toContainText("Последняя проверка", { timeout: 10_000 })
+  await page.screenshot({ path: `${SHOTS}/13-engine.png`, fullPage: true })
+
+  await page.getByTestId("tab-overview").click()
+  await page.getByTestId("card-battery").click()
+  await expect(page.getByTestId("chart-bat-rest")).toBeVisible()
+  await expect(page.getByTestId("chart-bat-crank")).toBeVisible()
+  await page.screenshot({ path: `${SHOTS}/14-battery.png`, fullPage: true })
+
+  await page.getByTestId("tab-overview").click()
+  await page.getByTestId("open-stats").click()
+  await expect(page.locator(".bar")).toHaveCount(10)
+  await page.getByTestId("period-month").click()
+  await expect(page.locator(".bar")).toHaveCount(6)
+  await expect(page.getByTestId("stats-table")).toBeVisible()
+  await page.screenshot({ path: `${SHOTS}/15-stats.png`, fullPage: true })
+  expect(errors).toEqual([])
+})
+
+test("deep links open the right screen", async ({ page }) => {
+  const errors = trackErrors(page)
+  await openDemo(page)
+  for (const [hash, id] of [
+    ["#engine", "engine-screen"],
+    ["#battery", "battery-screen"],
+    ["#stats", "stats-screen"],
+    ["#overview", "overview"],
+    ["#trip=20261119T100000Z-ab12cd34", "trip-detail"]
+  ] as const) {
+    await page.goto(`/car/${hash}`)
+    await expect(page.getByTestId(id)).toBeVisible()
+    await page.reload()
+    await expect(page.getByTestId(id)).toBeVisible()
+  }
+  await expect(page.getByTestId("trip-numbers")).toBeVisible()
+  await page.goto("/car/#pair=badcode")
+  await expect(page.getByTestId("tab-overview")).toBeVisible()
+  expect(errors.filter((e) => !/pair\/complete|404|Failed to load resource/.test(e))).toEqual([])
+})
+
+test("unpaired: onboarding is reachable and explains the adapter", async ({ page }) => {
+  const errors = trackErrors(page)
+  await page.goto("/car/")
+  await page.getByTestId("open-onboarding").click()
+  await expect(page.getByTestId("ob-title")).toBeVisible()
+  await page.getByTestId("ob-need").click()
+  await expect(page.getByTestId("ob-warning")).toContainText("Bluetooth")
+  await page.screenshot({ path: `${SHOTS}/16-onboarding.png` })
+  for (let i = 0; i < 4; i++) await page.getByTestId("ob-next").click()
+  await page.getByTestId("ob-done").click()
+  await expect(page.getByTestId("pair-screen")).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test("dark theme renders overview", async ({ browser }) => {
+  const ctx = await browser.newContext({ colorScheme: "dark", viewport: { width: 360, height: 780 }, locale: "ru-RU" })
+  const page = await ctx.newPage()
+  await openDemo(page)
+  await page.getByTestId("tab-overview").click()
+  await expect(page.getByTestId("verdict")).toBeVisible()
+  await page.screenshot({ path: `${SHOTS}/17-overview-dark.png`, fullPage: true })
+  await ctx.close()
 })

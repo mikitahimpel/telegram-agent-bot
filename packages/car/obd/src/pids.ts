@@ -75,3 +75,5 @@ export const protocolName = (dpn: string): string => {
   const code = dpn.trim().toUpperCase().replace(/^A(?=[0-9A-C]$)/, "")
   return PROTOCOLS[code] ?? dpn.trim()
 }
+
+export const isCanProtocol = (dpn: string): boolean => /^A?[6-9]$/i.test(dpn.trim())

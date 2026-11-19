@@ -1,0 +1,28 @@
+{
+  "name": "@bot/plugins-reminders",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./reminders": "./src/reminders.ts",
+    "./tz": "./src/tz.ts",
+    "./settings": "./src/settings.ts",
+    "./messages": "./src/messages.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/bot-scheduler": "workspace:*",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/telegram-format": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

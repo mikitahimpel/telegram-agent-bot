@@ -16,7 +16,12 @@
     "./import": "./src/import.ts",
     "./trip-store": "./src/trip-store.ts",
     "./messages": "./src/messages.ts",
-    "./testing": "./src/testing.ts"
+    "./testing": "./src/testing.ts",
+    "./notify": "./src/notify.ts",
+    "./rebuild": "./src/rebuild.ts",
+    "./insight-tools": "./src/insight-tools.ts",
+    "./web-url": "./src/web-url.ts",
+    "./notify-messages": "./src/notify-messages.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
@@ -26,7 +31,10 @@
     "@bot/core-contracts": "workspace:*",
     "effect": "catalog:",
     "@bot/car-format": "workspace:*",
-    "@bot/telegram-format": "workspace:*"
+    "@bot/telegram-format": "workspace:*",
+    "@bot/car-store": "workspace:*",
+    "@bot/car-dtc": "workspace:*",
+    "@bot/bot-scheduler": "workspace:*"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

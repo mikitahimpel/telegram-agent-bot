@@ -8,6 +8,8 @@ export interface InlineButton {
   readonly text: string
   readonly callbackData?: string
   readonly url?: string
+  /** Opens a Telegram Mini App (HTTPS URL) — Bot API `web_app`. */
+  readonly webAppUrl?: string
   readonly style?: "primary" | "success" | "danger"
 }
 

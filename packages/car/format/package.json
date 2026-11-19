@@ -1,0 +1,17 @@
+{
+  "name": "@bot/car-format",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./sample": "./src/sample.ts",
+    "./csv": "./src/csv.ts",
+    "./manifest": "./src/manifest.ts",
+    "./layout": "./src/layout.ts",
+    "./api": "./src/api.ts",
+    "./checksum": "./src/checksum.ts"
+  },
+  "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
+  "dependencies": { "effect": "catalog:" },
+  "devDependencies": { "@effect/vitest": "catalog:", "typescript": "catalog:", "vitest": "catalog:" }
+}

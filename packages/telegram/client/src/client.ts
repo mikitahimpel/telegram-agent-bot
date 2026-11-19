@@ -37,6 +37,7 @@ export const inlineKeyboardToMarkup = (keyboard: InlineKeyboard) => ({
       text: b.text,
       ...(b.callbackData !== undefined ? { callback_data: b.callbackData } : {}),
       ...(b.url !== undefined ? { url: b.url } : {}),
+      ...(b.webAppUrl !== undefined ? { web_app: { url: b.webAppUrl } } : {}),
       ...(b.style !== undefined ? { style: b.style } : {})
     }))
   )

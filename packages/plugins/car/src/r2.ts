@@ -15,6 +15,8 @@ export interface R2ListResultLike {
   readonly objects: ReadonlyArray<R2ObjectLike>
   readonly truncated: boolean
   readonly cursor?: string | undefined
+  /** Present when `delimiter` was requested. */
+  readonly delimitedPrefixes?: ReadonlyArray<string> | undefined
 }
 
 /** Minimal structural type of a Cloudflare R2 bucket binding. */
@@ -29,6 +31,8 @@ export interface R2Like {
     readonly prefix?: string
     readonly cursor?: string
     readonly limit?: number
+    readonly delimiter?: string
+    readonly include?: ReadonlyArray<"customMetadata" | "httpMetadata">
   }) => Promise<R2ListResultLike>
   readonly head: (key: string) => Promise<R2ObjectLike | null>
   readonly delete: (keys: string | ReadonlyArray<string>) => Promise<void>

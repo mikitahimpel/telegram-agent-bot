@@ -1,27 +1,29 @@
 import { Clock, Config, Context, Effect, Layer, Schema } from "effect"
-import type { CommandContext, CommandDef } from "@bot/core-contracts/commands"
+import { table } from "@bot/telegram-format/format"
+import { chunkKey, manifestKey } from "@bot/car-format/layout"
+import type { CallbackDef, CommandContext, CommandDef } from "@bot/core-contracts/commands"
 import { StorageError } from "@bot/core-contracts/errors"
-import type { BotPlugin, AgentTool } from "@bot/core-contracts/plugin"
+import type { TgId } from "@bot/core-contracts/ids"
+import type { Lang } from "@bot/core-contracts/lang"
+import type { AgentTool, BotPlugin } from "@bot/core-contracts/plugin"
 import { Telegram } from "@bot/core-contracts/telegram"
-import type { SendTarget } from "@bot/core-contracts/telegram"
-import { escapeHtml, formatBytes, messages } from "./messages.ts"
+import type { InlineKeyboard, SendTarget } from "@bot/core-contracts/telegram"
+import { METRIC_NAMES, combineMetrics, type TripMetrics } from "./analytics.ts"
+import { DEVICE_CALLBACK_PREFIX, listDevices, pairUrl, revokeDevice, startPair } from "./devices.ts"
+import { CarKv } from "./kv.ts"
+import { escapeHtml, formatDuration, formatKm, formatStamp, messages } from "./messages.ts"
 import { parsePeriod } from "./period.ts"
 import { DEFAULT_UPLOAD_TTL_SECONDS, Presigner, layerConfig } from "./presigner.ts"
 import { CarBucket } from "./r2.ts"
-import { TripParser, layerUnknownFormat } from "./trip-parser.ts"
-import {
-  aggregate,
-  headTrip,
-  isValidExt,
-  listTrips,
-  newUploadKey,
-  readTripBytes
-} from "./trips.ts"
-import type { TgId } from "@bot/core-contracts/ids"
+import { listOverview, parseTripId, tripIdTime, tripMetrics, tripStatus, type TripOverview } from "./trip-store.ts"
+import { headTrip, isValidExt, newUploadKey, prefixOf } from "./trips.ts"
 
-export type CarR = CarBucket | Presigner | TripParser | Telegram
+/** Public address of the Mini App (`https://host/car/`); empty when not configured. */
+export class CarWebUrl extends Context.Service<CarWebUrl, string>()("@bot/plugins-car/CarWebUrl") {}
 
-const target = (ctx: CommandContext): SendTarget =>
+export type CarR = CarBucket | Presigner | Telegram | CarKv | CarWebUrl
+
+const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
   ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
 
 const fail = (operation: string, message: string) => new StorageError({ operation, cause: new Error(message) })
@@ -37,9 +39,6 @@ const mapKeyError = (operation: string) =>
     e._tag === "InvalidTripKey" ? fail(operation, e.message) : (e as never as StorageError)
   )
 
-const shortName = (key: string) => key.slice(key.lastIndexOf("/") + 1)
-const stamp = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)}`
-
 const uploadLink = (tgId: TgId, ext: string) =>
   Effect.gen(function*() {
     const presigner = yield* Presigner
@@ -47,6 +46,113 @@ const uploadLink = (tgId: TgId, ext: string) =>
     const key = newUploadKey(tgId, new Date(now), ext)
     const url = yield* presigner.presignPut(key, DEFAULT_UPLOAD_TTL_SECONDS)
     return { key, url, expiresInSeconds: DEFAULT_UPLOAD_TTL_SECONDS }
+  })
+
+const startedAtOf = (o: TripOverview) => o.status.manifest?.startedAt ?? tripIdTime(o.tripId)
+
+const tripLine = (o: TripOverview, lang: Lang): string => {
+  const m = messages[lang]
+  const man = o.status.manifest
+  const date = formatStamp(startedAtOf(o))
+  if (man === null || man.status !== "finished") return m.tripRecording(date)
+  if (!o.status.complete) return m.tripPartial(date, o.status.received.length, man.chunkCount)
+  const seconds = ((man.endedAt ?? man.startedAt) - man.startedAt) / 1000
+  return m.tripOk(date, formatDuration(seconds, lang), o.status.rows)
+}
+
+const REPORT_TRIPS = 30
+const num1 = (v: number | undefined, digits = 1) => (v === undefined ? "-" : v.toFixed(digits))
+
+const sendApp = (ctx: CommandContext) =>
+  Effect.gen(function*() {
+    const tg = yield* Telegram
+    const m = messages[ctx.lang]
+    const webUrl = yield* CarWebUrl
+    if (webUrl === "") return yield* tg.sendMessage(target(ctx), m.appNotConfigured).pipe(Effect.asVoid)
+    const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: ctx.lang })
+    const keyboard: InlineKeyboard = [
+      [{ text: m.openApp, webAppUrl: webUrl }],
+      [{ text: m.openChrome, url: pairUrl(webUrl, code) }]
+    ]
+    yield* tg.sendMessage(target(ctx), m.appText, { keyboard }).pipe(Effect.asVoid)
+  })
+
+const sendDevices = (ctx: CommandContext) =>
+  Effect.gen(function*() {
+    const tg = yield* Telegram
+    const m = messages[ctx.lang]
+    const devices = yield* listDevices(ctx.tgId)
+    if (devices.length === 0) return yield* tg.sendMessage(target(ctx), m.devicesNone).pipe(Effect.asVoid)
+    const lines = devices.map((d) =>
+      m.deviceLine(
+        escapeHtml(d.name),
+        formatStamp(d.createdAt),
+        d.lastSeenAt === null ? m.deviceNever : formatStamp(d.lastSeenAt)
+      )
+    )
+    const keyboard: InlineKeyboard = devices.map((d) => [
+      { text: m.revoke(d.name), callbackData: `${DEVICE_CALLBACK_PREFIX}:${d.deviceId}`, style: "danger" as const }
+    ])
+    yield* tg.sendMessage(target(ctx), [m.devicesHeader(devices.length), ...lines].join("\n"), { keyboard }).pipe(Effect.asVoid)
+  })
+
+const sendReport = (ctx: CommandContext, periodArg: string | undefined) =>
+  Effect.gen(function*() {
+    const tg = yield* Telegram
+    const m = messages[ctx.lang]
+    const now = new Date(yield* Clock.currentTimeMillis)
+    const period = parsePeriod(periodArg, now)
+    if (period === undefined) return yield* tg.sendMessage(target(ctx), m.badPeriod).pipe(Effect.asVoid)
+    const all = yield* listOverview(ctx.tgId, { from: period.from, to: period.to, limit: 1000 })
+    const complete = all.filter((o) => o.status.complete)
+    const shown = complete.slice(0, REPORT_TRIPS)
+    const skipped = all.length - complete.length
+    const lines = [m.reportHeader(escapeHtml(period.label))]
+    if (shown.length === 0) {
+      lines.push(m.reportEmpty)
+      if (skipped > 0) lines.push(m.reportSkipped(skipped))
+      return yield* tg.sendMessage(target(ctx), lines.join("\n")).pipe(Effect.asVoid)
+    }
+    const metrics: Array<TripMetrics> = []
+    const rows: Array<Array<string>> = []
+    for (const o of shown) {
+      const tm = yield* tripMetrics(ctx.tgId, o.tripId, o.status)
+      if (tm === undefined) continue
+      metrics.push(tm)
+      rows.push([
+        formatStamp(startedAtOf(o)).slice(5),
+        formatDuration(tm.durationSeconds, ctx.lang),
+        num1(tm.distanceKm),
+        num1(tm.avgSpeedKmh, 0),
+        num1(tm.maxSpeedKmh, 0),
+        tm.fuelPer100Km === undefined ? "-" : `${num1(tm.fuelPer100Km)}${tm.fuelIsEstimate ? "*" : ""}`
+      ])
+    }
+    const total = combineMetrics(metrics)
+    rows.push([
+      m.reportTotal,
+      formatDuration(total.durationSeconds, ctx.lang),
+      num1(total.distanceKm),
+      num1(total.avgSpeedKmh, 0),
+      num1(total.maxSpeedKmh, 0),
+      total.fuelPer100Km === undefined ? "-" : `${num1(total.fuelPer100Km)}${total.fuelIsEstimate ? "*" : ""}`
+    ])
+    const unit = ctx.lang === "ru" ? "л" : "L"
+    lines.push(
+      table(m.reportColumns.split("|"), rows).pre,
+      m.reportSummary(
+        total.trips,
+        formatDuration(total.durationSeconds, ctx.lang),
+        formatKm(total.distanceKm, ctx.lang),
+        formatDuration(total.idleSeconds, ctx.lang),
+        total.fuelLiters === undefined ? "" : m.reportFuel(`${num1(total.fuelLiters)} ${unit}`),
+        total.avgCoolantC === undefined ? "" : m.reportCoolant(`${num1(total.avgCoolantC, 0)} °C`)
+      )
+    )
+    if (total.fuelIsEstimate) lines.push(m.reportEstimate)
+    if (skipped > 0) lines.push(m.reportSkipped(skipped))
+    if (complete.length > shown.length) lines.push(m.reportTruncated(shown.length))
+    yield* tg.sendMessage(target(ctx), lines.join("\n")).pipe(Effect.asVoid)
   })
 
 const carCommand: CommandDef<CarR> = {
@@ -62,6 +168,11 @@ const carCommand: CommandDef<CarR> = {
       const send = (html: string) => tg.sendMessage(target(ctx), html).pipe(Effect.asVoid)
 
       switch (sub.toLowerCase()) {
+        case "":
+        case "app":
+          return yield* sendApp(ctx)
+        case "devices":
+          return yield* sendDevices(ctx)
         case "upload": {
           const ext = rest[0] ?? "bin"
           if (!isValidExt(ext)) return yield* send(m.badExt)
@@ -69,34 +180,27 @@ const carCommand: CommandDef<CarR> = {
           return yield* send(m.uploadLink(escapeHtml(link.url), link.expiresInSeconds / 60))
         }
         case "trips": {
-          const trips = yield* listTrips(ctx.tgId, { limit: 20 })
+          const trips = yield* listOverview(ctx.tgId, { limit: 20 })
           if (trips.length === 0) return yield* send(m.noTrips)
-          const lines = trips.map(
-            (t) => `<code>${escapeHtml(shortName(t.key))}</code> - ${formatBytes(t.sizeBytes)} - ${stamp(t.uploaded)}`
-          )
-          return yield* send([m.tripsHeader(trips.length), ...lines].join("\n"))
+          return yield* send([m.tripsHeader(trips.length), ...trips.map((t) => tripLine(t, ctx.lang))].join("\n"))
         }
-        case "report": {
-          const now = new Date(yield* Clock.currentTimeMillis)
-          const period = parsePeriod(rest[0], now)
-          if (period === undefined) return yield* send(m.badPeriod)
-          const parser = yield* TripParser
-          const trips = yield* listTrips(ctx.tgId, { from: period.from, to: period.to })
-          const agg = aggregate(trips)
-          const lines = [m.reportHeader(escapeHtml(period.label))]
-          if (agg.count === 0) lines.push(m.reportEmpty)
-          else {
-            lines.push(m.reportTotals(agg.count, formatBytes(agg.totalBytes)))
-            if (agg.perDay.length <= 31) {
-              lines.push(...agg.perDay.map((d) => `${d.date}: ${d.count} / ${formatBytes(d.bytes)}`))
-            }
-          }
-          if (!parser.known) lines.push("", m.reportNote)
-          return yield* send(lines.join("\n"))
-        }
+        case "report":
+          return yield* sendReport(ctx, rest[0])
         default:
           return yield* send(m.help)
       }
+    })
+}
+
+const revokeCallback: CallbackDef<CarR> = {
+  prefix: DEVICE_CALLBACK_PREFIX,
+  role: "user",
+  handler: (ctx) =>
+    Effect.gen(function*() {
+      const tg = yield* Telegram
+      const m = messages[ctx.lang]
+      const done = yield* revokeDevice(ctx.tgId, ctx.payload)
+      yield* tg.answerCallbackQuery(ctx.callbackId, done ? m.revoked : m.revokeNotFound)
     })
 }
 
@@ -105,88 +209,148 @@ const ListInput = Schema.Struct({
   to: Schema.optionalKey(Schema.String.annotate({ description: "ISO date/time, exclusive" })),
   limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 200 })))
 })
-const GetInput = Schema.Struct({ key: Schema.String.annotate({ description: "Trip key from car_list_trips" }) })
+const GetInput = Schema.Struct({
+  tripId: Schema.optionalKey(Schema.String.annotate({ description: "Trip id from car_list_trips" })),
+  key: Schema.optionalKey(Schema.String.annotate({ description: "Raw uploaded file key (car/<id>/...) from car_list_trips.uploads" }))
+})
 const QueryInput = Schema.Struct({
   from: Schema.optionalKey(Schema.String),
   to: Schema.optionalKey(Schema.String),
-  metric: Schema.optionalKey(Schema.String.annotate({ description: "Parsed metric name (needs a known file format)" }))
+  metric: Schema.optionalKey(Schema.String.annotate({ description: `One of: ${METRIC_NAMES.join(", ")}` }))
 })
 const UploadInput = Schema.Struct({ ext: Schema.optionalKey(Schema.String) })
 
-const METRIC_FILES_LIMIT = 50
+const QUERY_TRIPS_LIMIT = 40
+const GET_TTL = 600
+
+const iso = (ms: number) => new Date(ms).toISOString()
 
 const tools: ReadonlyArray<AgentTool<CarR>> = [
   {
     name: "car_list_trips",
-    description: "List the user's uploaded car trip files (metadata only), newest first.",
+    description:
+      "List the user's recorded car trips (newest first) with completeness flag, plus raw uploaded files (not trips).",
     input: ListInput,
     handler: (raw, ctx) =>
       Effect.gen(function*() {
         const input = raw as typeof ListInput.Type
         const from = yield* parseInstant("car_list_trips", input.from)
         const to = yield* parseInstant("car_list_trips", input.to)
-        const trips = yield* listTrips(ctx.tgId, { from, to, limit: input.limit ?? 50 })
-        return { trips }
+        const trips = yield* listOverview(ctx.tgId, { from, to, limit: input.limit ?? 50 })
+        const bucket = yield* CarBucket
+        const prefix = prefixOf(ctx.tgId)
+        const root = yield* Effect.tryPromise({
+          try: () => bucket.list({ prefix, delimiter: "/" }),
+          catch: (cause) => new StorageError({ operation: "car.list-uploads", cause })
+        })
+        return {
+          trips: trips.map((o) => {
+            const man = o.status.manifest
+            return {
+              tripId: o.tripId,
+              startedAt: iso(startedAtOf(o)),
+              endedAt: man?.endedAt === undefined ? null : iso(man.endedAt),
+              recording: man === null || man.status !== "finished",
+              complete: o.status.complete,
+              chunks: { received: o.status.received.length, missing: o.status.missing, corrupt: o.status.corrupt, total: man?.chunkCount ?? null },
+              points: o.status.rows,
+              fuelRateSource: man?.fuelRateSource ?? null,
+              note: man?.note ?? null
+            }
+          }),
+          uploads: root.objects
+            .filter((o) => o.key.startsWith(prefix))
+            .map((o) => ({ key: o.key, sizeBytes: o.size, uploaded: o.uploaded.toISOString() }))
+        }
       })
   },
   {
     name: "car_get_trip",
     description:
-      "Get metadata and a short-lived presigned download URL for one trip file. Download it in the sandbox with curl.",
+      "One trip: manifest, status, computed metrics and short-lived presigned GET URLs (manifest + every chunk CSV) to curl in the sandbox. With `key` instead: a presigned URL for a raw uploaded file.",
     input: GetInput,
     handler: (raw, ctx) =>
       Effect.gen(function*() {
-        const { key } = raw as typeof GetInput.Type
-        const trip = yield* headTrip(ctx.tgId, key).pipe(mapKeyError("car_get_trip"))
-        if (trip === undefined) return { found: false }
-        const ttl = 600
-        const url = yield* (yield* Presigner).presignGet(key, ttl)
-        return { found: true, trip, downloadUrl: url, expiresInSeconds: ttl }
+        const input = raw as typeof GetInput.Type
+        const presigner = yield* Presigner
+        if (input.key !== undefined) {
+          const trip = yield* headTrip(ctx.tgId, input.key).pipe(mapKeyError("car_get_trip"))
+          if (trip === undefined) return { found: false }
+          return { found: true, trip, downloadUrl: yield* presigner.presignGet(input.key, GET_TTL), expiresInSeconds: GET_TTL }
+        }
+        const tripId = input.tripId === undefined ? undefined : parseTripId(input.tripId)
+        if (tripId === undefined) return yield* fail("car_get_trip", "tripId (from car_list_trips) or key is required")
+        const status = yield* tripStatus(ctx.tgId, tripId)
+        if (status.manifest === null) return { found: false }
+        const metrics = yield* tripMetrics(ctx.tgId, tripId, status)
+        const manifestUrl = yield* presigner.presignGet(manifestKey(ctx.tgId, tripId), GET_TTL)
+        const chunks = []
+        for (const seq of status.received) {
+          chunks.push({ seq, url: yield* presigner.presignGet(chunkKey(ctx.tgId, tripId, seq), GET_TTL) })
+        }
+        return {
+          found: true,
+          tripId,
+          complete: status.complete,
+          missing: status.missing,
+          corrupt: status.corrupt,
+          manifest: status.manifest,
+          metrics,
+          manifestUrl,
+          chunks,
+          csvColumns: "ts,lat,lon,gps_accuracy_m,gps_speed_kmh,speed_kmh,rpm,coolant_c,intake_c,load_pct,throttle_pct,maf_gps,map_kpa,fuel_rate_lph,fuel_level_pct,voltage_v",
+          expiresInSeconds: GET_TTL
+        }
       })
   },
   {
     name: "car_query",
-    description:
-      "Aggregates over trip files in a period: counts and sizes from metadata; parsed metrics when the file format is known.",
+    description: `Aggregates over trips in a period: per-trip metrics and totals. metric (optional) selects one of: ${METRIC_NAMES.join(", ")}.`,
     input: QueryInput,
     handler: (raw, ctx) =>
       Effect.gen(function*() {
         const input = raw as typeof QueryInput.Type
         const from = yield* parseInstant("car_query", input.from)
         const to = yield* parseInstant("car_query", input.to)
-        const trips = yield* listTrips(ctx.tgId, { from, to })
-        const base = { aggregate: aggregate(trips) }
-        if (input.metric === undefined) return base
-        const parser = yield* TripParser
-        const values: Array<number> = []
-        for (const trip of trips.slice(0, METRIC_FILES_LIMIT)) {
-          const bytes = yield* readTripBytes(ctx.tgId, trip.key).pipe(mapKeyError("car_query"))
-          if (bytes === undefined) continue
-          const parsed = yield* parser.parse({ key: trip.key, bytes }).pipe(Effect.result)
-          if (parsed._tag === "Failure") {
-            return { ...base, metric: { available: false, reason: parsed.failure.message } }
-          }
-          const v = parsed.success.metrics[input.metric]
-          if (v !== undefined) values.push(v)
+        if (input.metric !== undefined && !(METRIC_NAMES as ReadonlyArray<string>).includes(input.metric)) {
+          return { available: false, reason: `Unknown metric. Use one of: ${METRIC_NAMES.join(", ")}`, metrics: METRIC_NAMES }
         }
+        const all = yield* listOverview(ctx.tgId, { from, to, limit: 1000 })
+        const complete = all.filter((o) => o.status.complete).slice(0, QUERY_TRIPS_LIMIT)
+        const perTrip: Array<{ readonly tripId: string; readonly startedAt: string; readonly metrics: TripMetrics }> = []
+        for (const o of complete) {
+          const metrics = yield* tripMetrics(ctx.tgId, o.tripId, o.status)
+          if (metrics !== undefined) perTrip.push({ tripId: o.tripId, startedAt: iso(startedAtOf(o)), metrics })
+        }
+        const base = {
+          trips: all.length,
+          completeTrips: all.filter((o) => o.status.complete).length,
+          incompleteTrips: all.filter((o) => !o.status.complete).length,
+          analyzedTrips: perTrip.length,
+          totals: combineMetrics(perTrip.map((t) => t.metrics)),
+          metrics: METRIC_NAMES
+        }
+        if (input.metric === undefined) return { ...base, perTrip }
+        const key = input.metric as (typeof METRIC_NAMES)[number]
+        const values = perTrip.flatMap((t) => (t.metrics[key] === undefined ? [] : [t.metrics[key] as number]))
         const sum = values.reduce((a, b) => a + b, 0)
         return {
           ...base,
           metric: {
-            available: true,
-            name: input.metric,
-            files: values.length,
+            name: key,
+            trips: values.length,
             sum,
             avg: values.length === 0 ? null : sum / values.length,
             min: values.length === 0 ? null : Math.min(...values),
-            max: values.length === 0 ? null : Math.max(...values)
+            max: values.length === 0 ? null : Math.max(...values),
+            perTrip: perTrip.map((t) => ({ tripId: t.tripId, value: t.metrics[key] ?? null }))
           }
         }
       })
   },
   {
     name: "car_upload_link",
-    description: "Create a presigned PUT URL (valid 15 minutes) for the user to upload a trip file.",
+    description: "Create a presigned PUT URL (valid 15 minutes) for the user to upload a raw file. Trips normally come from the app.",
     input: UploadInput,
     handler: (raw, ctx) =>
       Effect.gen(function*() {
@@ -197,30 +361,40 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
   }
 ]
 
-const systemPrompt = `Car data plugin. The user uploads trip files (from their car's OBD logger) which you can reach with these tools:
-- car_list_trips {from?, to?, limit?}: list trip files (metadata), newest first.
-- car_get_trip {key}: metadata plus a short-lived presigned download URL. Download it into the sandbox with curl.
-- car_query {from?, to?, metric?}: aggregates over a period (counts, sizes; parsed metrics only once the file format is supported).
-- car_upload_link {ext?}: a 15-minute upload URL to give to the user.
-Heavy analytics belongs in the sandbox: download the files via the presigned URLs and analyze them with python/duckdb. Return results as tables and save charts as PNG files under /workspace/out/. Only keys under the user's own car/ prefix are accessible; never guess other keys.`
+const systemPrompt = `Car data plugin. The user records trips with the car app (OBD-II adapter + phone). Tools:
+- car_list_trips {from?, to?, limit?}: trips newest first (tripId, complete flag, chunk counts, points) plus raw uploads.
+- car_get_trip {tripId}: manifest, computed metrics and presigned GET URLs for the manifest and every chunk CSV (curl them in the sandbox, concatenate chunks in seq order). {key} for a raw uploaded file.
+- car_query {from?, to?, metric?}: real aggregates (distance, duration, avg/max speed, idle time, fuel, L/100km, coolant). metrics: ${METRIC_NAMES.join(", ")}.
+- car_upload_link {ext?}: a 15-minute upload URL for a raw file.
+Data layout: R2 car/<tgId>/trips/<tripId>/manifest.json + chunks/000000.csv ...; imported files in car/<tgId>/imports/. Only the user's own prefix is reachable.
+CSV columns (header row, missing value = empty cell, never zero): ts (epoch ms), lat, lon, gps_accuracy_m, gps_speed_kmh, speed_kmh (OBD 0D), rpm, coolant_c, intake_c, load_pct, throttle_pct, maf_gps, map_kpa, fuel_rate_lph, fuel_level_pct, voltage_v.
+Rules: analyse segments separately; never interpolate across manifest.gaps or time jumps over 10 s. Distance: integrate speed_kmh, fall back to GPS haversine. Fuel is an estimate when manifest.fuelRateSource = "maf_estimate". Only complete trips are fully reliable; mention incomplete ones.
+Heavy analytics belongs in the sandbox (python/duckdb). Return tables and save charts as PNG under /workspace/out/.`
 
 const pass = <I, S>(tag: Context.Service<I, S>): Layer.Layer<I, never, I> =>
   Layer.effect(tag, Effect.gen(function*() { return yield* tag }) as Effect.Effect<S, never, I>)
 
-export const layer: Layer.Layer<CarR, Config.ConfigError, CarBucket | Telegram> = Layer.mergeAll(
-  layerUnknownFormat,
-  layerConfig,
-  pass(CarBucket),
-  pass(Telegram)
+const webUrlLayer = Layer.effect(
+  CarWebUrl,
+  Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
 )
 
-export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram> = {
+export const layer: Layer.Layer<CarR, Config.ConfigError, CarBucket | Telegram | CarKv> = Layer.mergeAll(
+  layerConfig,
+  webUrlLayer,
+  pass(CarBucket),
+  pass(Telegram),
+  pass(CarKv)
+)
+
+export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram | CarKv> = {
   id: "car",
   title: { en: "Car analytics", ru: "Аналитика машины" },
   commands: [carCommand],
-  callbacks: [],
+  callbacks: [revokeCallback],
   tools,
   layer,
   systemPrompt,
   enabledByDefault: false
 }
+

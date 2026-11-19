@@ -1,0 +1,25 @@
+{
+  "name": "@bot/car-recorder",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./errors": "./src/errors.ts",
+    "./platform": "./src/platform.ts",
+    "./store": "./src/store.ts",
+    "./credentials": "./src/credentials.ts",
+    "./recorder": "./src/recorder.ts",
+    "./api-client": "./src/api-client.ts",
+    "./sync": "./src/sync.ts",
+    "./export": "./src/export.ts",
+    "./runtime": "./src/runtime.ts"
+  },
+  "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
+  "dependencies": { "effect": "catalog:", "@bot/car-format": "workspace:*" },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "fake-indexeddb": "6.2.8",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

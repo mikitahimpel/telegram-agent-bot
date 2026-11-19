@@ -10,7 +10,12 @@
     "./presigner": "./src/presigner.ts",
     "./period": "./src/period.ts",
     "./trips": "./src/trips.ts",
-    "./trip-parser": "./src/trip-parser.ts"
+    "./analytics": "./src/analytics.ts",
+    "./devices": "./src/devices.ts",
+    "./kv": "./src/kv.ts",
+    "./import": "./src/import.ts",
+    "./trip-store": "./src/trip-store.ts",
+    "./messages": "./src/messages.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
@@ -18,7 +23,9 @@
   },
   "dependencies": {
     "@bot/core-contracts": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "@bot/car-format": "workspace:*",
+    "@bot/telegram-format": "workspace:*"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

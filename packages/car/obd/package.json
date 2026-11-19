@@ -1,0 +1,24 @@
+{
+  "name": "@bot/car-obd",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./capabilities": "./src/capabilities.ts",
+    "./errors": "./src/errors.ts",
+    "./state": "./src/state.ts",
+    "./transport": "./src/transport.ts",
+    "./elm327": "./src/elm327.ts",
+    "./pids": "./src/pids.ts",
+    "./session": "./src/session.ts"
+  },
+  "scripts": { "typecheck": "tsc -p .", "test": "vitest run" },
+  "dependencies": { "@bot/car-format": "workspace:*", "effect": "catalog:" },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/w3c-web-serial": "1.0.9",
+    "@types/web-bluetooth": "0.0.22",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -4,11 +4,18 @@ import type { ApiCreditsExhausted, ContainerDown, SubscriptionLimitReached } fro
 import type { ClaudeSessionId, SessionKey, TgId } from "./ids.ts"
 import type { Lang } from "./lang.ts"
 
+export interface Attachment {
+  readonly fileName: string
+  readonly mimeType: string
+  readonly bytes: Uint8Array
+}
+
 export interface RunInput {
   readonly tgId: TgId
   readonly sessionKey: SessionKey
   readonly resume: ClaudeSessionId | undefined
   readonly prompt: string
+  readonly attachments?: ReadonlyArray<Attachment>
   readonly lang: Lang
   readonly mcp: { readonly url: string; readonly token: string } | undefined
 }

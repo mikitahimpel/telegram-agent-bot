@@ -1,0 +1,28 @@
+{
+  "name": "@bot/plugins-car",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./car": "./src/car.ts",
+    "./r2": "./src/r2.ts",
+    "./sigv4": "./src/sigv4.ts",
+    "./presigner": "./src/presigner.ts",
+    "./period": "./src/period.ts",
+    "./trips": "./src/trips.ts",
+    "./trip-parser": "./src/trip-parser.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

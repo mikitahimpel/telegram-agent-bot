@@ -1,0 +1,25 @@
+{
+  "name": "@bot/plugins-registry",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./registry": "./src/registry.ts",
+    "./flags": "./src/flags.ts",
+    "./mcp-token": "./src/mcp-token.ts",
+    "./mcp-server": "./src/mcp-server.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

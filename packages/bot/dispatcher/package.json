@@ -1,0 +1,29 @@
+{
+  "name": "@bot/bot-dispatcher",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./dispatcher": "./src/dispatcher.ts",
+    "./run-control": "./src/run-control.ts",
+    "./admin-notifier": "./src/admin-notifier.ts",
+    "./mcp-access": "./src/mcp-access.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/bot-commands": "workspace:*",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/telegram-schema": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@bot/agent-sessions": "workspace:*",
+    "@types/node": "catalog:"
+  }
+}

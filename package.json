@@ -4,10 +4,25 @@
   "type": "module",
   "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "typecheck": "pnpm -r typecheck && tsc -p .",
+    "test": "pnpm -r test",
+    "smoke": "tsx scripts/smoke.ts",
+    "infra:deploy": "alchemy deploy --yes",
+    "infra:plan": "alchemy plan",
+    "infra:destroy": "alchemy destroy --yes",
+    "infra:dev": "alchemy dev"
   },
   "devDependencies": {
+    "@alchemy.run/cloudflare": "catalog:",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/gateway": "workspace:*",
+    "@bot/infra-telegram-webhook": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "@types/node": "catalog:",
+    "alchemy": "catalog:",
+    "effect": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }

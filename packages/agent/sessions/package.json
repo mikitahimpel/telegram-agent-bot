@@ -1,0 +1,23 @@
+{
+  "name": "@bot/agent-sessions",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./sessions": "./src/sessions.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

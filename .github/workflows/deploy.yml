@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: deploy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+env:
+  ALCHEMY_STAGE: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || 'prod' }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  MCP_TOKEN_SECRET: ${{ secrets.MCP_TOKEN_SECRET }}
+  ADMIN_TG_ID: ${{ vars.ADMIN_TG_ID }}
+  DAILY_RUN_LIMIT: ${{ vars.DAILY_RUN_LIMIT || '50' }}
+  CONTAINER_INSTANCE_TYPE: ${{ vars.CONTAINER_INSTANCE_TYPE || 'basic' }}
+  CLAUDE_TOKEN_ISSUED_AT: ${{ vars.CLAUDE_TOKEN_ISSUED_AT }}
+
+jobs:
+  deploy:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: docker/setup-buildx-action@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Deploy ${{ env.ALCHEMY_STAGE }}
+        run: pnpm exec alchemy deploy --stage "$ALCHEMY_STAGE" --yes --no-input 2>&1 | tee deploy.log
+      - name: Smoke test
+        run: |
+          url="$(grep -oE 'https://[A-Za-z0-9._-]+\.workers\.dev' deploy.log | head -n 1)"
+          test -n "$url" || { echo "could not find the worker url in the deploy output"; exit 1; }
+          SMOKE_BASE_URL="$url" pnpm smoke
+
+  destroy:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Destroy ${{ env.ALCHEMY_STAGE }}
+        run: pnpm exec alchemy destroy --stage "$ALCHEMY_STAGE" --yes --no-input

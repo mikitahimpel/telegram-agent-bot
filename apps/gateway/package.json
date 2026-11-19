@@ -1,0 +1,36 @@
+{
+  "name": "@bot/gateway",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./worker": "./src/worker.ts",
+    "./registry": "./src/registry.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/agent-runner": "workspace:*",
+    "@bot/agent-sessions": "workspace:*",
+    "@bot/bot-allowlist": "workspace:*",
+    "@bot/bot-commands": "workspace:*",
+    "@bot/bot-core-commands": "workspace:*",
+    "@bot/bot-dispatcher": "workspace:*",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/plugins-car": "workspace:*",
+    "@bot/plugins-registry": "workspace:*",
+    "@bot/telegram-client": "workspace:*",
+    "@bot/telegram-schema": "workspace:*",
+    "@bot/telegram-streaming": "workspace:*",
+    "@cloudflare/sandbox": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -9,7 +9,7 @@ import type { AgentTool, BotPlugin } from "@bot/core-contracts/plugin"
 import { Telegram } from "@bot/core-contracts/telegram"
 import type { InlineKeyboard, SendTarget } from "@bot/core-contracts/telegram"
 import { METRIC_NAMES, combineMetrics, type TripMetrics } from "./analytics.ts"
-import { DEVICE_CALLBACK_PREFIX, listDevices, pairUrl, revokeDevice, startPair } from "./devices.ts"
+import { DEVICE_CALLBACK_PREFIX, listDevices, PAIR_TTL_SECONDS, pairUrl, revokeDevice, startPair } from "./devices.ts"
 import { CarKv } from "./kv.ts"
 import { escapeHtml, formatDuration, formatKm, formatStamp, messages } from "./messages.ts"
 import { parsePeriod } from "./period.ts"
@@ -215,6 +215,7 @@ const QueryInput = Schema.Struct({
   metric: Schema.optionalKey(Schema.String.annotate({ description: `One of: ${METRIC_NAMES.join(", ")}` }))
 })
 const UploadInput = Schema.Struct({ ext: Schema.optionalKey(Schema.String) })
+const AppLinkInput = Schema.Struct({})
 
 const QUERY_TRIPS_LIMIT = 40
 const GET_TTL = 600
@@ -345,8 +346,27 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
       })
   },
   {
+    name: "car_app_link",
+    description:
+      "Create a one-time link (valid 10 minutes) that opens the car recorder app in Chrome on the user's Android phone and connects that phone to this account. Use it whenever the user wants to record a trip, connect a phone or upload car data.",
+    input: AppLinkInput,
+    handler: (_raw, ctx) =>
+      Effect.gen(function*() {
+        const webUrl = yield* CarWebUrl
+        if (webUrl === "") return yield* fail("car_app_link", "CAR_WEB_URL is not configured")
+        const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: "en" })
+        return {
+          url: pairUrl(webUrl, code),
+          expiresInMinutes: PAIR_TTL_SECONDS / 60,
+          instructions:
+            "Give the user this link as is. It must be opened in Chrome on Android (Telegram's in-app browser will offer an 'Open in Chrome' button). It works once; for a new phone or an expired link call this tool again."
+        }
+      })
+  },
+  {
     name: "car_upload_link",
-    description: "Create a presigned PUT URL (valid 15 minutes) for the user to upload a raw file. Trips normally come from the app.",
+    description:
+      "Create a presigned PUT URL (valid 15 minutes) for uploading a raw file with an HTTP client such as curl. Not for people on a phone: for recording or uploading trips use car_app_link.",
     input: UploadInput,
     handler: (raw, ctx) =>
       Effect.gen(function*() {
@@ -361,7 +381,8 @@ const systemPrompt = `Car data plugin. The user records trips with the car app (
 - car_list_trips {from?, to?, limit?}: trips newest first (tripId, complete flag, chunk counts, points) plus raw uploads.
 - car_get_trip {tripId}: manifest, computed metrics and presigned GET URLs for the manifest and every chunk CSV (curl them in the sandbox, concatenate chunks in seq order). {key} for a raw uploaded file.
 - car_query {from?, to?, metric?}: real aggregates (distance, duration, avg/max speed, idle time, fuel, L/100km, coolant). metrics: ${METRIC_NAMES.join(", ")}.
-- car_upload_link {ext?}: a 15-minute upload URL for a raw file.
+- car_app_link {}: one-time 10-minute link that opens the recorder app in Chrome and connects the phone. Use it when the user wants to record a trip or get data into the bot. Users can also send a CSV file to the chat as a document.
+- car_upload_link {ext?}: raw presigned PUT URL for HTTP clients (curl); never give it to a person as a way to upload from a phone.
 Data layout: R2 car/<tgId>/trips/<tripId>/manifest.json + chunks/000000.csv ...; imported files in car/<tgId>/imports/. Only the user's own prefix is reachable.
 CSV columns (header row, missing value = empty cell, never zero): ts (epoch ms), lat, lon, gps_accuracy_m, gps_speed_kmh, speed_kmh (OBD 0D), rpm, coolant_c, intake_c, load_pct, throttle_pct, maf_gps, map_kpa, fuel_rate_lph, fuel_level_pct, voltage_v.
 Rules: analyse segments separately; never interpolate across manifest.gaps or time jumps over 10 s. Distance: integrate speed_kmh, fall back to GPS haversine. Fuel is an estimate when manifest.fuelRateSource = "maf_estimate". Only complete trips are fully reliable; mention incomplete ones.

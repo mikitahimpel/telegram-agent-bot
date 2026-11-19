@@ -10,6 +10,7 @@ import { layerWith } from "../src/presigner.ts"
 import { CarBucket } from "../src/r2.ts"
 import { CarKv, makeMemoryKv } from "../src/kv.ts"
 import { makeMemoryR2 } from "../src/testing.ts"
+import { completePair } from "../src/devices.ts"
 import { analyzeTrip } from "../src/analytics.ts"
 import { importDocument, storeImport } from "../src/import.ts"
 import { encodeCsv } from "@bot/car-format/csv"
@@ -56,6 +57,19 @@ describe("sigv4", () => {
     })
     expect(url).toContain("X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404")
   })
+
+  it.effect("car_app_link gives a one-time pairing link for the caller's account", () =>
+    Effect.gen(function*() {
+      const res = (yield* run(tool("car_app_link").handler({}, tg1))) as { url: string; expiresInMinutes: number }
+      expect(res.url.startsWith("https://bot.test/car/#pair=")).toBe(true)
+      expect(res.expiresInMinutes).toBe(10)
+      const code = res.url.split("#pair=")[1] ?? ""
+      const first = yield* run(completePair(code, "Chrome · Pixel"))
+      expect(first?.record.tgId).toBe(1)
+      const second = yield* run(completePair(code, "Chrome · Pixel"))
+      expect(second).toBeUndefined()
+    })
+  )
 
   it.effect("presigned PUT url shape", () =>
     Effect.gen(function*() {

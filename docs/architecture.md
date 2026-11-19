@@ -42,7 +42,7 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 - Imports between packages only through declared `exports`; add the dependency (`"@bot/x": "workspace:*"`) to package.json.
 - Services: `class X extends Context.Service<X, Shape>()("@bot/X") {}` from contracts; implementations export `layer` (and `layerTest`/mock helpers for tests).
 - Errors: `Data.TaggedError` from `@bot/core-contracts/errors`. Domain values: `Data.TaggedClass` / `Data.TaggedEnum`.
-- Config: `Config.redacted("TELEGRAM_BOT_TOKEN")`, `Config.string(...)` etc. Never log secrets.
+- Config (effect 4.1.4 constructors are capitalised): `Config.Redacted("TELEGRAM_BOT_TOKEN")`, `Config.String`, `Config.Int`, `Config.withDefault`. Never log secrets.
 - i18n: every user-facing string goes through a per-package catalog made with `defineMessages` from `@bot/core-contracts/lang` (ru + en). Lang = user's `/lang` choice (Sessions.getLang) else `langFromTelegram(from.language_code)`.
 - Telegram output is HTML parse_mode; escape all dynamic text.
 - Each package: `package.json`, `tsconfig.json` (`extends ../../../tsconfig.base.json`), `src/`, `test/` with vitest tests using mock Layers. `pnpm --filter <name> typecheck` and `test` must pass.

@@ -1,0 +1,25 @@
+{
+  "name": "@bot/bot-commands",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./registry": "./src/registry.ts",
+    "./help": "./src/help.ts",
+    "./messages": "./src/messages.ts",
+    "./html": "./src/html.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

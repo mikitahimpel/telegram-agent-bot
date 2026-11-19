@@ -1,0 +1,22 @@
+{
+  "name": "@bot/core-contracts",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./ids": "./src/ids.ts",
+    "./errors": "./src/errors.ts",
+    "./lang": "./src/lang.ts",
+    "./agent-event": "./src/agent-event.ts",
+    "./telegram": "./src/telegram.ts",
+    "./allowlist": "./src/allowlist.ts",
+    "./sessions": "./src/sessions.ts",
+    "./agent-runner": "./src/agent-runner.ts",
+    "./agent-directory": "./src/agent-directory.ts",
+    "./commands": "./src/commands.ts",
+    "./plugin": "./src/plugin.ts"
+  },
+  "scripts": { "typecheck": "tsc -p ." },
+  "dependencies": { "effect": "catalog:" },
+  "devDependencies": { "typescript": "catalog:" }
+}

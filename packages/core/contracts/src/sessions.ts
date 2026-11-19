@@ -1,0 +1,53 @@
+import { Context, type Effect } from "effect"
+import type { DailyLimitReached, StorageError } from "./errors.ts"
+import type { ClaudeSessionId, SessionKey, ThreadId } from "./ids.ts"
+import type { Lang } from "./lang.ts"
+
+export interface SessionRecord {
+  readonly key: SessionKey
+  readonly threadId: ThreadId | undefined
+  readonly title: string
+  readonly claudeSessionId: ClaudeSessionId | undefined
+  readonly createdAt: number
+  readonly lastUsedAt: number
+  readonly runs: number
+}
+
+export interface RunUsage {
+  readonly sessionKey: SessionKey
+  readonly costUsd: number
+  readonly inputTokens: number
+  readonly outputTokens: number
+  readonly durationMs: number
+  readonly isError: boolean
+}
+
+export interface UsageSummary {
+  readonly runsToday: number
+  readonly dailyLimit: number
+  readonly runsTotal: number
+  readonly costUsdTotal: number
+  readonly inputTokensTotal: number
+  readonly outputTokensTotal: number
+  readonly lastRunAt: number | undefined
+}
+
+/** Per-account state stored in the user-agent Durable Object's SQLite. */
+export class Sessions extends Context.Service<
+  Sessions,
+  {
+    readonly get: (key: SessionKey) => Effect.Effect<SessionRecord | undefined, StorageError>
+    /** Creates the record if missing (title defaults to "main" / "Topic <id>"). */
+    readonly ensure: (key: SessionKey, threadId: ThreadId | undefined, title?: string) => Effect.Effect<SessionRecord, StorageError>
+    readonly setClaudeSessionId: (key: SessionKey, id: ClaudeSessionId) => Effect.Effect<void, StorageError>
+    /** Forget the claude session id (next run starts fresh). */
+    readonly reset: (key: SessionKey) => Effect.Effect<void, StorageError>
+    readonly list: Effect.Effect<ReadonlyArray<SessionRecord>, StorageError>
+    /** Fails with DailyLimitReached when today's runs >= limit. */
+    readonly checkDailyLimit: Effect.Effect<void, DailyLimitReached | StorageError>
+    readonly recordRun: (usage: RunUsage) => Effect.Effect<void, StorageError>
+    readonly usage: Effect.Effect<UsageSummary, StorageError>
+    readonly getLang: Effect.Effect<Lang | undefined, StorageError>
+    readonly setLang: (lang: Lang) => Effect.Effect<void, StorageError>
+  }
+>()("@bot/Sessions") {}

@@ -1,0 +1,23 @@
+{
+  "name": "@bot/agent-stream-json",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./stream-json": "./src/stream-json.ts",
+    "./split-lines": "./src/split-lines.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/core-contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

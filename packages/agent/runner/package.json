@@ -1,0 +1,26 @@
+{
+  "name": "@bot/agent-runner",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./runner": "./src/runner.ts",
+    "./container-like": "./src/container-like.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bot/agent-stream-json": "workspace:*",
+    "@bot/core-contracts": "workspace:*",
+    "@cloudflare/sandbox": "1.0.3",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

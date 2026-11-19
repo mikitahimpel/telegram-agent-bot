@@ -6,7 +6,6 @@ import { RecorderFailure, StorageFailure, type StorageFailureReason } from "./er
 import { AppLifecycle, GeoSource, WakeLock, type GeoFix } from "./platform.ts"
 import { TripStore } from "./store.ts"
 
-/** Structural stand-in for @bot/car-obd events; the UI glues the two. */
 export type ReadingEvent =
   | { readonly _tag: "Reading"; readonly sample: Sample }
   | { readonly _tag: "GapStarted"; readonly at: number; readonly reason: string }
@@ -33,18 +32,12 @@ export type RecorderState = Data.TaggedEnum<{
   Recording: {
     readonly tripId: string
     readonly startedAt: number
-    /** Samples recorded in this trip (including those not flushed yet). */
     readonly points: number
-    /** Chunks sealed locally. */
     readonly chunks: number
-    /** Distance driven so far (OBD speed, GPS fallback), skipping gaps and steps > 10 s. */
     readonly distanceKm: number
     readonly lastSampleAt: number | undefined
-    /** A gap (adapter lost, app in background) is currently open. */
     readonly gapOpen: boolean
-    /** The adapter stream ended or failed; the trip stays open until stop(). */
     readonly sourceEnded: boolean
-    /** Last flush failed (e.g. quota). Samples stay in memory and are retried every 5 s. */
     readonly storageError: StorageFailureReason | undefined
     readonly geo: GeoStatus
     readonly wakeLock: boolean
@@ -60,7 +53,6 @@ export interface StartOptions {
   readonly geo?: boolean
   readonly appVersion?: string
   readonly note?: string
-  /** device clock minus server clock; recorded in the note when |offset| > 2 min. */
   readonly clockOffsetMs?: number
 }
 
@@ -118,7 +110,6 @@ interface Session {
   points: number
   chunks: number
   distanceKm: number
-  /** Previous sample for integration; cleared whenever a gap starts or ends. */
   prev: Sample | undefined
   lastSampleAt: number | undefined
   fibers: Array<Fiber.Fiber<unknown, unknown>>
@@ -178,7 +169,6 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         yield* publish(s)
       })
 
-    /** Flush memory → IndexedDB, then seal a chunk when due. Failures keep the samples in memory. */
     const tick = (s: Session, force: boolean) =>
       lock.withPermits(1)(
         Effect.gen(function*() {
@@ -316,7 +306,6 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         yield* Effect.forEach(s.fibers, (f) => Fiber.interrupt(f), { discard: true })
         s.fibers = []
         const now = yield* Clock.currentTimeMillis
-        // A gap still open at stop() ends the trip: close it at the last sample time instead of inventing data.
         yield* closeBgGap(s, now)
         yield* closeSourceGap(s, now)
       })
@@ -452,7 +441,6 @@ export const layer: Layer.Layer<Recorder, never, TripStore | GeoSource | WakeLoc
         const pending = yield* store.readPending(tripId)
         const lastSampleAt = pending[pending.length - 1]?.ts ?? t.lastSampleAt ?? t.manifest.startedAt
         const points = t.manifest.chunks.reduce((n, c) => n + c.rows, 0) + pending.length
-        // Seal leftovers now so the chunk boundary matches the restart gap.
         yield* store.sealPending(tripId)
         yield* store.updateManifest(tripId, (m) => ({ ...m, gaps: [...m.gaps, { from: lastSampleAt, to: now, reason: "app_restarted" as const }] }))
         const fresh = yield* store.getTrip(tripId)

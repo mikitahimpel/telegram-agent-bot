@@ -55,8 +55,6 @@ const whoOf = (a: AgentInfo) =>
 
 const todayOf = (a: AgentInfo) => `${a.usage.runsToday}/${a.usage.dailyLimit}`
 
-// ---- user commands ----
-
 const start: CommandDef<CoreR> = {
   name: "start",
   role: "user",
@@ -158,8 +156,6 @@ const lang: CommandDef<CoreR> = {
       yield* reply(ctx, messages[chosen].langChanged)
     })
 }
-
-// ---- admin commands ----
 
 const agents: CommandDef<CoreR> = {
   name: "agents",
@@ -285,8 +281,6 @@ export const coreCommands: ReadonlyArray<CommandDef<CoreR>> = [
   agents, usage, allow, revoke, kill, restart
 ]
 
-// ---- callbacks ----
-
 type CallbackCtx = Parameters<CallbackDef<CoreR>["handler"]>[0]
 
 const edit = (ctx: CallbackCtx, html: string) =>
@@ -295,7 +289,6 @@ const edit = (ctx: CallbackCtx, html: string) =>
     yield* tg.editMessageText({ ...target(ctx), messageId: ctx.messageId }, html)
   })
 
-/** Always answers the callback (clears the spinner), even on failure or wrong role. */
 const adminCallback = (
   run: (ctx: CallbackCtx, id: TgId) => Effect.Effect<string, import("@bot/core-contracts/errors").BotError, CoreR>
 ): CallbackDef<CoreR>["handler"] =>

@@ -24,9 +24,7 @@ export interface AppContext {
   canGoBack: ComputedRef<boolean>
   setLang(l: Lang): void
   perform(id: ActionId, arg?: { tripId?: string; scenario?: SimScenario }): Promise<void>
-  /** The user chose to record without pairing; trips stay on the phone until the phone is paired. */
   localMode: Ref<boolean>
-  /** Banners the user closed in this session. */
   dismissed: Ref<string[]>
   installPrompt: Ref<{ prompt(): Promise<void> } | null>
 }
@@ -66,7 +64,6 @@ export const createAppContext = (opts: {
       if (on) localStorage.setItem(LOCAL_KEY, "1")
       else localStorage.removeItem(LOCAL_KEY)
     } catch {
-      /* private mode */
     }
   })
   const dismissed = ref<string[]>([])

@@ -20,11 +20,9 @@ export interface AllowMeta extends AllowlistProfile {
   readonly invitedVia?: string
 }
 
-/** Who may talk to the bot. Admin comes from Config `ADMIN_TG_ID`; others live in KV. */
 export class Allowlist extends Context.Service<
   Allowlist,
   {
-    /** `undefined` = unknown user (ignore silently). */
     readonly roleOf: (tgId: TgId) => Effect.Effect<Role | undefined, StorageError>
     readonly allow: (tgId: TgId, by: TgId, meta?: AllowMeta) => Effect.Effect<void, StorageError>
     readonly updateProfile: (tgId: TgId, profile: AllowlistProfile) => Effect.Effect<void, StorageError>

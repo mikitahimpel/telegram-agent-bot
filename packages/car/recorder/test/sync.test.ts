@@ -107,7 +107,7 @@ describe("SyncEngine", () => {
   it.effect("revoked device pauses sync, keeps data; re-pairing resumes the pending chunks", () =>
     Effect.gen(function*() {
       const env = yield* makeEnv
-      env.server.validTokens = new Set() // revoked
+      env.server.validTokens = new Set()
       yield* Effect.gen(function*() {
         const sync = yield* SyncEngine
         const api = yield* CarApi
@@ -118,7 +118,6 @@ describe("SyncEngine", () => {
         yield* advance(600_000)
         expect(env.server.log.length).toBe(calls)
         expect((yield* (yield* TripStore).listChunks(id)).length).toBe(2)
-        // re-pair
         const paired = yield* api.pairComplete("code", "Pixel")
         expect(env.server.log.at(-1)!.auth).toBeUndefined()
         env.server.validTokens = new Set([paired.deviceToken])

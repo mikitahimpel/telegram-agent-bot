@@ -1,7 +1,6 @@
 import type { Gap } from "./manifest.ts"
 import type { Sample } from "./sample.ts"
 
-/** Samples further apart than this are never integrated across (adapter stall, app backgrounded). */
 export const MAX_STEP_SECONDS = 10
 const MAX_GPS_ACCURACY_M = 50
 const MAX_PLAUSIBLE_KMH = 300
@@ -21,13 +20,10 @@ export const isNum = (v: number | undefined): v is number => v !== undefined && 
 
 export interface DistanceStep {
   readonly dt: number
-  /** Trapezoid over OBD speed; undefined when either sample has no speed. */
   readonly obdKm: number | undefined
-  /** Haversine between GPS fixes; undefined when a fix is missing, inaccurate or implausible. */
   readonly gpsKm: number | undefined
 }
 
-/** Distance covered between two consecutive samples, or undefined when the interval must not be integrated. */
 export const distanceStep = (a: Sample, b: Sample, gaps: ReadonlyArray<Gap> = []): DistanceStep | undefined => {
   const dt = (b.ts - a.ts) / 1000
   if (dt <= 0 || dt > MAX_STEP_SECONDS || inGap(gaps, a.ts, b.ts)) return undefined

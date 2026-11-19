@@ -73,7 +73,6 @@ const messageFields = {
   forum_topic_created: Opt(ForumTopicCreated)
 }
 
-/** `reply_to_message` is decoded one level deep only; deeper replies are ignored. */
 export const ShallowMessage = Schema.Struct(messageFields)
 export type ShallowMessage = typeof ShallowMessage.Type
 

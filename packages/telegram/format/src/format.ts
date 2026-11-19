@@ -1,22 +1,15 @@
-/** Escapes text for Telegram HTML parse mode. */
 export const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 const escapeAttr = (s: string): string => escapeHtml(s).replace(/"/g, "&quot;")
 
-/** Wraps already-safe HTML in an expandable blockquote. */
 export const expandableQuote = (html: string): string => `<blockquote expandable>${html}</blockquote>`
-
-// ---------------------------------------------------------------------------
-// markdown -> Telegram HTML
-// ---------------------------------------------------------------------------
 
 const SAFE_URL = /^(https?:\/\/|tg:\/\/|mailto:)/i
 const isWordChar = (c: string | undefined): boolean => c !== undefined && /[\p{L}\p{N}]/u.test(c)
 const isSpace = (c: string | undefined): boolean => c === undefined || /\s/.test(c)
 const ESCAPABLE = "\\`*_{}[]()#+-.!~>|<"
 
-/** Index of the matching `]` for the `[` at `start`, honouring nesting and code spans. */
 const findBracketEnd = (s: string, start: number): number => {
   let depth = 0
   for (let i = start; i < s.length; i++) {
@@ -31,7 +24,6 @@ const findBracketEnd = (s: string, start: number): number => {
   return -1
 }
 
-/** Parses `(url "title")` starting at `(`; returns the url and the index after `)`. */
 const parseLinkTarget = (s: string, start: number): { url: string; end: number } | undefined => {
   let depth = 0
   for (let i = start; i < s.length; i++) {
@@ -54,7 +46,6 @@ const parseLinkTarget = (s: string, start: number): { url: string; end: number }
   return undefined
 }
 
-/** Finds the closing emphasis marker for an opener at `from`, skipping code spans and escapes. */
 const findClose = (s: string, from: number, marker: string): number => {
   const ch = marker[0]!
   for (let j = from; j < s.length; j++) {
@@ -74,7 +65,6 @@ const findClose = (s: string, from: number, marker: string): number => {
     if (c !== ch) continue
     if (marker.length === 1) {
       if (s[j + 1] === ch) {
-        // nested double marker: skip the pair
         let k = j
         while (s[k] === ch) k++
         j = k - 1
@@ -162,7 +152,6 @@ const renderInline = (s: string): string => {
             continue
           }
         }
-        // literal marker run (avoid re-reading the second char as a new opener)
         out += marker
         i += marker.length
         continue
@@ -307,12 +296,7 @@ const renderBlocks = (lines: ReadonlyArray<string>, inQuote: boolean): string =>
   return blocks.filter((b) => b !== "").join("\n\n")
 }
 
-/** Converts Claude's markdown into Telegram-safe HTML (balanced tags, all text escaped). */
 export const markdownToTelegramHtml = (md: string): string => renderBlocks(md.replace(/\r\n?/g, "\n").split("\n"), false)
-
-// ---------------------------------------------------------------------------
-// splitting
-// ---------------------------------------------------------------------------
 
 type Atom =
   | { readonly kind: "open"; readonly name: string; readonly raw: string }
@@ -369,12 +353,6 @@ const applyStack = (stack: Open[], a: Atom): void => {
 
 const isNl = (a: Atom | undefined): boolean => a !== undefined && a.kind === "text" && a.s === "\n"
 
-/**
- * Splits HTML into chunks of at most `limit` visible characters (tags don't count and an entity
- * like `&amp;` counts as one, matching how Telegram measures a message after parsing).
- * Breaks prefer paragraph, then line, then word boundaries. Tags open at a break are closed
- * at the end of the chunk and reopened (same attributes) at the start of the next one.
- */
 export const splitHtml = (html: string, limit = 4096): string[] => {
   if (limit < 1) throw new RangeError("limit must be >= 1")
   const atoms = tokenize(html)
@@ -392,7 +370,6 @@ export const splitHtml = (html: string, limit = 4096): string[] => {
     let seenText = false
     let first = 0
     let last = body.length
-    // trim newlines at both edges
     while (first < last && (isNl(body[first]) || body[first]!.kind !== "text")) {
       if (isNl(body[first])) first++
       else break
@@ -418,7 +395,6 @@ export const splitHtml = (html: string, limit = 4096): string[] => {
   }
 
   const findBreak = (): { cut: number; resume: number } => {
-    // cut: end (exclusive) of the chunk body; resume: start of the remainder
     const minPara = Math.floor(limit / 2)
     const minLine = Math.floor(limit / 4)
     let v = vis
@@ -457,7 +433,6 @@ export const splitHtml = (html: string, limit = 4096): string[] => {
       const stackAtCut = [...initial]
       for (const x of cur.slice(0, resume)) applyStack(stackAtCut, x)
       const body = cur.slice(0, cut)
-      // stack for the remainder: state after the whole consumed prefix, tags in between are kept in rest
       const rest = cur.slice(resume)
       emit(body)
       const stackAfterResume = [...initial]
@@ -473,18 +448,11 @@ export const splitHtml = (html: string, limit = 4096): string[] => {
   return chunks
 }
 
-// ---------------------------------------------------------------------------
-// tables / rich
-// ---------------------------------------------------------------------------
-
 export interface TableHtml {
-  /** `<table>` for rich messages (Bot API 10.1+). */
   readonly rich: string
-  /** Monospace `<pre>` fallback for classic sendMessage. */
   readonly pre: string
 }
 
-/** Builds a table. All cells are plain text and get escaped. */
 export const table = (headers: ReadonlyArray<string>, rows: ReadonlyArray<ReadonlyArray<string>>): TableHtml => {
   const head = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}</tr>`
   const body = rows.map((r) => `<tr>${r.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`).join("")

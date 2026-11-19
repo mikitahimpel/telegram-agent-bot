@@ -77,7 +77,6 @@ describe("AgentRunner", () => {
       expect(call.opts?.env?.BOT_MCP_TOKEN).toBe("MCP-SECRET")
       expect(call.opts?.user).toBe("1000:1000")
       expect(call.opts?.cwd).toBe("/workspace")
-      // no other exec leaks the token
       for (const c of fake.execs) if (c !== call) expect(c.opts?.env?.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined()
     }).pipe(Effect.provide(l))
   })

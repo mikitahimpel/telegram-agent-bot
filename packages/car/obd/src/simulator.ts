@@ -13,27 +13,24 @@ export type SimulatorScenario =
   | "late_reply"
 
 export interface SimulatorOptions {
-  /** PIDs (hex, e.g. "0F") the simulated car does not support. */
   readonly unsupported?: ReadonlyArray<string>
-  /** Epoch ms at which `drops_every_60s` links die; default 60 000 ms after the link opened. */
   readonly dropAfterMs?: number
 }
 
 const ALL_PIDS = ["04", "05", "0B", "0C", "0D", "0F", "10", "11", "2F", "42", "5E"]
 
-/** Fixed car state, so tests can assert decoded values. */
 export const SIM_DATA: Readonly<Record<string, ReadonlyArray<number>>> = {
-  "04": [0x80], // 50.2 %
-  "05": [0x82], // 90 C
-  "0B": [100], // 100 kPa
-  "0C": [0x1f, 0x40], // 2000 rpm
-  "0D": [60], // 60 km/h
-  "0F": [0x41], // 25 C
-  "10": [0x04, 0xd2], // 12.34 g/s
-  "11": [0x33], // 20 %
-  "2F": [0x80], // 50.2 %
-  "42": [0x37, 0x14], // 14.1 V
-  "5E": [0x00, 0x64] // 5 L/h
+  "04": [0x80],
+  "05": [0x82],
+  "0B": [100],
+  "0C": [0x1f, 0x40],
+  "0D": [60],
+  "0F": [0x41],
+  "10": [0x04, 0xd2],
+  "11": [0x33],
+  "2F": [0x80],
+  "42": [0x37, 0x14],
+  "5E": [0x00, 0x64]
 }
 
 export const SIM_VIN = "WP0ZZZ99ZTS392124"

@@ -15,11 +15,9 @@ export interface R2ListResultLike {
   readonly objects: ReadonlyArray<R2ObjectLike>
   readonly truncated: boolean
   readonly cursor?: string | undefined
-  /** Present when `delimiter` was requested. */
   readonly delimitedPrefixes?: ReadonlyArray<string> | undefined
 }
 
-/** Minimal structural type of a Cloudflare R2 bucket binding. */
 export interface R2Like {
   readonly get: (key: string) => Promise<R2ObjectBodyLike | null>
   readonly put: (
@@ -38,5 +36,4 @@ export interface R2Like {
   readonly delete: (keys: string | ReadonlyArray<string>) => Promise<void>
 }
 
-/** The bucket holding `car/<tgId>/...`. Provided by the gateway from the R2 binding. */
 export class CarBucket extends Context.Service<CarBucket, R2Like>()("@bot/plugins-car/CarBucket") {}

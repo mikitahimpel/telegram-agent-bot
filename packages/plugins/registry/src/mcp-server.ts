@@ -55,7 +55,7 @@ const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, msg: unknown)
       return rpcError(null, -32600, "Invalid Request")
     }
     const m = msg as { id?: Id; method?: unknown; params?: unknown }
-    if (m.id === undefined) return undefined // notification
+    if (m.id === undefined) return undefined
     const id = m.id
     switch (m.method) {
       case "initialize": {
@@ -85,10 +85,6 @@ const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, msg: unknown)
     }
   }).pipe(Effect.catch(() => Effect.succeed(rpcError(null, -32603, "Internal error"))))
 
-/**
- * Minimal MCP Streamable-HTTP endpoint: POST JSON-RPC, JSON responses, no SSE.
- * Resolves the account from `Authorization: Bearer <token>`.
- */
 export const handleMcpRequest =
   <R>(registry: PluginRegistry<R>) =>
   (request: Request): Effect.Effect<Response, never, R | McpToken | PluginFlags> =>

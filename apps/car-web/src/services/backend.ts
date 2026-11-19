@@ -25,10 +25,6 @@ export interface InterruptedTrip {
   points: number
 }
 
-/**
- * Everything the UI needs from the car packages. The Vue refs are fed from Effect SubscriptionRefs
- * (see use-effect-state.ts) by the real adapter, or by simulation in the demo backend.
- */
 export interface CarBackend {
   readonly platform: Platform
   readonly caps: Capabilities
@@ -39,7 +35,6 @@ export interface CarBackend {
   readonly sync: Ref<SyncGlobalVm>
   readonly trips: Ref<TripVm[]>
   readonly reading: Ref<Reading>
-  /** null = not known yet; otherwise sensors the car reported as supported. */
   readonly supported: Ref<SensorKey[] | null>
   readonly storage: Ref<StorageHealthVm | null>
   readonly diag: Ref<DiagEvent[]>
@@ -66,7 +61,6 @@ export interface CarBackend {
   refreshDevices(): Promise<void>
   revokeDevice(id: string): Promise<void>
   retryPairing(): Promise<void>
-  /** Called after a successful pairing: hand the device token to the API client and resume uploads. */
   adoptCredential(c: { deviceToken: string }): Promise<void>
   dispose(): void
 }

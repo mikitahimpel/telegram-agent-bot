@@ -18,7 +18,6 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   page.on("dialog", (d) => void d.accept())
   await page.goto("/car/")
 
-  // Pair screen is a dead end no more: bot link, local recording, demo.
   await expect(page.getByTestId("pair-screen")).toBeVisible()
   await expect(page.getByTestId("open-bot")).toHaveAttribute("href", "https://t.me/car_test_bot")
   await page.screenshot({ path: `${SHOTS}/01-pair.png` })
@@ -27,7 +26,6 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   await expect(page.getByTestId("connect-title")).toBeVisible()
   await expect(page.getByTestId("pair-screen")).toHaveCount(0)
 
-  // Wizard: no duplicated demo step.
   const steps = page.locator('[data-testid="wizard"] li')
   await expect(steps).toHaveCount(5)
   await expect(page.locator('[data-testid="wizard"]').getByText("Демо", { exact: false })).toHaveCount(1)
@@ -38,7 +36,6 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   await expect(pageNotPair(page)).resolves.toBe(true)
   await page.screenshot({ path: `${SHOTS}/03-ready.png` })
 
-  // Record.
   await page.getByTestId("connect-start").click()
   await expect(page.getByTestId("gauges")).toBeVisible()
   await expect.poll(() => gaugeText(page, "speedKmh"), { timeout: 15_000 }).toMatch(/\d/)
@@ -52,13 +49,11 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   await page.getByTestId("primary").click()
   await expect(page.getByTestId("gauges")).toHaveCount(0, { timeout: 20_000 })
 
-  // Trips list.
   await page.getByRole("button", { name: "Поездки", exact: true }).click()
   const row = page.getByTestId("trip-row").first()
   await expect(row).toBeVisible({ timeout: 15_000 })
   await expect(row).toContainText("км")
   await expect(row).not.toContainText("расстояние неизвестно")
-  // Unpaired phone: the status names the real blocker, not "sending starts shortly".
   await expect(row).toContainText("Ждёт подключения телефона к аккаунту")
   await expect(row).not.toContainText("скоро начнётся")
   await page.screenshot({ path: `${SHOTS}/05-trips.png` })
@@ -67,7 +62,6 @@ test("unpaired phone: demo connect, record, stop, trip with distance", async ({ 
   const recorded = await page.locator('[data-testid="counters"] .counter b').first().innerText()
   expect(Number(recorded.replace(/\D/g, ""))).toBeGreaterThan(0)
   await expect(page.getByTestId("status-card").first()).toContainText("Ждёт подключения телефона к аккаунту")
-  // Chunk grid is visible and nothing floats over it.
   const grid = page.locator(".chunk-grid, [data-testid='chunk-grid']").first()
   await grid.scrollIntoViewIfNeeded()
   await expect(grid).toBeVisible()
@@ -89,20 +83,17 @@ test("unpaired, local mode: compact banners, content above the fold, tabs do not
   await expect(page.getByTestId("banner-unpaired")).toBeVisible()
   const banner = await page.getByTestId("banner-unpaired").boundingBox()
   expect(banner!.height).toBeLessThan(56)
-  // No unconfirmed trips and not recording: no "may erase data" banner.
   await expect(page.getByTestId("banner-persist")).toHaveCount(0)
   const card = await page.getByTestId("status-card").first().boundingBox()
   expect(card!.y + card!.height).toBeLessThan(844)
   await page.screenshot({ path: `${SHOTS}/07-local-home.png` })
 
-  // Connect still works after choosing local mode.
   await page.getByTestId("primary").click()
   await page.getByTestId("transport-simulator").click()
   await page.getByTestId("connect-go").click()
   await expect(page.locator('[data-step="sensors"]')).toHaveAttribute("data-status", "done", { timeout: 20_000 })
   await expect(page.getByTestId("pair-screen")).toHaveCount(0)
 
-  // Bottom tabs never cover the last element.
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   const lastBottom = await page.evaluate(() => {
     const kids = [...document.querySelectorAll("main .screen > *")]

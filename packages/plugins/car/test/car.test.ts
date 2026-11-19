@@ -115,7 +115,6 @@ const drive = (n: number, extra: Record<string, number> = {}) =>
 
 describe("analytics", () => {
   it("integrates speed, fuel, idle and never across gaps or jumps", () => {
-    // 11 samples 1 s apart at 36 km/h = 10 s = 0.1 km; fuel 3.6 L/h * 10 s = 0.01 L
     const m = analyzeTrip(drive(11), [], "pid_5e")
     expect(m.distanceSource).toBe("obd")
     expect(m.distanceKm).toBeCloseTo(0.1, 6)
@@ -125,13 +124,10 @@ describe("analytics", () => {
     expect(m.avgCoolantC).toBe(90)
     expect(m.fuelIsEstimate).toBe(false)
     expect(analyzeTrip(drive(11), [], "maf_estimate").fuelIsEstimate).toBe(true)
-    // a 60 s jump in the middle adds nothing
     const jump = [...drive(5), ...drive(5).map((s) => ({ ...s, ts: s.ts + 64_000 }))]
     expect(analyzeTrip(jump, [], "none").distanceKm).toBeCloseTo(0.08, 6)
-    // an explicit gap covering one step removes that step
     const gapped = analyzeTrip(drive(11), [{ from: 1_800_000_003_500, to: 1_800_000_004_500, reason: "unknown" }], "none")
     expect(gapped.distanceKm).toBeCloseTo(0.08, 6)
-    // idle = rpm > 0 and speed 0
     const idle = analyzeTrip(drive(11, { speedKmh: 0 }), [], "none")
     expect(idle.idleSeconds).toBe(10)
   })
@@ -209,7 +205,6 @@ describe("trips, report, app, devices", () => {
       expect(btn.url).toMatch(/^https:\/\/bot\.test\/car\/#pair=[0-9a-f]{32}$/)
       expect(btn.webAppUrl).toBeUndefined()
       expect(sent[0]!.html).toContain("10 minutes")
-      // pair by hand, list, revoke through the callback
       const { completePair } = yield* Effect.promise(() => import("../src/devices.ts"))
       const code = btn.url.split("#pair=")[1]
       const paired = yield* run(completePair(code, "Pixel 8"))
@@ -243,7 +238,6 @@ describe("trips, report, app, devices", () => {
     })
   )
 })
-
 
 describe("parsePeriod", () => {
   const now = new Date("2026-11-19T12:00:00Z")

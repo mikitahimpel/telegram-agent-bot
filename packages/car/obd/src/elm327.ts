@@ -16,11 +16,8 @@ export interface SendOptions {
 
 export interface Elm327 {
   readonly transport: ObdTransport
-  /** One command in flight; returns cleaned reply lines (echo and SEARCHING... removed). Error tokens are NOT checked. */
   readonly send: (command: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected>
-  /** `send` + error token detection: fails with `CommandRejected`. */
   readonly query: (command: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<string>, CommandTimeout | Disconnected | CommandRejected>
-  /** Mode 01 PID: returns the data bytes after `41 <pid>`. */
   readonly mode01: (pid: string, options?: SendOptions) => Effect.Effect<ReadonlyArray<number>, CommandTimeout | Disconnected | CommandRejected>
 }
 
@@ -30,7 +27,6 @@ const norm = (s: string): string => s.replace(/\s/g, "").toUpperCase()
 
 const ERROR_TOKEN = /^(NODATA|UNABLETOCONNECT|CANERROR|BUFFERFULL|STOPPED|\?|ERR\d+|BUSBUSY|BUSERROR|DATAERROR|FBERROR|RXERROR|ACTALERT|LVRESET)$/
 
-/** Returns the error token in a cleaned reply, if any (e.g. "NODATA", "BUSINIT:ERROR"). */
 export const findErrorToken = (lines: ReadonlyArray<string>): string | undefined => {
   for (const line of lines) {
     const n = norm(line)
@@ -40,7 +36,6 @@ export const findErrorToken = (lines: ReadonlyArray<string>): string | undefined
   return undefined
 }
 
-/** Replies with non-printable bytes come from clone adapters that are mid-reset or at the wrong baud rate. */
 export const isGarbage = (lines: ReadonlyArray<string>): boolean => lines.some((l) => /[^\x20-\x7e]/.test(l))
 
 export const cleanReply = (raw: string, command: string): string[] => {
@@ -61,7 +56,6 @@ export const hexToBytes = (hex: string): number[] => {
   return out
 }
 
-/** Data bytes of a mode-01 reply: finds the line starting with `41<pid>`. */
 export const parseMode01 = (lines: ReadonlyArray<string>, pid: string): number[] | undefined => {
   const prefix = "41" + pid.toUpperCase()
   for (const line of lines) {
@@ -72,10 +66,6 @@ export const parseMode01 = (lines: ReadonlyArray<string>, pid: string): number[]
   return undefined
 }
 
-/**
- * Parses the VIN from a `0902` reply. Handles CAN ISO-TP multi-frame (`014` length line, `0:` `1:` `2:` frames)
- * and per-line K-line style (`49 02 01 ...`, `49 02 02 ...`).
- */
 export const parseVin = (lines: ReadonlyArray<string>): string | undefined => {
   const n = lines.map(norm)
   let bytes: number[]
@@ -100,7 +90,6 @@ export const parseVin = (lines: ReadonlyArray<string>): string | undefined => {
   return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : undefined
 }
 
-/** Starts reading the transport; `send` serialises commands and frames replies on the `>` prompt. */
 export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never, Scope.Scope> =>
   Effect.gen(function*() {
     const gate = yield* Semaphore.make(1)
@@ -133,11 +122,6 @@ export const makeElm327 = (transport: ObdTransport): Effect.Effect<Elm327, never
         })).pipe(Effect.catch(() => Effect.void), Effect.andThen(markDead))
     )
 
-    /**
-     * After a timeout the late reply (and its prompt) may still arrive. Send a bare CR and swallow input
-     * until two prompts have been seen (the stale one and the answer to CR); if they don't both come
-     * within 1.5 s, send ATE0 once and swallow its prompt. Only then is the next command dispatched.
-     */
     const awaitPrompts = (need: number, ms: number) =>
       Effect.gen(function*() {
         const done = yield* Deferred.make<void>()
@@ -216,9 +200,6 @@ export const INIT_TOTAL = INIT_STEPS.length
 
 const requiredSteps = new Set<string>(["ATE0", "ATSP0"])
 
-/**
- * ATZ with fallbacks for clones: on garbage, error or timeout, try `ATWS` then `ATD` first, with a pause.
- */
 const resetAdapter = (elm: Elm327): Effect.Effect<string, AdapterNotResponding | Disconnected> =>
   Effect.gen(function*() {
     const prefixes: ReadonlyArray<string | undefined> = [undefined, "ATWS", "ATD"]
@@ -241,7 +222,6 @@ const resetAdapter = (elm: Elm327): Effect.Effect<string, AdapterNotResponding |
     return yield* new AdapterNotResponding({ step: "ATZ", lastResponse: last === "" ? "timeout" : last })
   })
 
-/** Runs the adapter init sequence, reporting progress as (step 1-based, total, command). */
 export const initAdapter = (
   elm: Elm327,
   report: (step: number, total: number, label: string) => Effect.Effect<void> = () => Effect.void
@@ -273,10 +253,6 @@ export const initAdapter = (
 const RETRYABLE = /^(NODATA|UNABLETOCONNECT|STOPPED|CANERROR|BUSBUSY|BUSERROR|DATAERROR|FBERROR|BUSINIT.*)$/
 const ECU_ATTEMPTS = 3
 
-/**
- * Sends `0100` until the ECU answers (the first one triggers protocol search and can take seconds).
- * Persistent NO DATA / UNABLE TO CONNECT / BUS INIT ERROR → `EcuNotResponding` (ignition is off).
- */
 export const connectEcu = (elm: Elm327): Effect.Effect<ReadonlyArray<string>, EcuNotResponding | AdapterNotResponding | Disconnected> =>
   Effect.gen(function*() {
     let last = ""
@@ -300,7 +276,6 @@ export const connectEcu = (elm: Elm327): Effect.Effect<ReadonlyArray<string>, Ec
     return yield* new EcuNotResponding({ response: last })
   })
 
-/** Supported PIDs across 0100/0120/0140/..., following the "next range supported" bit. */
 export const readSupportedPids = (elm: Elm327, first: ReadonlyArray<string>): Effect.Effect<string[], Disconnected> =>
   Effect.gen(function*() {
     const all = [...first]

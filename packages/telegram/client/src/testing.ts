@@ -8,9 +8,7 @@ import { makeTelegram } from "./client.ts"
 export interface MockHttpCall {
   readonly url: string
   readonly method: string
-  /** Bot API method name (last URL path segment). */
   readonly apiMethod: string
-  /** Parsed JSON body, or `undefined` for multipart. */
   readonly json: Record<string, unknown> | undefined
   readonly form: FormData | undefined
 }
@@ -20,7 +18,6 @@ export interface MockHttpReply {
   readonly body: unknown
 }
 
-/** The real client running over a mock HTTP transport (token is `test-token`). */
 export const layerTest = (handler: (call: MockHttpCall) => MockHttpReply) => {
   const calls: Array<MockHttpCall> = []
   const http = HttpClient.make((request) =>
@@ -59,11 +56,9 @@ export interface RecordedCall {
 }
 
 export interface RecordingOptions {
-  /** Return an error to make this call fail. */
   readonly fail?: (call: RecordedCall) => TelegramError | undefined
 }
 
-/** In-memory `Telegram` that records every call. Message ids count up from 1. */
 export const recordingTelegram = (options: RecordingOptions = {}) => {
   const calls: Array<RecordedCall> = []
   let nextId = 1

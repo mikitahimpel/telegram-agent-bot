@@ -6,7 +6,6 @@ const pad = (n: number) => String(n).padStart(2, "0")
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const MONTHS_RU = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
 
-/** Epoch ms → human date-time in UTC, formatted per language ("Nov 19, 14:30 UTC" / "19 ноя, 14:30 UTC"). */
 export const formatDateTime = (ms: number, lang: Lang): string => {
   const d = new Date(ms)
   const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
@@ -16,7 +15,6 @@ export const formatDateTime = (ms: number, lang: Lang): string => {
     : `${MONTHS_EN[d.getUTCMonth()]} ${day}, ${time}`
 }
 
-/** Generic messages shared by the dispatcher, commands and plugins. All values are HTML. */
 export const messages = defineMessages({
   en: {
     unknownCommand: "Unknown command. Send /help to see what I can do.",
@@ -44,10 +42,6 @@ export const messages = defineMessages({
   }
 })
 
-/**
- * Localized HTML for a failure, or `undefined` when the bot must stay silent
- * (Unauthorized, and RunInterrupted because the stop command already confirms).
- */
 export const errorMessage = (err: BotError, lang: Lang): string | undefined => {
   const m = messages[lang]
   switch (err._tag) {

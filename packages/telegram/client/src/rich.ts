@@ -5,10 +5,6 @@ import { inlineKeyboardToMarkup } from "./client.ts"
 
 const Sent = Schema.Struct({ message_id: Schema.Number })
 
-/**
- * Bot API 10.1 `sendRichMessage` with `InputRichMessage = { html }`.
- * Rich messages allow up to 32768 characters, tables and expandable quotes.
- */
 export const sendRichMessage = (
   to: SendTarget,
   html: string,

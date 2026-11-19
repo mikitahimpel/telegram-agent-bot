@@ -51,10 +51,6 @@ const json = (body: unknown, status = 200): Response =>
 const errorResponse = (e: ApiFail): Response =>
   json({ error: { code: e.code, message: e.message, retryable: e.retryable } }, e.status)
 
-// ---------------------------------------------------------------------------
-// rate limit: fixed window, kept in isolate memory (a soft guard; not shared between isolates)
-// ---------------------------------------------------------------------------
-
 const WINDOW_MS = 60_000
 const LIMIT_PER_USER = 240
 const LIMIT_PAIR_PER_IP = 20
@@ -70,10 +66,6 @@ const rateLimit = (key: string, limit: number, lang: Lang) =>
     if (w === undefined || now - w.start >= WINDOW_MS) windows.set(key, { start: now, count: 1 })
     else if (++w.count > limit) return yield* Effect.fail(apiFail("rate_limited", messages[lang].rateLimited))
   })
-
-// ---------------------------------------------------------------------------
-// auth
-// ---------------------------------------------------------------------------
 
 interface Principal {
   readonly tgId: TgId
@@ -103,10 +95,6 @@ const requirePlugin = (p: Principal) =>
   Effect.gen(function*() {
     if (!(yield* pluginEnabled(p))) return yield* Effect.fail(apiFail("plugin_disabled", messages[p.lang].pluginDisabled))
   })
-
-// ---------------------------------------------------------------------------
-// helpers
-// ---------------------------------------------------------------------------
 
 const readBody = (request: Request, max: number, lang: Lang) =>
   Effect.gen(function*() {
@@ -149,7 +137,6 @@ const putManifest = (p: Principal, tripId: TripId, request: Request) =>
         }
       } catch (e) {
         if (e instanceof ApiFail) return yield* Effect.fail(e)
-        // unreadable old manifest: replace it
       }
     }
     yield* storageOp(() => bucket.put(key, JSON.stringify(manifest)))
@@ -225,10 +212,6 @@ const notifyFinished = (p: Principal, tripId: TripId, status: TripStatus, webUrl
     }
     yield* storageOp(() => bucket.put(marker, state))
   })
-
-// ---------------------------------------------------------------------------
-// router
-// ---------------------------------------------------------------------------
 
 const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
   Effect.gen(function*() {
@@ -308,7 +291,6 @@ const route = (request: Request, segments: ReadonlyArray<string>, url: URL) =>
 
 const escapeHtml = (t: string) => t.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
 
-/** `/car/api/*` handler for the gateway Worker. Never fails: every error becomes an `ApiError` JSON response. */
 export const handleCarApi = (request: Request): Effect.Effect<Response, never, CarApiR> => {
   const url = new URL(request.url)
   const segments = url.pathname.replace(/^\/car\/api\/?/, "").split("/").filter((s) => s !== "")

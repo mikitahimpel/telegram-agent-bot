@@ -8,14 +8,11 @@ export interface ExecCall {
 }
 
 export interface FakeOptions {
-  /** stdout lines of the `claude -p` run. */
   readonly claudeLines: ReadonlyArray<string>
-  /** Keep stdout open after the lines until killed. */
   readonly hang?: boolean
   readonly claudeExitCode?: number
   readonly claudeStderr?: string
   readonly startRunning?: boolean
-  /** Successive outputs of `find /workspace/out`. */
   readonly findOutputs?: ReadonlyArray<string>
   readonly failBackup?: boolean
 }
@@ -44,14 +41,13 @@ export const makeFake = (o: FakeOptions) => {
     const close = (code: number) => {
       if (closed) return
       closed = true
-      try { ctl.close() } catch { /* already closed */ }
+      try { ctl.close() } catch {}
       resolveExit(code)
     }
     const stdout = new ReadableStream<Uint8Array>({
       start(c) {
         ctl = c
         const lines = o.claudeLines.map((l) => `${l}\n`).join("")
-        // Split in awkward chunks to exercise the line splitter.
         const bytes = enc.encode(lines)
         const mid = Math.floor(bytes.length / 2)
         c.enqueue(bytes.slice(0, mid))

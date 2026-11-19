@@ -5,7 +5,6 @@ import { TripStore } from "./store.ts"
 
 export interface ExportedTrip {
   readonly fileName: string
-  /** All chunks merged (plus any unsealed pending samples), header once. */
   readonly csv: Blob
   readonly manifestJson: Blob
   readonly manifestFileName: string
@@ -46,7 +45,6 @@ export const exportTrip = (tripId: string): Effect.Effect<ExportedTrip, ExportFa
 
 export type ShareResult = "shared" | "downloaded" | "cancelled"
 
-/** Web Share API level 2 with files; falls back to downloading each file. */
 export const shareFiles = (files: ReadonlyArray<{ readonly name: string; readonly blob: Blob }>, title?: string): Effect.Effect<ShareResult> =>
   Effect.promise(async (): Promise<ShareResult> => {
     const fileObjs = files.map((f) => new File([f.blob], f.name, { type: f.blob.type }))

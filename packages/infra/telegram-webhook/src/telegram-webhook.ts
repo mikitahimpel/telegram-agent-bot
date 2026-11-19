@@ -4,7 +4,6 @@ import { Data, Effect, Layer, Redacted } from "effect"
 
 export const ALLOWED_UPDATES = ["message", "edited_message", "callback_query", "stopped_message_generation"] as const
 
-/** One `setMyCommands` call; structurally equal to `MenuPayload` of @bot/bot-commands/registry. */
 export interface WebhookMenu {
   readonly scope: { readonly type: "default" } | { readonly type: "chat"; readonly chatId: number }
   readonly languageCode: string | undefined
@@ -14,9 +13,7 @@ export interface WebhookMenu {
 export interface TelegramWebhookProps {
   readonly botToken: Redacted.Redacted<string>
   readonly secretToken: Redacted.Redacted<string>
-  /** `Worker.url` resolves after the Worker deploys; it may be undefined in the type. */
   readonly url: string | undefined
-  /** Passed as props so the resource updates whenever the command registry changes. */
   readonly menus: ReadonlyArray<WebhookMenu>
 }
 

@@ -4,16 +4,13 @@ import type { ChatId } from "@bot/core-contracts/ids"
 import { Telegram } from "@bot/core-contracts/telegram"
 import { escapeHtml } from "@bot/bot-commands/html"
 
-/** Short notification to the admin chat. Never fails; duplicates are suppressed for a while. */
 export class AdminNotifier extends Context.Service<
   AdminNotifier,
   { readonly notify: (message: string) => Effect.Effect<void> }
 >()("@bot/AdminNotifier") {}
 
 export interface NotifierOptions {
-  /** Same message is not repeated within this window. */
   readonly dedupeMs?: number
-  /** Hard cap of notifications per minute. */
   readonly maxPerMinute?: number
 }
 

@@ -93,7 +93,6 @@ describe("pairing", () => {
     expect(s.sent[0]?.html).toContain("Pixel")
     expect(s.sent[0]?.options.keyboard[0][0].style).toBe("danger")
     expect(s.sent[0]?.options.keyboard[0][0].callbackData).toBe(`cardev:${first.body.deviceId}`)
-    // the raw token is never stored, only its hash
     expect([...s.kv.store.keys()].some((k) => k.includes(first.body.deviceToken))).toBe(false)
     expect([...s.kv.store.values()].some((v) => v.includes(first.body.deviceToken))).toBe(false)
     const again = await s.call(req("POST", "/pair/complete", { body: JSON.stringify({ code: first.code, deviceName: "Other" }) }))
@@ -192,7 +191,6 @@ describe("chunks", () => {
     expect([...s.r2.objects.keys()].every((k) => k.startsWith(`car/${A}/`))).toBe(true)
     const st = (await (await s.call(req("GET", `/trips/${tripId}/status`, { token: b.body.deviceToken }))).json()) as any
     expect(st.received).toEqual([])
-    // path traversal in ids is rejected
     const bad = await s.call(req("GET", "/trips/..%2F111/status", { token: b.body.deviceToken }))
     expect(bad.status).toBe(400)
   })
@@ -209,7 +207,6 @@ describe("manifest, status, finish", () => {
     const put = await s.call(req("PUT", `/trips/${tripId}/manifest`, { token, body: JSON.stringify(manifest) }))
     expect(put.status).toBe(200)
     await putChunk(s, token, 0, bodies[0]!)
-    // chunk 1 stored with different content than the manifest says → corrupt
     await putChunk(s, token, 1, chunkBody(500, 5))
     const status = (await (await s.call(req("GET", `/trips/${tripId}/status`, { token }))).json()) as any
     expect(status).toMatchObject({ received: [0], missing: [2], corrupt: [1], complete: false, rows: 5 })
@@ -221,9 +218,8 @@ describe("manifest, status, finish", () => {
     expect(s.sent.at(-1)?.options.keyboard[0][0].webAppUrl).toBeUndefined()
     const n = s.sent.length
     await s.call(req("POST", `/trips/${tripId}/finish`, { token }))
-    expect(s.sent.length).toBe(n) // same state: no duplicate message
+    expect(s.sent.length).toBe(n)
 
-    // repair: delete corrupt, resend correct ones
     s.r2.objects.delete(chunkKey(A, tripId, 1))
     await putChunk(s, token, 1, bodies[1]!)
     await putChunk(s, token, 2, bodies[2]!)

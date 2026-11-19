@@ -11,7 +11,6 @@ export class InvalidTripKey extends Data.TaggedError("InvalidTripKey")<{
 
 export const prefixOf = (tgId: TgId): string => `car/${tgId}/`
 
-/** Accepts only `car/<tgId>/<name>` with no traversal, empty or control segments. */
 export const validateKey = (tgId: TgId, key: string): Effect.Effect<string, InvalidTripKey> => {
   const prefix = prefixOf(tgId)
   const rest = key.slice(prefix.length)
@@ -53,7 +52,6 @@ export interface TripFilter {
   readonly limit?: number | undefined
 }
 
-/** Trips of one account, newest first. */
 export const listTrips = (tgId: TgId, filter: TripFilter = {}) =>
   Effect.gen(function*() {
     const bucket = yield* CarBucket
@@ -77,7 +75,6 @@ export const listTrips = (tgId: TgId, filter: TripFilter = {}) =>
       .map(toTrip)
   })
 
-/** Metadata of one trip; the key must belong to `tgId`. */
 export const headTrip = (tgId: TgId, key: string) =>
   Effect.gen(function*() {
     yield* validateKey(tgId, key)
@@ -124,7 +121,6 @@ const EXT = /^[a-z0-9]{1,10}$/i
 
 export const isValidExt = (ext: string): boolean => EXT.test(ext)
 
-/** `car/<tgId>/<ISO timestamp>-<random>.<ext>` (":" and "." in the timestamp become "-"). */
 export const newUploadKey = (tgId: TgId, now: Date, ext = "bin"): string => {
   const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, "0")).join("")
   const ts = now.toISOString().replace(/[:.]/g, "-")

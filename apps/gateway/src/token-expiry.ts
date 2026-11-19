@@ -1,6 +1,5 @@
 import { defineMessages } from "@bot/core-contracts/lang"
 
-/** `claude setup-token` tokens are valid for about a year. */
 export const TOKEN_LIFETIME_DAYS = 365
 export const REMINDER_DAYS = [30, 7, 1] as const
 const DAY_MS = 86_400_000
@@ -8,10 +7,6 @@ const DAY_MS = 86_400_000
 export const daysLeft = (issuedAtMs: number, nowMs: number): number =>
   Math.ceil((issuedAtMs + TOKEN_LIFETIME_DAYS * DAY_MS - nowMs) / DAY_MS)
 
-/**
- * Reminder stage for the remaining days: 30, 7, 1, or 0 once expired; `undefined` while there is
- * more than 30 days left. A stage is announced once, so a 6-hourly cron stays quiet in between.
- */
 export const reminderStage = (remainingDays: number): number | undefined => {
   if (remainingDays <= 0) return 0
   for (const d of [1, 7, 30]) if (remainingDays <= d) return d

@@ -14,7 +14,6 @@ import { CarBucket } from "./r2.ts"
 
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024
 const ROWS_PER_CHUNK = 1000
-/** 2000-01-01; anything smaller is not epoch milliseconds. */
 const MIN_TS = 946_684_800_000
 
 export class EmptyImport extends Data.TaggedError("EmptyImport")<{}> {}
@@ -26,7 +25,6 @@ export interface ImportResult {
   readonly metrics: TripMetrics
 }
 
-/** Validates the CSV and stores it as `imports/<tripId>.csv` plus a normal, synthesized trip (manifest + chunks). */
 export const storeImport = (tgId: TgId | number, text: string, fileName: string) =>
   Effect.gen(function*() {
     const parsed = yield* parseCsv(text)
@@ -123,10 +121,6 @@ const download = (fileId: string) =>
     return new TextDecoder().decode(buf)
   })
 
-/**
- * Hook for the dispatcher: a user sent a document. Returns false when it is not a CSV (not handled);
- * otherwise imports it and replies with a summary or a precise localized error.
- */
 export const importDocument = (ctx: ImportContext, doc: DocumentLike) =>
   Effect.gen(function*() {
     if (!isCsvDocument(doc)) return false

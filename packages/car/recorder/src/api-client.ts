@@ -13,7 +13,6 @@ import {
 import type { TripManifest } from "@bot/car-format/manifest"
 import { ApiFailure } from "./errors.ts"
 
-/** Long-lived device token from pairing. */
 export interface Credential {
   readonly token: string
 }
@@ -27,19 +26,16 @@ export interface CarApiShape {
   readonly status: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly finish: (tripId: string) => Effect.Effect<TripStatus, ApiFailure>
   readonly listTrips: (limit?: number) => Effect.Effect<TripList, ApiFailure>
-  /** No auth header. */
   readonly pairComplete: (code: string, deviceName: string) => Effect.Effect<PairComplete, ApiFailure>
   readonly devices: Effect.Effect<DeviceList, ApiFailure>
   readonly revokeDevice: (deviceId: string) => Effect.Effect<void, ApiFailure>
   readonly credential: Effect.Effect<Credential | undefined>
-  /** Swap the credential at runtime (e.g. after re-pairing). */
   readonly setCredential: (c: Credential | undefined) => Effect.Effect<void>
 }
 
 export class CarApi extends Context.Service<CarApi, CarApiShape>()("@bot/car-recorder/CarApi") {}
 
 export interface CarApiOptions {
-  /** e.g. "https://host/car/api" (no trailing slash needed). */
   readonly apiBase: string
   readonly credential?: Credential | undefined
   readonly timeoutMs?: number
@@ -185,6 +181,5 @@ export const makeCarApi = (options: CarApiOptions) =>
     return api
   })
 
-/** Requires an `HttpClient` (FetchHttpClient.layer in the browser). */
 export const layer = (options: CarApiOptions): Layer.Layer<CarApi, never, HttpClient.HttpClient> =>
   Layer.effect(CarApi, makeCarApi(options))

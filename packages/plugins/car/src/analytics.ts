@@ -11,9 +11,7 @@ export interface TripMetrics {
   readonly points: number
   readonly startTs: number | undefined
   readonly endTs: number | undefined
-  /** Wall-clock span, last - first sample. */
   readonly durationSeconds: number
-  /** Time actually integrated (excludes gaps and jumps). */
   readonly activeSeconds: number
   readonly distanceKm: number | undefined
   readonly distanceSource: "obd" | "gps" | "none"
@@ -21,7 +19,6 @@ export interface TripMetrics {
   readonly maxSpeedKmh: number | undefined
   readonly idleSeconds: number
   readonly fuelLiters: number | undefined
-  /** Distance over the same intervals the fuel was integrated on. */
   readonly fuelDistanceKm: number | undefined
   readonly fuelPer100Km: number | undefined
   readonly fuelIsEstimate: boolean
@@ -37,7 +34,6 @@ interface Step {
   readonly idle: boolean
 }
 
-/** Per-trip metrics. Never interpolates across gaps or time jumps > 10 s. */
 export const analyzeTrip = (
   input: ReadonlyArray<Sample>,
   gaps: ReadonlyArray<Gap>,

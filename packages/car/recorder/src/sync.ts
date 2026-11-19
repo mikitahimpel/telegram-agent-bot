@@ -10,22 +10,16 @@ import { TripStore, type ChunkRecord, type TripRecord } from "./store.ts"
 export type ReauthReason = "device_revoked" | "not_paired"
 export type BlockedCode = "plugin_disabled" | "forbidden"
 
-/** Global engine status. */
 export type SyncStatus = Data.TaggedEnum<{
   Idle: {}
   Syncing: {}
-  /** navigator.onLine is false; uploads resume on the `online` event. */
   Offline: {}
-  /** 401: device token revoked, or no credential (not paired). Local data is kept; call `retryNow()` after re-pairing. */
   NeedsReauth: { readonly reason: ReauthReason }
-  /** 403 / plugin disabled: ask the admin. */
   Blocked: { readonly code: BlockedCode }
-  /** The user paused syncing. */
   Paused: {}
 }>
 export const SyncStatus = Data.taggedEnum<SyncStatus>()
 
-/** Per-trip upload state shown to the user. */
 export type TripSync = Data.TaggedEnum<{
   Recording: { readonly sent: number; readonly total: number }
   Queued: { readonly total: number }
@@ -38,14 +32,12 @@ export type TripSync = Data.TaggedEnum<{
   }
   Verifying: {}
   Confirmed: { readonly at: number }
-  /** Terminal problems: the server cannot get a complete, intact copy without user action (export). */
   Incomplete: {
     readonly missing: number
     readonly corrupt: number
     readonly conflict: number
     readonly localCopy: boolean
   }
-  /** Known to the server only (recorded on another device or local copy deleted). */
   CloudOnly: {}
 }>
 export const TripSync = Data.taggedEnum<TripSync>()
@@ -66,18 +58,15 @@ export interface TripSyncInfo {
   readonly startedAt: number
   readonly endedAt: number | undefined
   readonly points: number | undefined
-  /** Locally integrated distance; undefined for cloud-only or pre-tracking trips. */
   readonly distanceKm: number | undefined
   readonly sync: TripSync
   readonly chunks: ReadonlyArray<ChunkView>
-  /** Server-side counters when known (from GET /trips). */
   readonly cloud: { readonly received: number; readonly chunkCount: number; readonly complete: boolean } | undefined
 }
 
 export interface SyncState {
   readonly status: SyncStatus
   readonly trips: ReadonlyArray<TripSyncInfo>
-  /** device clock minus server clock, from GET /me. */
   readonly clockOffsetMs: number | undefined
   readonly lastSyncAt: number | undefined
   readonly lastError: string | undefined
@@ -85,13 +74,10 @@ export interface SyncState {
 
 export interface SyncEngineShape {
   readonly state: SubscriptionRef.SubscriptionRef<SyncState>
-  /** Wake up now; with a trip id also clears its backoff and re-queues corrupt chunks. Clears NeedsReauth/Blocked. */
   readonly retryNow: (tripId?: string) => Effect.Effect<void>
   readonly pause: Effect.Effect<void>
   readonly resume: Effect.Effect<void>
-  /** User action: drop the local chunks of a trip (a confirmed trip is removed entirely). */
   readonly discardLocal: (tripId: string) => Effect.Effect<void, StorageFailure>
-  /** Rebuild state from the store (e.g. after the UI deleted something). */
   readonly refresh: Effect.Effect<void, StorageFailure>
 }
 
@@ -110,7 +96,6 @@ interface Gate {
   attempts: number
   nextAt: number
   lastError: string
-  /** checksum_mismatch counter (chunks only) */
   checksumFails: number
 }
 
@@ -147,8 +132,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
     let startupGate: Gate | undefined
     let refreshCloud = false
     const key = (tripId: string, seq: number) => `${tripId}:${seq}`
-
-    // ---- state derivation -------------------------------------------------
 
     const derive = (trip: TripRecord, chunks: ReadonlyArray<ChunkRecord>, now: number): TripSyncInfo => {
       const m = trip.manifest
@@ -251,14 +234,11 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
 
     const setStatus = (status: SyncStatus) => SubscriptionRef.update(state, (s) => ({ ...s, status }))
 
-    // ---- failure handling -------------------------------------------------
-
     const reauthStatus = Effect.gen(function*() {
       const c = yield* api.credential
       return SyncStatus.NeedsReauth({ reason: c !== undefined ? "device_revoked" : "not_paired" })
     })
 
-    /** Converts failures that stop the whole engine into `Halt`. */
     const guard = <A>(eff: Effect.Effect<A, ApiFailure>): Effect.Effect<A, ApiFailure | Halt> =>
       eff.pipe(
         Effect.catch((f) =>
@@ -285,8 +265,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
       return g
     }
 
-    // ---- uploading --------------------------------------------------------
-
     const uploadChunk = (c: ChunkRecord) =>
       Effect.gen(function*() {
         const k = key(c.tripId, c.seq)
@@ -311,7 +289,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
             yield* store.setChunkState(c.tripId, c.seq, "corrupt", "Checksum kept failing in transit")
           }
         } else if (result.code === "not_found") {
-          // Server does not know the trip: re-send the manifest first.
           yield* store.updateTrip(c.tripId, (t) => ({ ...t, manifestSentRev: 0 }))
           bump(chunkGates, k, result.message, now, yield* Random.next)
         } else if (result.retryable) {
@@ -363,7 +340,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
           rounds.delete(tripId)
           return "done" as const
         }
-        // Server is missing / has corrupt objects: re-queue from local data.
         const round = (rounds.get(tripId) ?? 0) + 1
         let requeued = 0
         for (const seq of [...status.missing, ...status.corrupt]) {
@@ -418,7 +394,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
             yield* publishTrip(tripId)
             return
           }
-          // All chunks sent (or terminally failed): final manifest, finish, verify.
           if (!(yield* sendManifestIfDirty(tripId))) {
             yield* publishTrip(tripId)
             return
@@ -447,8 +422,6 @@ export const layer: Layer.Layer<SyncEngine, never, TripStore | CarApi | AppLifec
           if (verdict !== "again") return
         }
       })
-
-    // ---- the pass ---------------------------------------------------------
 
     const startup = Effect.gen(function*() {
       const now = yield* Clock.currentTimeMillis

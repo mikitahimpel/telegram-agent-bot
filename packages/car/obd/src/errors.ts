@@ -16,7 +16,6 @@ export class PermissionDenied extends Data.TaggedError("PermissionDenied")<{
   readonly code = "permission_denied" as const
 }
 
-/** The user closed the device picker without choosing. */
 export class DeviceNotSelected extends Data.TaggedError("DeviceNotSelected")<{}> {
   readonly code = "device_not_selected" as const
 }
@@ -34,7 +33,6 @@ export class AdapterNotResponding extends Data.TaggedError("AdapterNotResponding
   readonly code = "adapter_not_responding" as const
 }
 
-/** UNABLE TO CONNECT / BUS INIT ERROR / NO DATA on 0100: ignition is most likely off. */
 export class EcuNotResponding extends Data.TaggedError("EcuNotResponding")<{
   readonly response: string
 }> {
@@ -47,7 +45,6 @@ export class CommandTimeout extends Data.TaggedError("CommandTimeout")<{
   readonly code = "command_timeout" as const
 }
 
-/** The adapter answered with an error token (NO DATA, CAN ERROR, BUFFER FULL, STOPPED, ?, ...). */
 export class CommandRejected extends Data.TaggedError("CommandRejected")<{
   readonly command: string
   readonly token: string

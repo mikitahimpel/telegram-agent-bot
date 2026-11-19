@@ -6,10 +6,6 @@ export interface Period {
 
 const DAY = 86_400_000
 
-/**
- * `7d`, `30d`, `month` (current UTC month), `YYYY-MM`; empty/undefined = `30d`.
- * Returns undefined for anything else.
- */
 export const parsePeriod = (input: string | undefined, now: Date): Period | undefined => {
   const text = (input ?? "").trim().toLowerCase()
   if (text === "") return parsePeriod("30d", now)

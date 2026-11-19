@@ -3,7 +3,6 @@ import { Allowlist, type AllowlistEntry } from "@bot/core-contracts/allowlist"
 import { StorageError } from "@bot/core-contracts/errors"
 import { TgId } from "@bot/core-contracts/ids"
 
-/** Minimal structural subset of a Cloudflare `KVNamespace`. */
 export interface KvLike {
   readonly get: (key: string) => Promise<string | null>
   readonly put: (key: string, value: string) => Promise<void>
@@ -113,7 +112,6 @@ export const make = (kv: KvLike, adminId: TgId): Allowlist["Service"] => {
   }
 }
 
-/** Allowlist on a KV namespace; admin id from Config `ADMIN_TG_ID`. */
 export const layer = (kv: KvLike) =>
   Layer.effect(
     Allowlist,
@@ -123,7 +121,6 @@ export const layer = (kv: KvLike) =>
     })
   )
 
-/** In-memory KV with the same shape, for tests. */
 export const makeMemoryKv = (initial: ReadonlyArray<AllowlistEntry> = []): KvLike => {
   const store = new Map<string, string>(
     initial.map((e) => {
@@ -142,6 +139,5 @@ export const makeMemoryKv = (initial: ReadonlyArray<AllowlistEntry> = []): KvLik
   }
 }
 
-/** In-memory Allowlist for tests. */
 export const layerMemory = (adminId: TgId, initial: ReadonlyArray<AllowlistEntry> = []) =>
   Layer.succeed(Allowlist, make(makeMemoryKv(initial), adminId))

@@ -34,16 +34,11 @@ export interface DemoOptions {
   online?: boolean
   fuelSource?: FuelRateSource
   clockOffsetMs?: number
-  /** Disable timers (tests). */
   static?: boolean
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-/**
- * In-memory simulation of the whole backend. Used for development, tests and as a fallback
- * until the real adapter (car-obd + car-recorder runtime) is wired in services/runtime.ts.
- */
 export const createDemoBackend = (o: DemoOptions = {}): CarBackend => {
   const caps: Capabilities = o.caps ?? { ble: true, serial: true, secureContext: true, inTelegram: false, reasons: [] }
   const conn = ref<ConnectionVm>(o.conn ?? { _tag: "Idle" })

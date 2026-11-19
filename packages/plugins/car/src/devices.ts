@@ -5,7 +5,6 @@ import type { Lang } from "@bot/core-contracts/lang"
 import { CarKv, type CarKvLike } from "./kv.ts"
 
 export const PAIR_TTL_SECONDS = 10 * 60
-/** lastSeenAt is written at most this often (KV writes are slow and rate limited per key). */
 export const LAST_SEEN_INTERVAL_MS = 10 * 60 * 1000
 export const MAX_DEVICES = 10
 
@@ -67,7 +66,6 @@ const cleanName = (name: string): string => {
   return n === "" ? "Chrome" : n
 }
 
-/** One-time pairing code (10 min). Only a hash of the code is stored. */
 export const startPair = (who: { readonly tgId: number; readonly firstName: string; readonly lang: Lang }) =>
   Effect.gen(function*() {
     const now = yield* Clock.currentTimeMillis
@@ -86,7 +84,6 @@ export interface PairedDevice {
   readonly record: DeviceRecord
 }
 
-/** Consumes the code (single use). `undefined` = unknown, used or expired. */
 export const completePair = (code: string, deviceName: string) =>
   Effect.gen(function*() {
     if (!/^[0-9a-f]{32}$/.test(code)) return undefined
@@ -109,7 +106,6 @@ export const completePair = (code: string, deviceName: string) =>
       lastSeenAt: null
     }
     const index = yield* readIndex(pair.tgId)
-    // Oldest devices fall off when the limit is exceeded.
     const keep = index.slice(-(MAX_DEVICES - 1))
     for (const old of index.slice(0, index.length - keep.length)) {
       yield* kvOp("car.devices.evict", (kv) => kv.delete(devKey(old.hash)))
@@ -121,7 +117,6 @@ export const completePair = (code: string, deviceName: string) =>
     return { token, record } satisfies PairedDevice
   })
 
-/** Looks up a device token. Revoked or unknown → undefined. Refreshes lastSeenAt at most every 10 min. */
 export const authDevice = (token: string) =>
   Effect.gen(function*() {
     if (token.length < 20 || token.length > 100) return undefined
@@ -148,7 +143,6 @@ export const listDevices = (tgId: number) =>
     return out
   })
 
-/** Revokes one device of this account. False when it does not exist. */
 export const revokeDevice = (tgId: number, deviceId: string) =>
   Effect.gen(function*() {
     const index = yield* readIndex(tgId)

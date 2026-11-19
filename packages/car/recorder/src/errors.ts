@@ -3,14 +3,12 @@ import type { ApiErrorCode } from "@bot/car-format/api"
 
 export type StorageFailureReason = "quota" | "unavailable" | "unknown"
 
-/** IndexedDB failed. `quota` = QuotaExceededError, `unavailable` = no IndexedDB / blocked / private mode. */
 export class StorageFailure extends Data.TaggedError("StorageFailure")<{
   readonly reason: StorageFailureReason
   readonly message: string
   readonly cause?: unknown
 }> {}
 
-/** An API call failed. `network`/`timeout` are client-side; the rest come from the server error body. */
 export class ApiFailure extends Data.TaggedError("ApiFailure")<{
   readonly code: ApiErrorCode | "network" | "timeout"
   readonly retryable: boolean
@@ -18,7 +16,6 @@ export class ApiFailure extends Data.TaggedError("ApiFailure")<{
   readonly status?: number
 }> {}
 
-/** Misuse of the recorder (already recording, unknown trip, trip not resumable). */
 export class RecorderFailure extends Data.TaggedError("RecorderFailure")<{
   readonly reason: "busy" | "not_found" | "not_interrupted"
   readonly message: string

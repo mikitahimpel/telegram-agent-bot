@@ -112,7 +112,6 @@ export default {
     return text("not found", 404)
   },
 
-  /** Cron (every 6 hours): the admin's agent checks the claude CLI auth and the token expiry. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const adminId = Number(env.ADMIN_TG_ID)
     ctx.waitUntil(

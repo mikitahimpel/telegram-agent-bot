@@ -3,12 +3,10 @@ import type { TelegramError } from "./errors.ts"
 import type { ChatId, ThreadId } from "./ids.ts"
 import type { Localized } from "./lang.ts"
 
-/** Inline keyboard button. `style` follows Bot API (e.g. "danger" / "primary" / "success"). */
 export interface InlineButton {
   readonly text: string
   readonly callbackData?: string
   readonly url?: string
-  /** Opens a Telegram Mini App (HTTPS URL) — Bot API `web_app`. */
   readonly webAppUrl?: string
   readonly style?: "primary" | "success" | "danger"
 }
@@ -20,7 +18,6 @@ export interface SendTarget {
   readonly threadId?: ThreadId
 }
 
-/** Text is HTML (parse_mode=HTML). Callers escape user content with the formatter package. */
 export interface SendOptions {
   readonly keyboard?: InlineKeyboard
   readonly replyToMessageId?: number
@@ -40,14 +37,9 @@ export type CommandScope =
   | { readonly type: "default" }
   | { readonly type: "chat"; readonly chatId: ChatId }
 
-/**
- * Typed Telegram Bot API client. All methods retry 429 according to `retry_after`.
- * Long texts are NOT split here — use the formatter package's splitter first.
- */
 export class Telegram extends Context.Service<
   Telegram,
   {
-    /** Raw call for methods without a typed wrapper. Result is `unknown`; decode with Schema. */
     readonly call: (method: string, params: Record<string, unknown>) => Effect.Effect<unknown, TelegramError>
     readonly sendMessage: (to: SendTarget, html: string, options?: SendOptions) => Effect.Effect<SentMessage, TelegramError>
     readonly editMessageText: (
@@ -55,7 +47,6 @@ export class Telegram extends Context.Service<
       html: string,
       options?: SendOptions
     ) => Effect.Effect<void, TelegramError>
-    /** Streams a partial reply (Bot API `sendMessageDraft`). Same `draftId` = same bubble. */
     readonly sendMessageDraft: (
       to: SendTarget & { readonly draftId: number },
       html: string

@@ -11,7 +11,6 @@ const encoder = new TextEncoder()
 
 const sha256 = async (text: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(text)))
 
-/** Compares digests of both values, so neither the length nor the content leaks through timing. */
 export const secretMatches = async (given: string | null, expected: string): Promise<boolean> => {
   const [a, b] = await Promise.all([sha256(given ?? ""), sha256(expected)])
   let diff = given === null || expected === "" ? 1 : 0
@@ -19,7 +18,6 @@ export const secretMatches = async (given: string | null, expected: string): Pro
   return diff === 0
 }
 
-/** The Telegram user whose agent should handle the update (chat id equals user id in private chats). */
 export const senderOf = (update: Update): number | undefined =>
   update.message?.from?.id ?? update.callback_query?.from.id ?? update.stopped_message_generation?.chat.id
 
@@ -29,7 +27,6 @@ export type WebhookOutcome =
   | { readonly _tag: "Invite"; readonly from: User; readonly code: string }
   | { readonly _tag: "Forward"; readonly tgId: number; readonly raw: unknown }
 
-/** Secret check, decoding and the early allowlist check. The DO re-checks the role itself. */
 export const screenWebhook = (request: Request, env: Env): Effect.Effect<WebhookOutcome> =>
   Effect.gen(function* () {
     const ok = yield* Effect.promise(() => secretMatches(request.headers.get(SECRET_HEADER), env.TELEGRAM_WEBHOOK_SECRET))

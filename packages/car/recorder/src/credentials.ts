@@ -1,7 +1,6 @@
 import { Effect } from "effect"
 import { classifyStorageError, type StorageFailure } from "./errors.ts"
 
-/** Chrome PWA device credential, stored in IndexedDB after pairing. */
 export interface DeviceCredentials {
   readonly deviceToken: string
   readonly deviceId: string

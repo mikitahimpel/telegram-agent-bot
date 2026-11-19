@@ -18,7 +18,6 @@ import { CarBucket } from "./r2.ts"
 import { listOverview, parseTripId, tripIdTime, tripMetrics, tripStatus, type TripOverview } from "./trip-store.ts"
 import { headTrip, isValidExt, newUploadKey, prefixOf } from "./trips.ts"
 
-/** Public address of the Mini App (`https://host/car/`); empty when not configured. */
 export class CarWebUrl extends Context.Service<CarWebUrl, string>()("@bot/plugins-car/CarWebUrl") {}
 
 export type CarR = CarBucket | Presigner | Telegram | CarKv | CarWebUrl

@@ -13,7 +13,6 @@ import { layerIndexedDb, TripStore } from "../src/store.ts"
 import * as SyncModule from "../src/sync.ts"
 
 export const settle = (ms = 25) => Effect.promise(() => new Promise<void>((r) => setTimeout(r, ms)))
-/** Moves the TestClock, then lets real IndexedDB promises finish. */
 export const advance = (ms: number) => TestClock.adjust(ms).pipe(Effect.andThen(settle()), Effect.andThen(settle()))
 export const eventually = <A, E, R>(f: Effect.Effect<A, E, R>, ok: (a: A) => boolean, tries = 80) =>
   Effect.gen(function*() {
@@ -25,7 +24,6 @@ export const eventually = <A, E, R>(f: Effect.Effect<A, E, R>, ok: (a: A) => boo
     return last
   })
 
-/** Advances the clock in steps until `ok` holds (each step lets one backoff elapse). */
 export const pump = <A, E, R>(f: Effect.Effect<A, E, R>, ok: (a: A) => boolean, stepMs = 400_000, tries = 12) =>
   Effect.gen(function*() {
     let last = yield* f
@@ -50,7 +48,6 @@ export const apiError = (status: number, code: string, retryable: boolean) => ({
   body: { error: { code, message: code, retryable } }
 })
 
-/** In-memory implementation of the car HTTP API. `hook` can override any reply. */
 export class FakeServer {
   readonly manifests = new Map<string, TripManifest>()
   readonly chunks = new Map<string, Map<number, { sha: string; body: string }>>()
@@ -175,7 +172,6 @@ export interface Env {
   readonly lifecycle: Effect.Success<typeof makeFakeLifecycle>
   readonly geo: Effect.Success<typeof makeFakeGeo>
   readonly wl: Effect.Success<typeof wakeLockFake>
-  /** Layer for one "process"; build it again over the same env to simulate a restart. */
   readonly layer: (credential?: CarApiModule.Credential | null) => Layer.Layer<
     TripStore | CarApiModule.CarApi | RecorderModule.Recorder | SyncModule.SyncEngine
   >
@@ -201,7 +197,6 @@ export const makeEnv = Effect.gen(function*() {
   return { server, factory, lifecycle, geo, wl, layer } satisfies Env
 })
 
-/** Writes a finished trip with `n` chunks of 2 rows each straight into the store. */
 export const seedTrip = (n: number, opts: { finished?: boolean; at?: number } = {}) =>
   Effect.gen(function*() {
     const store = yield* TripStore

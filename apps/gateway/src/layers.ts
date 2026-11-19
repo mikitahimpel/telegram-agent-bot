@@ -8,10 +8,6 @@ import { configLayer } from "./config.ts"
 import type { Env } from "./env.ts"
 import { pluginRegistry } from "./plugins.ts"
 
-/**
- * Everything plugin tools and plugin commands need: Telegram, flags, the car bucket and the
- * plugin layers themselves. Shared by the user-agent DO and the Worker's /mcp route.
- */
 export const pluginEnvironment = (env: Env, origin?: string) => {
   const base = Layer.mergeAll(
     telegramLayer,

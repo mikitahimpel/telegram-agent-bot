@@ -6,7 +6,6 @@ import { withRealBackend } from "./real-backend.ts"
 
 export const API_BASE = "/car/api"
 
-/** One ManagedRuntime (store, API client, recorder, sync) plus the OBD session, wrapped as the UI's CarBackend. */
 export const createBackend = (): CarBackend => {
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent
   const base = createDemoBackend({ platform: detectPlatform(ua), caps: localCapabilities(), trips: [], diag: [], pairing: "unpaired", storage: null })

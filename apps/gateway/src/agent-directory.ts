@@ -11,7 +11,6 @@ const viaStub = <A>(operation: string, call: () => Promise<A>) =>
     catch: (cause) => new ContainerDown({ reason: `${operation}: ${cause instanceof Error ? cause.message : String(cause)}`, cause })
   })
 
-/** Admin operations on other accounts through their user-agent DO stubs. */
 export const agentDirectoryLayer = (env: Env): Layer.Layer<AgentDirectory, never, Allowlist> =>
   Layer.effect(
     AgentDirectory,

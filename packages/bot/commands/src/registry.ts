@@ -3,12 +3,10 @@ import type { ChatId, Role } from "@bot/core-contracts/ids"
 import type { Lang } from "@bot/core-contracts/lang"
 import type { BotCommandEntry, CommandScope } from "@bot/core-contracts/telegram"
 
-/** What `/help` needs from a registry (handlers are irrelevant to it). */
 export interface HelpSource {
   readonly visibleFor: (role: Role) => ReadonlyArray<Pick<CommandDef, "name" | "role" | "description" | "usage">>
 }
 
-/** One `setMyCommands` call. `languageCode: undefined` = the default (English) list. */
 export interface MenuPayload {
   readonly scope: CommandScope
   readonly languageCode: string | undefined
@@ -16,16 +14,12 @@ export interface MenuPayload {
 }
 
 export interface Registry<R = never> extends HelpSource {
-  /** Admin commands are invisible to users (`undefined`, same as unknown). */
   readonly find: (name: string, role: Role) => CommandDef<R> | undefined
-  /** `data` = `<prefix>:<payload>`. */
   readonly findCallback: (
     data: string,
     role: Role
   ) => { readonly def: CallbackDef<R>; readonly payload: string } | undefined
-  /** Commands listed in /help and the menu: hidden ones excluded; users never see admin commands. */
   readonly visibleFor: (role: Role) => ReadonlyArray<CommandDef<R>>
-  /** setMyCommands payloads; `adminChatId` is the admin's private chat. */
   readonly menus: (adminChatId: ChatId) => ReadonlyArray<MenuPayload>
 }
 
@@ -37,7 +31,6 @@ const MENU_LANGS: ReadonlyArray<{ readonly lang: Lang; readonly languageCode: st
 const MIN_DESCRIPTION = 3
 const MAX_DESCRIPTION = 256
 
-/** Telegram requires command descriptions of 3–256 characters. */
 export const clampDescription = (text: string): string => {
   const trimmed = text.trim()
   if (trimmed.length > MAX_DESCRIPTION) return `${trimmed.slice(0, MAX_DESCRIPTION - 1)}…`

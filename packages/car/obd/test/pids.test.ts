@@ -5,7 +5,7 @@ const dec = (pid: string, bytes: number[]) => pidByCode(pid)!.decode(bytes)
 
 describe("pid decoders", () => {
   it("decodes known values", () => {
-    expect(dec("0C", [0x1a, 0xf8])).toBe(1726) // 6904 / 4
+    expect(dec("0C", [0x1a, 0xf8])).toBe(1726)
     expect(dec("0D", [0x3c])).toBe(60)
     expect(dec("05", [0x82])).toBe(90)
     expect(dec("0F", [0x41])).toBe(25)

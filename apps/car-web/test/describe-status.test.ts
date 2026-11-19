@@ -105,7 +105,6 @@ describe("describeStatus is exhaustive", () => {
           if (blocking) expect(text).not.toMatch(/starts shortly|скоро начнётся/i)
           if (expected[key]!.action) expect(v.action?.id).toBe(expected[key]!.action)
         }
-        // finished states are never overridden
         expect(describeStatus({ kind: "trip", state: { _tag: "Confirmed", at: NOW }, sync: g }, lang, NOW).title).toBe(
           describeStatus({ kind: "trip", state: { _tag: "Confirmed", at: NOW } }, lang, NOW).title
         )

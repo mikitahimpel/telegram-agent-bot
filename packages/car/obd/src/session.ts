@@ -50,14 +50,12 @@ export interface ObdSession {
 }
 
 export interface ConnectOptions {
-  /** Called synchronously with every connection state, including the ones emitted during connect. */
   readonly onState?: (s: ConnectionState) => void
   readonly scenario?: SimulatorScenario
   readonly unsupported?: ReadonlyArray<string>
   readonly baudRate?: number
   readonly namePrefix?: string
   readonly reconnect?: {
-    /** Give up and fail with `Disconnected` after this long; default 5 min. */
     readonly maxMs?: number
     readonly baseDelayMs?: number
     readonly maxDelayMs?: number
@@ -150,7 +148,6 @@ export const connect = (
 
       type Emit = (e: ObdEvent) => Effect.Effect<unknown>
 
-      /** Emits GapStarted, retries with exponential backoff, emits GapEnded; fails with Disconnected after `maxMs`. */
       const recover = (emit: Emit): Effect.Effect<void, ObdError> =>
         Effect.gen(function*() {
           const since = yield* Clock.currentTimeMillis

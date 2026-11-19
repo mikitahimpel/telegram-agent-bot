@@ -5,14 +5,6 @@ import type { Sample } from "@bot/car-format/sample"
 import type { ChunkInfo, TripManifest } from "@bot/car-format/manifest"
 import { classifyStorageError, StorageFailure } from "./errors.ts"
 
-/**
- * Persisted upload state of one chunk.
- *  pending   not on the server yet (or must be re-sent)
- *  sent      server acknowledged the PUT
- *  confirmed server `status` listed it as received and intact
- *  conflict  server has different content for this seq; never retried automatically
- *  corrupt   checksum failed repeatedly in transit, or server reports it corrupt after re-upload
- */
 export type ChunkUploadState = "pending" | "sent" | "confirmed" | "conflict" | "corrupt"
 
 export interface ChunkRecord {
@@ -31,18 +23,12 @@ export interface ChunkRecord {
 export interface TripRecord {
   readonly tripId: string
   readonly manifest: TripManifest
-  /** Bumped whenever the manifest changes; the uploader sends it when `manifestRev > manifestSentRev`. */
   readonly manifestRev: number
   readonly manifestSentRev: number
-  /** POST /finish was acknowledged. */
   readonly finishSent: boolean
-  /** Set once the server reported `complete` for this trip. */
   readonly confirmedAt?: number
-  /** The user discarded the local chunks while the cloud copy was not confirmed. */
   readonly localDeleted: boolean
-  /** Timestamp of the last flushed sample (chunk or pending). */
   readonly lastSampleAt?: number
-  /** Distance integrated while recording (km); absent for trips recorded before it was tracked. */
   readonly distanceKm?: number
   readonly createdAt: number
 }
@@ -58,7 +44,6 @@ export interface StorageHealth {
   readonly usage: number
   readonly quota: number
   readonly persisted: boolean
-  /** Less than 15% or 50 MB free: warn the user. */
   readonly low: boolean
 }
 
@@ -72,19 +57,16 @@ export interface TripStoreShape {
   readonly createTrip: (manifest: TripManifest) => Effect.Effect<TripRecord, StorageFailure>
   readonly getTrip: (tripId: string) => Effect.Effect<TripRecord | undefined, StorageFailure>
   readonly listTrips: Effect.Effect<ReadonlyArray<TripRecord>, StorageFailure>
-  /** Changes sync-only fields; does not bump the manifest revision. */
   readonly updateTrip: (
     tripId: string,
     f: (t: TripRecord) => TripRecord
   ) => Effect.Effect<TripRecord | undefined, StorageFailure>
-  /** Changes the manifest and bumps `manifestRev`. */
   readonly updateManifest: (
     tripId: string,
     f: (m: TripManifest) => TripManifest
   ) => Effect.Effect<TripRecord | undefined, StorageFailure>
   readonly appendPending: (tripId: string, samples: ReadonlyArray<Sample>) => Effect.Effect<void, StorageFailure>
   readonly readPending: (tripId: string) => Effect.Effect<ReadonlyArray<Sample>, StorageFailure>
-  /** All pending samples become the next chunk (atomically: chunk + manifest entry + pending cleanup). */
   readonly sealPending: (tripId: string) => Effect.Effect<ChunkRecord | undefined, StorageFailure>
   readonly listChunks: (tripId: string) => Effect.Effect<ReadonlyArray<ChunkRecord>, StorageFailure>
   readonly getChunk: (tripId: string, seq: number) => Effect.Effect<ChunkRecord | undefined, StorageFailure>
@@ -94,13 +76,10 @@ export interface TripStoreShape {
     state: ChunkUploadState,
     lastError?: string
   ) => Effect.Effect<void, StorageFailure>
-  /** Removes the trip, its chunks and pending samples. */
   readonly deleteTrip: (tripId: string) => Effect.Effect<void, StorageFailure>
-  /** Removes chunks and pending samples but keeps the trip record. */
   readonly deleteChunks: (tripId: string) => Effect.Effect<void, StorageFailure>
   readonly storageHealth: Effect.Effect<StorageHealth>
   readonly requestPersistence: Effect.Effect<boolean>
-  /** Emits the trip id after every write that touches the trip. */
   readonly changes: Stream.Stream<string>
 }
 
@@ -111,12 +90,10 @@ type Op =
   | { readonly type: "put"; readonly store: StoreName; readonly value: unknown }
   | { readonly type: "delete"; readonly store: StoreName; readonly key: ReadonlyArray<unknown> | string }
 
-/** Minimal persistence primitives; TripStore logic is written once on top. */
 export interface Backend {
   readonly get: (store: StoreName, key: ReadonlyArray<unknown> | string) => Promise<unknown>
   readonly all: (store: StoreName) => Promise<ReadonlyArray<unknown>>
   readonly byTrip: (store: "chunks" | "pending", tripId: string) => Promise<ReadonlyArray<unknown>>
-  /** One atomic transaction. */
   readonly write: (ops: ReadonlyArray<Op>) => Promise<void>
 }
 
@@ -217,7 +194,6 @@ export const makeIndexedDbBackend = (dbName: string, factory?: IDBFactory): Back
           try {
             tx.abort()
           } catch {
-            /* already finished */
           }
         }
       })
@@ -417,11 +393,9 @@ export const makeTripStore = (backend: Backend, storage?: StorageApiLike) =>
 export const layerFromBackend = (backend: Backend, storage?: StorageApiLike): Layer.Layer<TripStore> =>
   Layer.effect(TripStore, makeTripStore(backend, storage))
 
-/** IndexedDB database `dbName`. `factory` defaults to `globalThis.indexedDB` (tests pass a fake). */
 export const layerIndexedDb = (dbName: string, factory?: IDBFactory, storage?: StorageApiLike): Layer.Layer<TripStore> =>
   layerFromBackend(makeIndexedDbBackend(dbName, factory), storage)
 
-/** In-memory store for tests and previews. */
 export const layerMemory: Layer.Layer<TripStore> = Layer.effect(
   TripStore,
   makeTripStore(makeMemoryBackend(), { estimate: async () => ({ usage: 0, quota: 1 << 30 }), persisted: async () => true, persist: async () => true })

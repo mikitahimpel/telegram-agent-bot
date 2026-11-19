@@ -11,7 +11,6 @@ export interface PresignerConfig {
 export const DEFAULT_UPLOAD_TTL_SECONDS = 15 * 60
 export const DEFAULT_DOWNLOAD_TTL_SECONDS = 10 * 60
 
-/** Presigned R2 (S3-compatible) URLs. */
 export class Presigner extends Context.Service<
   Presigner,
   {
@@ -46,7 +45,6 @@ const make = (config: PresignerConfig): Presigner["Service"] => {
 
 export const layerWith = (config: PresignerConfig): Layer.Layer<Presigner> => Layer.succeed(Presigner, make(config))
 
-/** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (redacted), `CAR_BUCKET_NAME`. */
 export const layerConfig = Layer.effect(
   Presigner,
   Effect.gen(function*() {

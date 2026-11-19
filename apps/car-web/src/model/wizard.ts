@@ -10,7 +10,6 @@ export interface WizardStep {
   id: StepId
   label: string
   status: StepStatus
-  /** Present when failed: human explanation + fix + action. */
   problem?: StatusView
   note?: string
 }

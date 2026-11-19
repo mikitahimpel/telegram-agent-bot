@@ -23,12 +23,9 @@ export interface StatusView {
   tone: Tone
   icon: string
   title: string
-  /** What it means and what to do, plain language. */
   text: string
-  /** Optional one-line version for lists. */
   summary?: string
   action?: StatusAction
-  /** Technical details for the expandable block. */
   details?: string
 }
 
@@ -324,7 +321,6 @@ const pairView = (t: TFn, state: Extract<StatusInput, { kind: "pair" }>["state"]
   }
 }
 
-/** Pure: any state of the app -> title, plain explanation and the one action. `env` may return null (nothing wrong). */
 export function describeStatus(input: Exclude<StatusInput, { kind: "env" }>, lang: Lang, now?: number): StatusView
 export function describeStatus(input: StatusInput, lang: Lang, now?: number): StatusView | null
 export function describeStatus(input: StatusInput, lang: Lang, now: number = Date.now()): StatusView | null {

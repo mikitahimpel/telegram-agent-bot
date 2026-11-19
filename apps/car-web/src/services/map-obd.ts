@@ -28,7 +28,6 @@ export const mapObdError = (e: ObdError): ConnError => {
 
 const PID_TO_SENSOR: Record<string, SensorKey> = { "0D": "speedKmh", "0C": "rpm", "05": "coolantC", "42": "voltageV" }
 
-/** Sensors the UI shows, derived from the PIDs the ECU reported. Voltage always works via ATRV. */
 export const sensorsFromInfo = (info: Pick<SessionInfo, "supportedPids" | "fuelRateSource">): SensorKey[] => {
   const out = new Set<SensorKey>(["voltageV"])
   for (const pid of info.supportedPids) {

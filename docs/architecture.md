@@ -39,6 +39,7 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 | alchemy.run.ts | — | all infrastructure, stages dev/prod/pr-N |
 
 ## Rules
+- No comments in code (no JSDoc, no inline). Only tool directives are allowed (`@ts-expect-error`, `/// <reference>`, `eslint-disable`). Explain intent with names and types; put design notes in docs/.
 - kebab-case files/folders; PascalCase classes/services. No `any` except where contracts already use it. No barrel index.ts: `exports` in package.json lists subpaths, each maps to one `src/<name>.ts`.
 - Imports between packages only through declared `exports`; add the dependency (`"@bot/x": "workspace:*"`) to package.json.
 - Services: `class X extends Context.Service<X, Shape>()("@bot/X") {}` from contracts; implementations export `layer` (and `layerTest`/mock helpers for tests).

@@ -2,10 +2,6 @@ export type Lang = "ru" | "en"
 
 type Params = Record<string, string | number>
 
-/**
- * Tiny template formatter: `{name}` inserts a value, `{n#one|other}` (en) or `{n#one|few|many}` (ru)
- * prints the number followed by its plural form.
- */
 export const formatMessage = (lang: Lang, template: string, params: Params = {}): string =>
   template.replace(/\{(\w+)(?:#([^}]+))?\}/g, (_m, name: string, forms?: string) => {
     const v = params[name]

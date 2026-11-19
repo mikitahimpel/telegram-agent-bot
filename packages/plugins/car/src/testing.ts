@@ -1,6 +1,5 @@
 import type { R2Like, R2ObjectLike } from "./r2.ts"
 
-/** In-memory R2 with list (prefix, delimiter, cursor, limit, customMetadata), for tests. */
 export const makeMemoryR2 = (): R2Like & { readonly objects: Map<string, { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }> } => {
   const objects = new Map<string, { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }>()
   const toObj = (key: string, v: { bytes: Uint8Array; meta?: Record<string, string> | undefined; uploaded: Date }): R2ObjectLike => ({

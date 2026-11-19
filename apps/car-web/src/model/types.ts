@@ -1,5 +1,3 @@
-/** Plain view-model types. The service adapters convert the Effect state models of the car packages into these. */
-
 export type ObdErrorCode =
   | "BluetoothUnavailable"
   | "SerialUnavailable"
@@ -14,11 +12,8 @@ export type ObdErrorCode =
 
 export interface ConnError {
   code: ObdErrorCode
-  /** Init step that failed (AdapterNotResponding). */
   step?: string
-  /** BluetoothUnavailable reason / CommandRejected token. */
   reason?: string
-  /** Raw technical text for the "Details" block. */
   detail?: string
 }
 

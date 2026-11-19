@@ -9,7 +9,6 @@ export const parsePairHash = (hash: string): string | null => {
   return m?.[1] ?? null
 }
 
-/** "Chrome · Pixel 8" style name from the user agent. */
 export const deviceNameFromUA = (ua: string): string => {
   const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "Browser"
   const android = /Android[^;]*;\s*([^;)]+?)(?:\s+Build|[;)])/.exec(ua)?.[1]?.trim()
@@ -43,7 +42,6 @@ export const completePair = async (
   try {
     code2 = ((await res.json()) as { error?: { code?: string } }).error?.code ?? ""
   } catch {
-    /* non-JSON error body */
   }
   if (code2 === "pair_code_invalid") return { ok: false, error: "invalid" }
   if (code2 === "plugin_disabled" || code2 === "forbidden") return { ok: false, error: "blocked" }

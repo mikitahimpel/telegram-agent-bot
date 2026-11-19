@@ -1,41 +1,14 @@
 import { Schema } from "effect"
 import { TripManifest } from "./manifest.ts"
 
-/**
- * HTTP API between the Mini App and the gateway Worker. Base path: `/car/api`.
- * The recorder runs only in Chrome (Web Bluetooth/Serial are not available in Android WebView,
- * so a Telegram in-app browser just shows "Open in Chrome").
- *
- * Auth: `Authorization: Device <deviceToken>` — long-lived, revocable (`/car devices`).
- * The user must be allowed and the car plugin enabled.
- *
- * Pairing: the bot's `/car app` creates a one-time code (10 min) and sends a URL button
- * `https://<host>/car/#pair=<code>`. Chrome → POST /car/api/pair/complete { code, deviceName }
- * (no auth) → PairComplete { deviceToken, ... }, stored in IndexedDB. Reused/expired → `pair_code_invalid`.
- * The bot then notifies: "New device connected: <deviceName>" with a revoke button.
- *
- *   GET  /car/api/me                                  → Me
- *   GET  /car/api/devices                             → DeviceList
- *   DELETE /car/api/devices/:deviceId                 → { ok: true }
- *   PUT  /car/api/trips/:tripId/manifest              body TripManifest (JSON)      → ManifestReceipt
- *   PUT  /car/api/trips/:tripId/chunks/:seq           body CSV, header `X-Content-SHA256` → ChunkReceipt
- *   GET  /car/api/trips/:tripId/status                → TripStatus
- *   POST /car/api/trips/:tripId/finish                → TripStatus (+ bot message to the user)
- *   GET  /car/api/trips?limit=50                      → TripList
- *
- * All writes are idempotent: re-sending the same chunk (same sha256) returns `stored: "already"`.
- * Re-sending a chunk with a DIFFERENT sha256 for an existing seq fails with `chunk_conflict`
- * (the device must never rewrite history).
- */
-
 export const ApiErrorCode = Schema.Literals([
-  "unauthorized", // device token missing/revoked → pair again via /car app
-  "pair_code_invalid", // pairing code expired or already used → get a new link from the bot
-  "forbidden", // not on allowlist
-  "plugin_disabled", // admin has not enabled the car plugin for this account
+  "unauthorized",
+  "pair_code_invalid",
+  "forbidden",
+  "plugin_disabled",
   "bad_request",
-  "checksum_mismatch", // body hash ≠ X-Content-SHA256 → corrupted in transit, retry
-  "chunk_conflict", // same seq, different content already stored
+  "checksum_mismatch",
+  "chunk_conflict",
   "too_large",
   "not_found",
   "rate_limited",
@@ -53,7 +26,6 @@ export const Me = Schema.Struct({
   firstName: Schema.String,
   lang: Schema.Literals(["ru", "en"]),
   pluginEnabled: Schema.Boolean,
-  /** Server clock, to detect a wrong device clock. */
   serverTime: Schema.Number
 })
 export type Me = typeof Me.Type
@@ -67,10 +39,6 @@ export const ChunkReceipt = Schema.Struct({
 })
 export type ChunkReceipt = typeof ChunkReceipt.Type
 
-/**
- * Server view of one trip. `missing` = seqs in the manifest (0..chunkCount-1 when finished,
- * else manifest.chunks) without a stored object; `corrupt` = stored but hash/size differ.
- */
 export const TripStatus = Schema.Struct({
   tripId: Schema.String,
   manifest: Schema.NullOr(TripManifest),

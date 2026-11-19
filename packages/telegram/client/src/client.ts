@@ -13,7 +13,6 @@ import {
 export const DEFAULT_API_BASE = "https://api.telegram.org"
 export const MAX_RATE_LIMIT_RETRIES = 3
 
-/** Internal: a 429 that carries the server-provided wait. Never escapes the client. */
 class RateLimited extends Data.TaggedError("RateLimited")<{
   readonly retryAfterSeconds: number
   readonly error: TelegramError
@@ -30,7 +29,6 @@ const Envelope = Schema.Struct({
 const SentMessageResult = Schema.Struct({ message_id: Schema.Number })
 const TopicResult = Schema.Struct({ message_thread_id: Schema.Number })
 
-/** Maps our camelCase keyboard to the Bot API `reply_markup` object. */
 export const inlineKeyboardToMarkup = (keyboard: InlineKeyboard) => ({
   inline_keyboard: keyboard.map((row) =>
     row.map((b) => ({
@@ -73,7 +71,6 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
         const request = HttpClientRequest.post(`${base}/bot${Redacted.value(token)}/${method}`).pipe(
           HttpClientRequest.setBody(body)
         )
-        // Transport errors may embed the URL (which contains the token): never forward them.
         const response = yield* http.execute(request).pipe(
           Effect.mapError((e) => badResponse(method, `transport error (${e.reason._tag})`))
         )
@@ -128,7 +125,6 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
         ...(options?.disablePreview === true ? { link_preview_options: { is_disabled: true } } : {})
       }).pipe(
         Effect.asVoid,
-        // Re-editing with identical content is harmless.
         Effect.catchIf(
           (e) => e.errorCode === 400 && e.description.includes("message is not modified"),
           () => Effect.void
@@ -198,7 +194,6 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
     })
   })
 
-/** Reads `TELEGRAM_BOT_TOKEN` (redacted) and optional `TELEGRAM_API_BASE`. Requires an `HttpClient`. */
 export const layer: Layer.Layer<Telegram, Config.ConfigError, HttpClient.HttpClient> = Layer.effect(
   Telegram,
   Effect.gen(function*() {
@@ -208,7 +203,6 @@ export const layer: Layer.Layer<Telegram, Config.ConfigError, HttpClient.HttpCli
   })
 )
 
-/** `layer` wired to the platform `fetch` (Workers, Node, browsers). */
 export const layerFetch = layer.pipe(Layer.provide(FetchHttpClient.layer))
 
 export type { Context }

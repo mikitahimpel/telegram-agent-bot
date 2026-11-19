@@ -12,11 +12,9 @@ export const detectPlatform = (ua: string): Platform => {
 export const isTelegramWebview = (ua: string, w: { TelegramWebviewProxy?: unknown } = globalThis as never): boolean =>
   /Telegram/i.test(ua) || w.TelegramWebviewProxy !== undefined
 
-/** Language comes from the browser; the user can override it in Settings. */
 export const initialLang = (navLang: string | undefined, saved: string | null | undefined): Lang =>
   saved === "ru" || saved === "en" ? saved : detectLang(navLang)
 
-/** Bot deep link from VITE_BOT_USERNAME (with or without a leading @); null when unset. */
 export const botUrl = (username: string | undefined | null): string | null => {
   const u = (username ?? "").trim().replace(/^@/, "")
   return /^[A-Za-z0-9_]{3,}$/.test(u) ? `https://t.me/${u}` : null
@@ -24,9 +22,5 @@ export const botUrl = (username: string | undefined | null): string | null => {
 
 export const localCapabilities = (): Capabilities => detectCapabilities()
 
-/**
- * "intent://host/path#pair=CODE#Intent;scheme=https;package=com.android.chrome;end"
- * Keeps the pair hash so Chrome can complete pairing.
- */
 export const buildChromeIntentUrl = (loc: { host: string; pathname: string; search?: string; hash: string }): string =>
   `intent://${loc.host}${loc.pathname}${loc.search ?? ""}${loc.hash}#Intent;scheme=https;package=com.android.chrome;end`

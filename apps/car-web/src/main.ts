@@ -23,7 +23,6 @@ const ctx = createAppContext({
     try {
       localStorage.setItem(LANG_KEY, l)
     } catch {
-      /* private mode */
     }
   }
 })

@@ -32,18 +32,14 @@ export interface UsageSummary {
   readonly lastRunAt: number | undefined
 }
 
-/** Per-account state stored in the user-agent Durable Object's SQLite. */
 export class Sessions extends Context.Service<
   Sessions,
   {
     readonly get: (key: SessionKey) => Effect.Effect<SessionRecord | undefined, StorageError>
-    /** Creates the record if missing (title defaults to "main" / "Topic <id>"). */
     readonly ensure: (key: SessionKey, threadId: ThreadId | undefined, title?: string) => Effect.Effect<SessionRecord, StorageError>
     readonly setClaudeSessionId: (key: SessionKey, id: ClaudeSessionId) => Effect.Effect<void, StorageError>
-    /** Forget the claude session id (next run starts fresh). */
     readonly reset: (key: SessionKey) => Effect.Effect<void, StorageError>
     readonly list: Effect.Effect<ReadonlyArray<SessionRecord>, StorageError>
-    /** Fails with DailyLimitReached when today's runs >= limit. */
     readonly checkDailyLimit: Effect.Effect<void, DailyLimitReached | StorageError>
     readonly recordRun: (usage: RunUsage) => Effect.Effect<void, StorageError>
     readonly usage: Effect.Effect<UsageSummary, StorageError>

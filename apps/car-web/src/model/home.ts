@@ -13,7 +13,6 @@ export interface HomeInput {
 const pendingTrips = (trips: TripVm[]) =>
   trips.filter((t) => ["Queued", "Uploading", "Waiting", "Verifying"].includes(t.sync._tag))
 
-/** Picks the single most important thing to tell the user on the Home card. */
 export const describeHome = (i: HomeInput, lang: Lang, now: number = Date.now()): StatusView => {
   const t = makeT(lang)
   if (i.rec._tag !== "Idle") {

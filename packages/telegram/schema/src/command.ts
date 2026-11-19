@@ -5,12 +5,6 @@ export interface ParsedCommand {
   readonly args: string
 }
 
-/**
- * Parses `/cmd`, `/cmd args` and `/cmd@botname args`. A command is recognized when a
- * `bot_command` entity sits at offset 0 (or, without entities, when the text starts with `/`).
- * `name` is lower-cased and has no slash or bot suffix. When `botUsername` is given,
- * commands addressed to a different bot yield `undefined`.
- */
 export const parseCommand = (
   message: Pick<Message, "text" | "entities">,
   botUsername?: string

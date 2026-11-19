@@ -9,10 +9,6 @@ export interface PairingEnv {
   stripHash(): void
 }
 
-/**
- * Runs once at start in Chrome. Only a browser that can actually record consumes the one-time code:
- * WebViews never call pairComplete (the code must survive until Chrome opens the link).
- */
 export const runPairing = async (backend: CarBackend, env: PairingEnv): Promise<void> => {
   const canRecord = backend.caps.ble || backend.caps.serial
   if (!canRecord) return

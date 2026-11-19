@@ -21,13 +21,11 @@ export const metricsKey = (tgId: number, tripId: TripId): string => `${tripPrefi
 export const parseTripId = (text: string): TripId | undefined =>
   TRIP_ID_PATTERN.test(text) ? TripId.make(text) : undefined
 
-/** `20261119T102030Z-ab12cd34` → epoch ms. */
 export const tripIdTime = (tripId: string): number => {
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/.exec(tripId)
   return m === null ? NaN : Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!, +m[4]!, +m[5]!, +m[6]!)
 }
 
-/** Trip ids of an account, newest first (ids sort by start time). */
 export const listTripIds = (tgId: TgId | number, limit = 50) =>
   Effect.gen(function*() {
     const bucket = yield* CarBucket
@@ -69,7 +67,6 @@ export interface StoredChunk {
   readonly rows: number | undefined
 }
 
-/** One paginated list per trip; includes the sha/rows metadata, so no per-chunk `head` is needed. */
 export const storedChunks = (tgId: TgId | number, tripId: TripId) =>
   Effect.gen(function*() {
     const bucket = yield* CarBucket
@@ -98,7 +95,6 @@ export const storedChunks = (tgId: TgId | number, tripId: TripId) =>
     return out
   })
 
-/** Server view of a trip: which expected chunks are stored, missing or corrupt. */
 export const computeStatus = (
   tripId: string,
   manifest: TripManifest | null,
@@ -170,7 +166,6 @@ export interface OverviewFilter {
   readonly limit?: number | undefined
 }
 
-/** Newest-first trips with their status; the period filter uses the time encoded in the trip id. */
 export const listOverview = (tgId: TgId | number, filter: OverviewFilter = {}) =>
   Effect.gen(function*() {
     const from = filter.from?.getTime() ?? -Infinity
@@ -197,7 +192,6 @@ export interface ReadSamples {
   readonly badChunks: ReadonlyArray<number>
 }
 
-/** Concatenates the verified chunks of a trip. Unreadable chunks are reported, not fatal. */
 export const readSamples = (tgId: TgId | number, tripId: TripId, seqs: ReadonlyArray<number>) =>
   Effect.gen(function*() {
     const bucket = yield* CarBucket
@@ -224,10 +218,6 @@ interface CachedMetrics {
   readonly metrics: TripMetrics
 }
 
-/**
- * Metrics of a finished, complete trip. Cached in `metrics.json` next to the manifest
- * (written best-effort), so a report over many trips reads one object per trip.
- */
 export const tripMetrics = (tgId: TgId | number, tripId: TripId, status: TripStatus) =>
   Effect.gen(function*() {
     const manifest = status.manifest
@@ -241,7 +231,6 @@ export const tripMetrics = (tgId: TgId | number, tripId: TripId, status: TripSta
           const parsed = JSON.parse(new TextDecoder().decode(yield* storage("car.metrics.read", () => cached.arrayBuffer()))) as CachedMetrics
           if (parsed.chunkCount === manifest.chunkCount && parsed.metrics.version === 1) return parsed.metrics
         } catch {
-          // recompute
         }
       }
     }

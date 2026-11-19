@@ -7,7 +7,6 @@ import type { BotPlugin, PluginFlags as PluginFlagsShape } from "@bot/core-contr
 import { Telegram } from "@bot/core-contracts/telegram"
 import type { InlineKeyboard, SendTarget } from "@bot/core-contracts/telegram"
 
-/** Minimal structural type of a Workers KV namespace. */
 export interface KvLike {
   readonly get: (key: string) => Promise<string | null>
   readonly put: (key: string, value: string) => Promise<void>
@@ -36,7 +35,6 @@ const makeFlags = (
     load(tgId).pipe(Effect.flatMap((record) => save(tgId, { ...record, [pluginId]: enabled })))
 })
 
-/** KV-backed flags: `plugins:<tgId>` → JSON `{ [pluginId]: boolean }`. */
 export const layerKv = (kv: KvLike, plugins: ReadonlyArray<AnyPlugin>): Layer.Layer<PluginFlags> =>
   Layer.succeed(
     PluginFlags,
@@ -64,7 +62,6 @@ export const layerKv = (kv: KvLike, plugins: ReadonlyArray<AnyPlugin>): Layer.La
     )
   )
 
-/** In-memory flags for tests. */
 export const layerMemory = (plugins: ReadonlyArray<AnyPlugin>): Layer.Layer<PluginFlags> => {
   const store = new Map<TgId, Record<string, boolean>>()
   return Layer.succeed(
@@ -111,14 +108,12 @@ const parseTgId = (text: string): TgId | undefined => {
 
 export const CALLBACK_PREFIX = "plg"
 
-/** Builds `plg:<tgId>:<pluginId>:<0|1>`. */
 export const callbackData = (tgId: TgId, pluginId: string, enable: boolean): string =>
   `${CALLBACK_PREFIX}:${tgId}:${pluginId}:${enable ? 1 : 0}`
 
 const target = (ctx: { readonly chatId: SendTarget["chatId"]; readonly threadId: SendTarget["threadId"] | undefined }): SendTarget =>
   ctx.threadId === undefined ? { chatId: ctx.chatId } : { chatId: ctx.chatId, threadId: ctx.threadId }
 
-/** `/plugins <tgId>` and its inline-button callback. Both admin-only. */
 export const makePluginAdmin = (
   plugins: ReadonlyArray<AnyPlugin>
 ): {

@@ -19,18 +19,14 @@ export type TransportKind = "ble" | "serial" | "simulator"
 export interface ObdTransport {
   readonly kind: TransportKind
   readonly name: string
-  /** Sends `line` followed by CR. */
   readonly write: (line: string) => Effect.Effect<void, Disconnected>
-  /** Decoded text as it arrives (arbitrary chunking). Fails with `Disconnected` when the link drops. */
   readonly incoming: Stream.Stream<string, Disconnected>
   readonly close: Effect.Effect<void>
-  /** Re-establishes the link to the same device without a new picker. Used for auto-reconnect. */
   readonly reopen: Effect.Effect<ObdTransport, ObdError, Scope.Scope>
 }
 
 export type IncomingQueue = Queue.Queue<string, Disconnected | Cause.Done>
 
-/** Known ELM327 BLE GATT layouts. Characteristics are re-discovered by their properties; these are only preferences. */
 export const BLE_SERVICES: ReadonlyArray<{ service: BluetoothServiceUUID; notify: BluetoothCharacteristicUUID; write: BluetoothCharacteristicUUID }> = [
   { service: 0xfff0, notify: 0xfff1, write: 0xfff2 },
   { service: 0xffe0, notify: 0xffe1, write: 0xffe1 },
@@ -66,7 +62,6 @@ const chunkBytes = (bytes: Uint8Array, size: number): Uint8Array[] => {
   return out
 }
 
-/** Web Bluetooth. Shows the browser device picker, then connects to the first matching GATT layout. */
 export const bleTransport = (options?: { readonly namePrefix?: string }): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
   Effect.gen(function*() {
     if (typeof navigator === "undefined" || navigator.bluetooth === undefined) {
@@ -207,16 +202,15 @@ const probePort = async (port: SerialPort, baudRates: ReadonlyArray<number>): Pr
     last = text
     try {
       reader.releaseLock()
-    } catch { /* already released */ }
+    } catch {}
     try {
       writer.releaseLock()
-    } catch { /* already released */ }
+    } catch {}
     await port.close().catch(() => undefined)
   }
   return last
 }
 
-/** Web Serial (USB / paired Bluetooth-SPP adapters on desktop Chrome). Tries each baud rate until the adapter answers. */
 export const serialTransport = (options?: { readonly baudRate?: number; readonly baudRates?: ReadonlyArray<number> }): Effect.Effect<ObdTransport, ObdError, Scope.Scope> =>
   Effect.gen(function*() {
     if (typeof navigator === "undefined" || navigator.serial === undefined) return yield* new SerialUnavailable()
@@ -263,10 +257,10 @@ const serialOpen = (port: SerialPort, rates: ReadonlyArray<number>): Effect.Effe
         await reader.cancel().catch(() => undefined)
         try {
           reader.releaseLock()
-        } catch { /* already released */ }
+        } catch {}
         try {
           writer.releaseLock()
-        } catch { /* already released */ }
+        } catch {}
         await port.close().catch(() => undefined)
       }),
       reopen: Effect.suspend(() => serialOpen(port, [baud]))

@@ -33,7 +33,6 @@ import type { CoreR } from "@bot/bot-core-commands/core-commands"
 import { registry } from "./registry.ts"
 import { daysLeft, healthMessages, parseIssuedAt, reminderStage } from "./token-expiry.ts"
 
-/** Image key of the container declared in alchemy.run.ts (`Cloudflare.Container("Runner", ...)`). */
 export const RUNNER_IMAGE = "Runner"
 const MCP_TOKEN_TTL_SECONDS = 2 * 60 * 60
 
@@ -169,7 +168,6 @@ export class UserAgent extends DurableObject<Env> {
     return this.#state.runtime
   }
 
-  /** Webhook entry: resolves when the whole agent run is finished, which keeps this DO alive. */
   async handleUpdate(tgId: number, raw: unknown, origin: string): Promise<void> {
     const runtime = this.#runtime(tgId, origin)
     await runtime.runPromise(
@@ -255,7 +253,6 @@ export class UserAgent extends DurableObject<Env> {
     )
   }
 
-  /** Stops runs and destroys the container; it is recreated and restored from R2 on the next message. */
   async kill(tgId: number): Promise<void> {
     await this.#runtime(tgId).runPromise(
       Effect.gen(function* () {
@@ -276,10 +273,6 @@ export class UserAgent extends DurableObject<Env> {
     )
   }
 
-  /**
-   * Cron entry (admin's DO): checks the claude CLI auth and reminds about the token expiry
-   * (30/7/1 days before, once per stage).
-   */
   async healthcheck(tgId: number): Promise<void> {
     const storage = this.ctx.storage
     const issuedAt = parseIssuedAt(this.env.CLAUDE_TOKEN_ISSUED_AT)

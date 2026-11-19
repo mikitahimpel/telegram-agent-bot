@@ -6,10 +6,8 @@ export interface PidDef {
   readonly pid: string
   readonly key: ObdKey
   readonly label: string
-  /** Number of data bytes in the reply. */
   readonly bytes: number
   readonly decode: (b: ReadonlyArray<number>) => number
-  /** Slow PIDs are polled every ~10th tick. */
   readonly slow: boolean
 }
 
@@ -32,10 +30,6 @@ export const PIDS: ReadonlyArray<PidDef> = [
 
 export const pidByCode = (pid: string): PidDef | undefined => PIDS.find((p) => p.pid === pid.toUpperCase())
 
-/**
- * Parses the 4 data bytes of a supported-PID reply (0100 / 0120 / 0140 ...).
- * `base` is the first PID covered by the request (0x00, 0x20, ...); bit 31 of the mask is base+1.
- */
 export const parseSupportedMask = (base: number, bytes: ReadonlyArray<number>): string[] => {
   const out: string[] = []
   for (let i = 0; i < 32; i++) {
@@ -48,7 +42,6 @@ export const parseSupportedMask = (base: number, bytes: ReadonlyArray<number>): 
 const GASOLINE_AFR = 14.7
 const GASOLINE_DENSITY_KG_PER_L = 0.745
 
-/** Fuel flow in L/h from MAF (g/s) assuming a stoichiometric gasoline mixture. */
 export const fuelLphFromMaf = (mafGps: number): number =>
   (mafGps / GASOLINE_AFR / 1000 / GASOLINE_DENSITY_KG_PER_L) * 3600
 
@@ -57,7 +50,6 @@ export type FuelRateSource = "pid_5e" | "maf_estimate" | "none"
 export const fuelRateSourceFor = (supported: ReadonlyArray<string>): FuelRateSource =>
   supported.includes("5E") ? "pid_5e" : supported.includes("10") ? "maf_estimate" : "none"
 
-/** Parses `ATRV` replies such as "12.6V" or "12.6". */
 export const parseVoltage = (text: string): number | undefined => {
   const m = /(\d+(?:\.\d+)?)\s*V?/i.exec(text)
   return m === null ? undefined : Number(m[1])
@@ -79,7 +71,6 @@ const PROTOCOLS: Record<string, string> = {
   C: "User2 CAN"
 }
 
-/** `ATDPN` answers like "A6" (auto) or "6". */
 export const protocolName = (dpn: string): string => {
   const code = dpn.trim().toUpperCase().replace(/^A(?=[0-9A-C]$)/, "")
   return PROTOCOLS[code] ?? dpn.trim()

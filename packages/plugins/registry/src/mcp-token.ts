@@ -26,7 +26,6 @@ const fromBase64Url = (text: string): Uint8Array | undefined => {
   }
 }
 
-/** Short-lived bearer token binding the sandbox's MCP client to one Telegram account. */
 export class McpToken extends Context.Service<
   McpToken,
   {
@@ -82,7 +81,6 @@ const make = (secret: string): McpToken["Service"] => {
 
 export const layerSecret = (secret: string): Layer.Layer<McpToken> => Layer.succeed(McpToken, make(secret))
 
-/** Secret from `Config.Redacted("MCP_TOKEN_SECRET")`. */
 export const layer = Layer.effect(
   McpToken,
   Effect.gen(function*() {

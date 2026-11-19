@@ -11,18 +11,12 @@ const HEADER = COLUMNS.map(([name]) => name).join(",")
 const cell = (v: number | undefined): string =>
   v === undefined || !Number.isFinite(v) ? "" : String(Math.round(v * 1e6) / 1e6)
 
-/** Header + one line per sample, `\n` line endings, trailing newline. */
 export const encodeCsv = (samples: ReadonlyArray<Sample>): string => {
   const lines = [HEADER]
   for (const s of samples) lines.push(COLUMNS.map(([, key]) => cell(s[key])).join(","))
   return lines.join("\n") + "\n"
 }
 
-/**
- * Parses a chunk or an exported trip file. Tolerates `\r\n`, a missing trailing
- * newline, extra unknown columns (ignored) and missing optional columns.
- * Fails on a missing `ts` column or a non-numeric non-empty cell.
- */
 export const parseCsv = (text: string): Effect.Effect<ReadonlyArray<Sample>, CsvParseError> =>
   Effect.suspend(() => {
     const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim() !== "")

@@ -3,7 +3,6 @@ export interface Capabilities {
   readonly serial: boolean
   readonly secureContext: boolean
   readonly inTelegram: boolean
-  /** Stable codes: ble_unsupported, serial_unsupported, insecure_context, ios_webkit. */
   readonly reasons: string[]
 }
 

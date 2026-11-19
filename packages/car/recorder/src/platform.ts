@@ -14,7 +14,6 @@ export interface GeoFailure {
   readonly reason: GeoFailureReason
 }
 
-/** Stream of GPS fixes. Fails (once) with GeoFailure when permission is denied or the API is missing. */
 export class GeoSource extends Context.Service<GeoSource, {
   readonly watch: Stream.Stream<GeoFix, GeoFailure>
 }>()("@bot/car-recorder/GeoSource") {}
@@ -60,7 +59,6 @@ export const makeFakeGeo = Effect.gen(function*() {
   return { layer, emit: (fix: GeoFix) => PubSub.publish(pubsub, fix).pipe(Effect.asVoid) } satisfies FakeGeo
 })
 
-/** Screen Wake Lock. `acquire` is idempotent and returns whether the lock is held. */
 export class WakeLock extends Context.Service<WakeLock, {
   readonly acquire: Effect.Effect<boolean>
   readonly release: Effect.Effect<void>
@@ -86,7 +84,6 @@ export const wakeLockBrowserLayer: Layer.Layer<WakeLock> = Layer.sync(WakeLock, 
       try {
         await s?.release()
       } catch {
-        /* already released */
       }
     })
   }
@@ -103,7 +100,6 @@ export const wakeLockFake = Effect.sync(() => {
 
 export type Visibility = "visible" | "hidden"
 
-/** Page visibility + connectivity, behind a service so tests can drive them. */
 export class AppLifecycle extends Context.Service<AppLifecycle, {
   readonly isOnline: Effect.Effect<boolean>
   readonly isVisible: Effect.Effect<boolean>

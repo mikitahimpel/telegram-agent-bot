@@ -16,7 +16,6 @@ const helpMessages = defineMessages({
   }
 })
 
-/** HTML /help text built from the registry: users see only their commands, the admin sees both groups. */
 export const renderHelp = (registry: HelpSource, role: Role, lang: Lang): string => {
   const m = helpMessages[lang]
   const visible = registry.visibleFor(role)

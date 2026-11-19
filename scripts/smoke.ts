@@ -1,12 +1,3 @@
-/**
- * Post-deploy smoke test.
- *   SMOKE_BASE_URL            deployed Worker URL (https://...workers.dev)
- *   TELEGRAM_WEBHOOK_SECRET   same secret the webhook was registered with
- *   ADMIN_TG_ID               the admin's Telegram id (receives the "ping" reply)
- * Checks: GET /health is 200, a wrong secret is rejected with 403, and a synthetic admin
- * "ping" update with the right secret is accepted with 200.
- */
-
 const required = (name: string): string => {
   const value = process.env[name]
   if (value === undefined || value === "") {

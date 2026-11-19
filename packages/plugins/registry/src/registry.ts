@@ -13,16 +13,12 @@ type LayerInputOf<P> = P extends BotPlugin<any, any, infer R> ? R : never
 
 export interface PluginRegistry<R> {
   readonly plugins: ReadonlyArray<AnyPlugin>
-  /** Commands of all plugins plus the admin `/plugins` command; merge with core commands. */
   readonly commands: ReadonlyArray<CommandDef<R | Telegram | PluginFlags>>
   readonly callbacks: ReadonlyArray<CallbackDef<R | Telegram | PluginFlags>>
-  /** Tools of plugins enabled for the account. */
   readonly toolsFor: (tgId: TgId) => Effect.Effect<ReadonlyArray<AgentTool<R>>, StorageError, PluginFlags>
-  /** System prompt additions of plugins enabled for the account. */
   readonly systemPromptFor: (tgId: TgId) => Effect.Effect<string, StorageError, PluginFlags>
 }
 
-/** The single place where plugins are registered: the array passed in. */
 export const makePluginRegistry = <const Ps extends ReadonlyArray<AnyPlugin>>(
   plugins: Ps
 ): PluginRegistry<RequirementsOf<Ps[number]>> & {

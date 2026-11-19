@@ -9,17 +9,11 @@ import { toAgentEvents } from "@bot/agent-stream-json/stream-json"
 import type { ContainerLike, DirectoryBackupLike, DirectoryBackupRecord, ExecProcessLike, R2Like } from "./container-like.ts"
 
 export interface RunnerDeps {
-  /** `ctx.container` of the UserAgent Durable Object. */
   readonly container: ContainerLike
-  /** `DirectoryBackup` built in the DO with `prefix: "agents/<tgId>/"`. */
   readonly backup: DirectoryBackupLike
-  /** R2 bucket binding; only `agents/<tgId>/backup.json` is read/written through it. */
   readonly bucket: R2Like
-  /** Key in `container.images`. Default "workspace". */
   readonly imageName?: string
-  /** uid:gid of the unprivileged user in the image. Default "1000:1000". */
   readonly user?: string
-  /** HOME of that user (holds `.claude`). Default "/home/node". */
   readonly home?: string
 }
 
@@ -71,7 +65,6 @@ export interface RunnerConfig {
   readonly inactivityTimeout: Duration.Duration
 }
 
-/** Accepts "10m" / "90s" / "2h" / "500ms" as well as Effect's "10 minutes". */
 const parseDuration = (raw: string): Option.Option<Duration.Duration> => {
   const m = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h)$/.exec(raw.trim())
   if (m !== null) {
@@ -99,13 +92,11 @@ export const RunnerConfig = Config.all({
   )
 })
 
-/** Pure argv builder. The OAuth token and the MCP token never appear here. */
 export const buildClaudeArgv = (input: RunInput, cfg: { readonly maxTurns: number; readonly model: Option.Option<string> }): string[] => {
   const tools = input.mcp === undefined ? BASE_TOOLS : [...BASE_TOOLS, `mcp__${MCP_SERVER}`]
   const argv = [
     "claude",
     "-p",
-    // A leading "-" would be parsed as an option.
     input.prompt.startsWith("-") ? ` ${input.prompt}` : input.prompt,
     "--output-format", "stream-json",
     "--verbose",
@@ -154,7 +145,6 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
     const claudeDir = `${home}/.claude`
     const imageName = deps.imageName ?? "workspace"
     const inactivityMs = Duration.toMillis(cfg.inactivityTimeout)
-    /** start/restore/snapshot/destroy never overlap (DirectoryBackup also serialises per container). */
     const lock = Semaphore.makeUnsafe(1)
 
     const secret = Object.values(credentials)[0] ?? ""
@@ -164,7 +154,6 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
     const wrap = <A>(label: string, f: () => Promise<A>): Effect.Effect<A, ContainerDown> =>
       Effect.tryPromise({ try: f, catch: (e) => down(`${label}: ${errMessage(e)}`, e) })
 
-    /** Runs a short command; returns exit code and decoded output. */
     const sh = (cmd: string[], opts: { root?: boolean; env?: Record<string, string> } = {}) =>
       wrap(cmd[0] ?? "exec", async () => {
         const p = await container.exec(cmd, {
@@ -194,7 +183,6 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
         })
       )
 
-    /** Probe until the freshly started container answers exec. */
     const waitReady = Effect.tryPromise({
       try: async () => {
         const p = await container.exec(["true"], { user })
@@ -209,14 +197,12 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
         const idx = yield* readIndex(tgId)
         if (idx.claude !== undefined) yield* wrap("restore ~/.claude", () => backup.restore(idx.claude!))
         if (idx.workspace !== undefined) yield* wrap("restore /workspace", () => backup.restore(idx.workspace!))
-        // Restore runs as the shim's user; hand everything back to the unprivileged user.
         yield* sh(["mkdir", "-p", OUT_DIR, claudeDir], { root: true })
         yield* sh(["chown", "-R", user, WORKSPACE, home], { root: true })
       })
 
     const touchTimeout = wrap("setInactivityTimeout", () => container.setInactivityTimeout(inactivityMs))
 
-    /** Start (+ restore once) if the container is down. A container that is already running keeps its live state. */
     const ensureStarted = (tgId: TgId): Effect.Effect<void, ContainerDown> =>
       lock.withPermit(
         Effect.gen(function* () {
@@ -268,7 +254,6 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
     const snapshotQuiet = (tgId: TgId) =>
       snapshot(tgId).pipe(Effect.catch((e) => Effect.logWarning(`snapshot failed: ${e.reason}`)))
 
-    /** path -> "mtime:size" of regular files in /workspace/out. */
     const listOut = Effect.gen(function* () {
       const r = yield* sh(["find", OUT_DIR, "-type", "f", "-printf", "%p\t%T@\t%s\n"])
       const m = new Map<string, string>()
@@ -319,9 +304,8 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
             (p) =>
               Effect.gen(function* () {
                 if (!finished) {
-                  // Interrupted/failed mid-run: SIGKILL the CLI, then sweep its children (Bash tool etc.).
                   yield* Effect.sync(() => {
-                    try { p.kill(9) } catch { /* already gone */ }
+                    try { p.kill(9) } catch {}
                     ac.abort()
                   })
                   yield* Effect.promise(() => Promise.race([p.exitCode.catch(() => 0), new Promise((r) => setTimeout(r, 3000))]))
@@ -331,7 +315,6 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
               })
           )
 
-          // stderr is drained eagerly so the CLI never blocks on a full pipe; only the tail is kept.
           const stderrTail: Promise<string> =
             proc.stderr === null
               ? Promise.resolve("")
@@ -401,14 +384,12 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
           yield* ensureStarted(tgId)
           const v = yield* sh(["claude", "--version"])
           if (v.code !== 0) return yield* Effect.fail(down(`claude --version exited ${v.code}: ${v.stderr.trim()}`))
-          // `claude auth status` makes no model call: it only reports whether credentials are present
-          // (a revoked/expired token is NOT detected; that surfaces as an is_error result on the next run).
           const a = yield* sh(["claude", "auth", "status"], { env: credentials })
           let authOk = false
           try {
             const status = JSON.parse(a.stdout) as { loggedIn?: boolean; authMethod?: string }
             authOk = a.code === 0 && status.loggedIn === true && (cfg.auth.mode !== "api_key" || status.authMethod === "api_key")
-          } catch { /* unparsable -> not ok */ }
+          } catch {}
           return { version: v.stdout.trim().split(" ")[0] ?? v.stdout.trim(), authOk }
         })
     })

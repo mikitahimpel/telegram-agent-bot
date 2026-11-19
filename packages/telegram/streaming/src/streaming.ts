@@ -7,7 +7,6 @@ import { escapeHtml, markdownToTelegramHtml, splitHtml } from "@bot/telegram-for
 import { messages } from "./messages.ts"
 
 export const TELEGRAM_LIMIT = 4096
-/** Final answers longer than this (markdown chars) are sent as a .md document. */
 export const DOCUMENT_THRESHOLD = 12000
 const STATUS_RESERVE = 300
 
@@ -29,14 +28,9 @@ const stripTags = (html: string) => html.replace(/<[^>]*>/g, "")
 const isParseError = (e: TelegramError) => e.errorCode === 400 && /parse entities|can't parse/i.test(e.description)
 const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
-/** Retries once with tags stripped when Telegram rejects our HTML. */
 const withPlainFallback = <A>(run: (html: string) => Effect.Effect<A, TelegramError>, html: string) =>
   run(html).pipe(Effect.catchIf(isParseError, () => run(stripTags(html))))
 
-/**
- * Consumes agent events and renders them to Telegram: throttled live drafts while running,
- * persisted message(s) on completion. Stream errors propagate unchanged.
- */
 export const presentRun = <E, R = never>(
   stream: Stream.Stream<AgentEvent, E, R>,
   target: SendTarget,
@@ -84,7 +78,6 @@ export const presentRun = <E, R = never>(
           return
         }
         const id = placeholderId
-        // Preview edits are best effort; the final message does not depend on them.
         yield* Effect.ignore(withPlainFallback((h) => tg.editMessageText({ ...target, messageId: id }, h), html))
       })
 

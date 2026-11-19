@@ -10,25 +10,21 @@ const hmac = async (key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayB
 
 const sha256Hex = async (data: string): Promise<string> => hex(await crypto.subtle.digest("SHA-256", encoder.encode(data)))
 
-/** RFC 3986 percent-encoding as required by SigV4. */
 const encode = (s: string): string =>
   encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 
 export interface PresignInput {
   readonly method: "GET" | "PUT"
   readonly host: string
-  /** Absolute path starting with "/", NOT yet encoded (e.g. "/bucket/car/1/x.bin"). */
   readonly path: string
   readonly accessKeyId: string
   readonly secretAccessKey: string
-  /** "auto" for R2. */
   readonly region: string
   readonly service: string
   readonly expiresSeconds: number
   readonly now: Date
 }
 
-/** AWS SigV4 query-string signing (presigned URL), payload UNSIGNED-PAYLOAD. */
 export const presignUrl = async (input: PresignInput): Promise<string> => {
   const amzDate = input.now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")
   const date = amzDate.slice(0, 8)

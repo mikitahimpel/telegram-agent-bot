@@ -40,7 +40,6 @@ const beforeUnload = (e: BeforeUnloadEvent) => {
 onMounted(() => window.addEventListener("beforeunload", beforeUnload))
 onBeforeUnmount(() => window.removeEventListener("beforeunload", beforeUnload))
 
-// Recording is the only place to be while a trip is open.
 watch(recording, (on) => on && route.value.name !== "recording" && go({ name: "recording" }))
 </script>
 

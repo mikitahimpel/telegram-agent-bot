@@ -7,7 +7,6 @@ import { TelegramWebhook, providers as telegramProviders } from "@bot/infra-tele
 import { registry } from "./apps/gateway/src/registry.ts"
 
 const GATEWAY_MAIN = `${import.meta.dirname}/apps/gateway/src/worker.ts`
-// Built by `pnpm --filter @bot/car-web build`; served under /car/ by the Worker's static assets layer.
 const CAR_WEB_DIST = `${import.meta.dirname}/apps/car-web/dist`
 const RUNNER_CONTEXT = `${import.meta.dirname}/apps/claude-runner`
 
@@ -20,7 +19,6 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const stack = yield* Alchemy.Stack
 
-    // Secrets (values come from the environment; `pp run --env-file .env -- alchemy deploy`).
     const telegramBotToken = yield* Config.Redacted("TELEGRAM_BOT_TOKEN")
     const telegramWebhookSecret = yield* Config.Redacted("TELEGRAM_WEBHOOK_SECRET")
     const claudeAuthMode = yield* Config.Literals(["subscription", "api_key"], "CLAUDE_AUTH_MODE").pipe(
@@ -32,25 +30,17 @@ export default Alchemy.Stack(
         : { CLAUDE_CODE_OAUTH_TOKEN: yield* Config.Redacted("CLAUDE_CODE_OAUTH_TOKEN") }
     const mcpTokenSecret = yield* Config.Redacted("MCP_TOKEN_SECRET")
 
-    // Plain config (defaults are resolved here: `Config.withDefault` values are not bound to the Worker).
     const adminTgId = yield* Config.Int("ADMIN_TG_ID")
     const dailyRunLimit = yield* Config.Int("DAILY_RUN_LIMIT").pipe(Config.withDefault(50))
     const instanceType = yield* Config.String("CONTAINER_INSTANCE_TYPE").pipe(Config.withDefault("basic"))
-    // Optional override; empty = derived from the request origin (`<worker url>/car/`), because a Worker cannot bind its own URL.
     const carWebUrl = yield* Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
     const tokenIssuedAt = yield* Config.String("CLAUDE_TOKEN_ISSUED_AT").pipe(Config.withDefault(""))
 
-    // `agents/<tgId>/` snapshots of ~/.claude and `car/<tgId>/` data share one bucket.
-    // Browsers upload car files with presigned PUTs, hence CORS.
     const data = Cloudflare.R2.Bucket("Data", {
       cors: [{ allowedMethods: ["GET", "PUT"], allowedOrigins: ["*"], allowedHeaders: ["*"] }]
     })
-    // Allowlist (`allow:<id>`) and plugin flags (`plugins:<id>`).
     const kv = Cloudflare.KV.Namespace("Kv")
 
-    // One image for the sandbox. The UserAgent Durable Object starts it itself (`ctx.container.start`),
-    // choosing the instance type at runtime (CONTAINER_INSTANCE_TYPE). The container id is the image key
-    // the DO reads from `ctx.container.images`.
     const runner = Cloudflare.Container("Runner", {
       schedulingPolicy: "durable_object",
       context: RUNNER_CONTEXT,
@@ -62,8 +52,6 @@ export default Alchemy.Stack(
       compatibility: { date: "2026-11-19", flags: ["nodejs_compat"] },
       observability: { logs: { enabled: true, invocationLogs: true, persist: true } },
       crons: ["0 */6 * * *"],
-      // Assets-first: files under /car/ (recorder PWA) never invoke the Worker; unknown /car/* paths fall back to
-      // index.html (SPA). The Worker's own routes are listed in runWorkerFirst so the SPA fallback cannot shadow them.
       assets: {
         directory: CAR_WEB_DIST,
         base: "/car",
@@ -90,7 +78,6 @@ export default Alchemy.Stack(
 
     const webhookUrl = Output.interpolate`${gateway.url}/telegram/webhook`
 
-    // A bot has exactly one webhook: only `dev` (own test bot) and `prod` register it; pr-* stages skip it.
     if (stack.stage === "dev" || stack.stage === "prod") {
       yield* TelegramWebhook("Webhook", {
         botToken: telegramBotToken,

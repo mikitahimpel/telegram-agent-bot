@@ -17,7 +17,7 @@ describe("Recorder", () => {
         yield* env.geo.emit({ ts: 1000, lat: 52, lon: 21, accuracyM: 5 })
         yield* settle()
         yield* src.emit(sample(2000))
-        yield* src.emit(sample(9000)) // fix is 8 s old: not merged
+        yield* src.emit(sample(9000))
         yield* settle()
         yield* advance(5000)
         const pending = yield* store.readPending(id)
@@ -45,18 +45,17 @@ describe("Recorder", () => {
         yield* settle()
         const km = () => SubscriptionRef.get(rec.state).pipe(Effect.map((s) => (s._tag === "Recording" ? s.distanceKm : -1)))
         yield* src.emit(sample(0, { speedKmh: 36 }))
-        yield* src.emit(sample(5000, { speedKmh: 36 })) // 36 km/h * 5 s = 0.05 km
+        yield* src.emit(sample(5000, { speedKmh: 36 }))
         yield* settle()
         expect(yield* km()).toBeCloseTo(0.05, 6)
-        yield* src.emit(sample(30_000, { speedKmh: 36 })) // 25 s jump: skipped
+        yield* src.emit(sample(30_000, { speedKmh: 36 }))
         yield* settle()
         expect(yield* km()).toBeCloseTo(0.05, 6)
         yield* src.emit({ _tag: "GapStarted", at: 31_000, reason: "adapter_disconnected" })
         yield* src.emit({ _tag: "GapEnded", at: 32_000 })
-        yield* src.emit(sample(33_000, { speedKmh: 36 })) // first sample after a gap: no previous
+        yield* src.emit(sample(33_000, { speedKmh: 36 }))
         yield* settle()
         expect(yield* km()).toBeCloseTo(0.05, 6)
-        // no OBD speed: GPS haversine, 0.01 deg lat is about 1.112 km in 10 s
         const noSpeed = (ts: number, lat: number) => sample(ts, { speedKmh: undefined, lat, lon: 21, gpsAccuracyM: 5 })
         yield* src.emit(noSpeed(40_000, 52))
         yield* src.emit(noSpeed(50_000, 52.001))
@@ -118,12 +117,11 @@ describe("Recorder", () => {
         yield* settle()
         yield* src.emit(sample(10))
         yield* src.emit(sample(20))
-        yield* advance(5000) // flushed
-        yield* src.emit(sample(30)) // never flushed: lost in the crash
+        yield* advance(5000)
+        yield* src.emit(sample(30))
         yield* settle()
         return tripId
       }).pipe(Effect.provide(env.layer()))
-      // "restart": new layers over the same database
       yield* Effect.gen(function*() {
         const rec = yield* Recorder
         const store = yield* TripStore

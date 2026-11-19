@@ -16,10 +16,6 @@ import { mapRecorderState, mapSyncStatus, mapSyncTrips } from "./map-recorder.ts
 
 type CarRuntime = ReturnType<typeof makeCarRuntime>
 
-/**
- * Wires @bot/car-obd (adapter) and @bot/car-recorder (store, recorder, sync, API) on top of a base backend
- * that only supplies the Vue refs.
- */
 export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersion: string): CarBackend => {
   let scope: Scope.Closeable | null = null
   let session: ObdSession | null = null
@@ -112,11 +108,9 @@ export const withRealBackend = (base: CarBackend, runtime: CarRuntime, appVersio
       const list = await runtime.runPromise(CarApi.use((a) => a.devices))
       base.devices.value = list.devices.map((d) => ({ id: d.deviceId, name: d.name, lastSeenAt: d.lastSeenAt, current: false }))
     } catch {
-      /* offline or not paired: keep the previous list */
     }
   }
 
-  // Long-lived subscriptions.
   runtime.runFork(
     Effect.gen(function*() {
       const sync = yield* SyncEngine

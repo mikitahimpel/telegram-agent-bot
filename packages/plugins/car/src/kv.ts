@@ -1,13 +1,11 @@
 import { Context } from "effect"
 
-/** Minimal structural type of a Workers KV namespace (what the car plugin and API need). */
 export interface CarKvLike {
   readonly get: (key: string) => Promise<string | null>
   readonly put: (key: string, value: string, options?: { readonly expirationTtl?: number }) => Promise<void>
   readonly delete: (key: string) => Promise<void>
 }
 
-/** KV for pairing codes and device tokens. Provided by the gateway from the KV binding. */
 export class CarKv extends Context.Service<CarKv, CarKvLike>()("@bot/plugins-car/CarKv") {}
 
 export const makeMemoryKv = (): CarKvLike & { readonly store: Map<string, string> } => {

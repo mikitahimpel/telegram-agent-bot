@@ -18,17 +18,12 @@ import { AdminNotifier } from "./admin-notifier.ts"
 import { McpAccess } from "./mcp-access.ts"
 import { RunSlots } from "./run-control.ts"
 
-/**
- * Shows a run to the user (drafts, final message). Supplied by the caller (gateway wires
- * `presentRun` from @bot/telegram-streaming) so the dispatcher stays independent of it.
- */
 export type PresentRun = (args: {
   readonly to: SendTarget
   readonly lang: Lang
   readonly stream: Stream.Stream<AgentEvent, BotError>
 }) => Effect.Effect<void, BotError, Telegram>
 
-/** A document the user sent. Return true when it was handled (e.g. a plugin imported it); false falls through. */
 export type DocumentHook<R> = (args: {
   readonly document: Document
   readonly tgId: TgId
@@ -41,7 +36,6 @@ export interface DispatcherOptions<R> {
   readonly registry: Registry<R>
   readonly present: PresentRun
   readonly onDocument?: DocumentHook<R>
-  /** Bot username used to ignore `/cmd@otherbot`. */
   readonly botUsername?: string
 }
 
@@ -56,7 +50,6 @@ export type DispatchRequirements<R> =
   | AdminNotifier
   | McpAccess
 
-/** Errors that are expected user-facing situations; everything else is also reported to the admin. */
 const isExpected = (e: BotError): boolean =>
   e._tag === "Unauthorized" ||
   e._tag === "AgentBusy" ||
@@ -81,7 +74,6 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
   const { registry, present } = options
   const profiles = new Map<number, string>()
 
-  /** Last line of defense: show a localized error, report unexpected ones to the admin, never fail. */
   const guard = <A, E, Rx>(origin: Origin | undefined, lang: Lang, effect: Effect.Effect<A, E, Rx>) =>
     effect.pipe(
       Effect.asVoid,
@@ -192,7 +184,6 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
         .pipe(Stream.tap(tap))
 
       const execute = present({ to, lang, stream }).pipe(
-        // A run that ended without a result (crash, stop, limit) still counts towards the daily quota.
         Effect.onExit(() =>
           Effect.gen(function* () {
             if (yield* Ref.get(completed)) return
@@ -308,7 +299,6 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
     }).pipe(
       Effect.catchCause((cause) =>
         Effect.gen(function* () {
-          // Failures before a sender is known (allowlist/session storage): report only.
           if (Cause.hasInterruptsOnly(cause)) return
           yield* (yield* AdminNotifier).notify(`Dispatch failed: ${Cause.pretty(cause)}`)
         })

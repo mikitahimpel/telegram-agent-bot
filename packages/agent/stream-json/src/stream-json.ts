@@ -47,7 +47,6 @@ const RateLimitLine = Schema.Struct({
   rate_limit_info: opt(Schema.Struct({ status: opt(Schema.String), resetsAt: opt(Schema.Number) }))
 })
 
-/** Internal parsed form of a CLI line, before limit detection. */
 type Parsed = Data.TaggedEnum<{
   Init: { readonly sessionId: string; readonly model: string }
   Delta: { readonly text: string }
@@ -76,7 +75,6 @@ const truncate = (s: string, max = PREVIEW_MAX): string => {
 
 const PREVIEW_KEYS = ["command", "file_path", "path", "pattern", "url", "query", "description", "prompt"]
 
-/** "Bash: ls -la", "Read: /workspace/a.csv"; MCP tool names are shortened to the tool part. */
 export const summarizeToolCall = (name: string, input: unknown): string => {
   const rec = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {}
   let preview: string | undefined
@@ -195,11 +193,6 @@ const completed = (r: Extract<Parsed, { _tag: "Result" }>): AgentEvent =>
     numTurns: r.numTurns
   })
 
-/**
- * Stateless decode of one stdout line. Unknown / malformed / blank lines give `None`.
- * Returns only the first event of a multi-block assistant line; use `decodeLineEvents` for all.
- * Usage-limit detection needs cross-line state and lives in `toAgentEvents`.
- */
 export const decodeLine = (line: string): Effect.Effect<Option.Option<AgentEvent>> =>
   Effect.sync(() => Option.flatMapNullishOr(parseLine(line), (p) => toEvents(p)[0]))
 
@@ -210,7 +203,6 @@ const CREDITS_TEXT = /credit balance is too low|insufficient credit|billing/i
 const LIMIT_TEXT = /usage limit|hit your limit|limit reached|usage_limit_reached/i
 const EPOCH_PIPE = /\|\s*(\d{9,})/
 
-/** CLI timestamps are epoch seconds; accept ms too. */
 const toEpochMillis = (n: number): number => (n < 1e12 ? n * 1000 : n)
 
 const parseResetFromText = (text: string): number | undefined => {
@@ -245,7 +237,6 @@ const step = (s: State, p: Parsed): readonly [State, ReadonlyArray<Item>] => {
       return [{ ...s, rejected, lastResetsAt: resetsAt }, []]
     }
     case "Assistant": {
-      // Limit/auth failures arrive as a synthetic assistant message; its text is not model output.
       const events = p.error === "rate_limit" ? [] : p.events
       return [
         p.error !== undefined ? { ...s, assistantError: p.error } : s,
@@ -269,11 +260,6 @@ const step = (s: State, p: Parsed): readonly [State, ReadonlyArray<Item>] => {
   }
 }
 
-/**
- * Raw stdout lines -> AgentEvents. Fails with SubscriptionLimitReached when the CLI reports an
- * exhausted subscription limit (instead of emitting a Completed); any other `is_error` result
- * becomes `Completed{isError:true}`. Unknown line types are skipped.
- */
 export const toAgentEvents = <E, R>(
   lines: Stream.Stream<string, E, R>
 ): Stream.Stream<AgentEvent, E | SubscriptionLimitReached | ApiCreditsExhausted, R> =>

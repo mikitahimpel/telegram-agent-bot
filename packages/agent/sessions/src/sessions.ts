@@ -5,7 +5,6 @@ import { Lang } from "@bot/core-contracts/lang"
 import { Schema } from "effect"
 import { Sessions, type SessionRecord, type UsageSummary } from "@bot/core-contracts/sessions"
 
-/** Minimal structural subset of the Durable Object `ctx.storage.sql`. */
 export interface SqlStorageLike {
   readonly exec: (
     query: string,
@@ -165,7 +164,6 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
   }
 }
 
-/** Creates tables idempotently. */
 export const migrate = (sql: SqlStorageLike) =>
   Effect.try({
     try: () => {
@@ -174,7 +172,6 @@ export const migrate = (sql: SqlStorageLike) =>
     catch: (cause) => new StorageError({ operation: "sessions.migrate", cause })
   })
 
-/** Sessions over DO SQLite. Daily limit from Config `DAILY_RUN_LIMIT` (default 50). */
 export const layer = (sql: SqlStorageLike) =>
   Layer.effect(
     Sessions,

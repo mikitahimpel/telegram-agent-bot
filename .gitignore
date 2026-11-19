@@ -6,3 +6,5 @@ node_modules
 *.log
 .wrangler
 dist
+apps/car-web/e2e/screenshots
+apps/car-web/test-results

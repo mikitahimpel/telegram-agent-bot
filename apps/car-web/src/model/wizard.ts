@@ -71,6 +71,7 @@ export const wizardSteps = (
   const failIdx = failed ? ORDER.indexOf(failed) : -1
   const act = activeIndex(conn)
   const supported = transport === "simulator" || (transport === "ble" ? caps.ble : caps.serial)
+  const order = transport === "simulator" ? ORDER.filter((id) => id !== "bluetooth") : ORDER
   return ORDER.map((id, idx): WizardStep => {
     const step: WizardStep = { id, label: label(id), status: "pending" }
     if (failIdx >= 0) {
@@ -86,5 +87,5 @@ export const wizardSteps = (
     if (id === "sensors" && conn._tag === "Ready") step.note = t("connect.step.sensors.n", { n: conn.sensors })
     if (id === "adapter" && conn._tag === "InitializingAdapter") step.note = `${conn.step}/${conn.total} ${conn.label}`
     return step
-  })
+  }).filter((s) => order.includes(s.id))
 }

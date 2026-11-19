@@ -25,7 +25,7 @@ const unsupported = computed(
       lang.value
     ) !== null
 )
-const gate = computed<"unsupported" | "pair" | "app">(() => (unsupported.value ? "unsupported" : backend.pairing.value === "paired" || localMode.value ? "app" : "pair"))
+const gate = computed<"unsupported" | "pair" | "app">(() => (unsupported.value ? "unsupported" : backend.pairing.value === "paired" || localMode.value || backend.conn.value._tag !== "Idle" || backend.rec.value._tag !== "Idle" ? "app" : "pair"))
 const recording = computed(() => backend.rec.value._tag === "Recording")
 const titleKey = computed(() => {
   const n = route.value.name

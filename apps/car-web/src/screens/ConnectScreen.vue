@@ -80,7 +80,7 @@ const mark = { done: "✓", active: "…", failed: "!", pending: "" } as const
     <StatusCard v-if="backend.conn.value._tag !== 'Idle' && backend.conn.value._tag !== 'Failed'" :view="view" />
 
     <div class="actions">
-      <button v-if="backend.conn.value._tag === 'Ready'" class="btn btn-primary" type="button" @click="perform('start')">{{ t("action.start") }}</button>
+      <button v-if="backend.conn.value._tag === 'Ready'" class="btn btn-primary" type="button" data-testid="connect-start" @click="perform('start')">{{ t("action.start") }}</button>
       <button v-else-if="idle" class="btn btn-primary" type="button" data-testid="connect-go" @click="backend.connect(transport, scenario)">
         {{ backend.conn.value._tag === "Failed" ? t("common.retry") : t("connect.start") }}
       </button>

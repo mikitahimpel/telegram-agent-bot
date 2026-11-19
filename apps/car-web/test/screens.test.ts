@@ -17,6 +17,7 @@ import TripsScreen from "../src/screens/TripsScreen.vue"
 import { createDemoBackend, type DemoOptions } from "../src/services/demo-backend.ts"
 
 const make = (o: DemoOptions = {}, lang: Lang = "en") => {
+  localStorage.clear()
   const backend = createDemoBackend({ static: true, ...o })
   const ctx = createAppContext({ backend, lang, tickMs: 0 })
   return { backend, ctx, global: { provide: { [AppKey as symbol]: ctx } } }
@@ -36,7 +37,7 @@ describe("screens render with fixtures", () => {
       it("connect wizard with failure + dev menu", async () => {
         const { global } = make({ conn: { _tag: "Failed", error: { code: "EcuNotResponding" } } }, lang)
         const w = mount(ConnectScreen, { global, props: { preset: "simulator" } })
-        expect(w.findAll("[data-step]").length).toBe(6)
+        expect(w.findAll("[data-step]").length).toBe(5)
         expect(w.find('[data-status="failed"]').text()).toMatch(/./)
         for (let i = 0; i < 5; i++) await w.find('[data-testid="connect-title"]').trigger("click")
         expect(w.find('[data-testid="dev-menu"]').exists()).toBe(true)
@@ -117,7 +118,7 @@ describe("App gating and banners", () => {
     expect(w.find('[data-testid="banners"]').exists()).toBe(true)
   })
   it("Chrome unpaired: pair screen", () => {
-    const { global } = make({ pairing: "unpaired" })
+    const { global } = make({ pairing: "unpaired", conn: { _tag: "Idle" } })
     expect(mount(App, { global }).find('[data-testid="pair-screen"]').exists()).toBe(true)
   })
   it("paired: shell with banners for offline, revoked, storage, clock", () => {

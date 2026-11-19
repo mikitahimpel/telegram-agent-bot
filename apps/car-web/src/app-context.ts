@@ -1,4 +1,4 @@
-import { computed, inject, ref, type ComputedRef, type InjectionKey, type Ref } from "vue"
+import { computed, inject, ref, watch, type ComputedRef, type InjectionKey, type Ref } from "vue"
 import { makeT, type Lang, type TFn } from "./i18n/index.ts"
 import type { ActionId, SimScenario, TransportKind } from "./model/types.ts"
 import type { CarBackend } from "./services/backend.ts"
@@ -26,6 +26,8 @@ export interface AppContext {
   perform(id: ActionId, arg?: { tripId?: string; scenario?: SimScenario }): Promise<void>
   /** The user chose to record without pairing; trips stay on the phone until the phone is paired. */
   localMode: Ref<boolean>
+  /** Banners the user closed in this session. */
+  dismissed: Ref<string[]>
   installPrompt: Ref<{ prompt(): Promise<void> } | null>
 }
 
@@ -50,7 +52,24 @@ export const createAppContext = (opts: {
   if (opts.tickMs !== 0) setInterval(() => (now.value = Date.now()), opts.tickMs ?? 1000)
   const route = ref<Route>({ name: "home" })
   const stack: Route[] = []
-  const localMode = ref(false)
+  const LOCAL_KEY = "car-local-mode"
+  const stored = (): boolean => {
+    try {
+      return localStorage.getItem(LOCAL_KEY) === "1"
+    } catch {
+      return false
+    }
+  }
+  const localMode = ref(stored())
+  watch(localMode, (on) => {
+    try {
+      if (on) localStorage.setItem(LOCAL_KEY, "1")
+      else localStorage.removeItem(LOCAL_KEY)
+    } catch {
+      /* private mode */
+    }
+  })
+  const dismissed = ref<string[]>([])
   const installPrompt = ref<{ prompt(): Promise<void> } | null>(null)
   const depth = ref(0)
 
@@ -79,14 +98,18 @@ export const createAppContext = (opts: {
     },
     installPrompt,
     localMode,
+    dismissed,
     async perform(id, arg) {
       switch (id) {
         case "connect":
         case "retry":
+          localMode.value = true
           return go({ name: "connect" })
         case "tryDemo":
+          localMode.value = true
           return go({ name: "connect", preset: "simulator" })
         case "start":
+          localMode.value = true
           await backend.startRecording()
           return go({ name: "recording" })
         case "stop":

@@ -1,0 +1,22 @@
+{
+  "name": "@bot/telegram-schema",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./command": "./src/command.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

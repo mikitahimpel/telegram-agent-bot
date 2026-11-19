@@ -1,0 +1,94 @@
+import { Effect, Layer, Redacted } from "effect"
+import { HttpClient, HttpClientResponse } from "effect/http"
+import { TelegramError } from "@bot/core-contracts/errors"
+import type { ChatId, ThreadId } from "@bot/core-contracts/ids"
+import { Telegram } from "@bot/core-contracts/telegram"
+import { makeTelegram } from "./client.ts"
+
+export interface MockHttpCall {
+  readonly url: string
+  readonly method: string
+  /** Bot API method name (last URL path segment). */
+  readonly apiMethod: string
+  /** Parsed JSON body, or `undefined` for multipart. */
+  readonly json: Record<string, unknown> | undefined
+  readonly form: FormData | undefined
+}
+
+export interface MockHttpReply {
+  readonly status?: number
+  readonly body: unknown
+}
+
+/** The real client running over a mock HTTP transport (token is `test-token`). */
+export const layerTest = (handler: (call: MockHttpCall) => MockHttpReply) => {
+  const calls: Array<MockHttpCall> = []
+  const http = HttpClient.make((request) =>
+    Effect.sync(() => {
+      let json: Record<string, unknown> | undefined
+      let form: FormData | undefined
+      if (request.body._tag === "Uint8Array") {
+        json = JSON.parse(new TextDecoder().decode(request.body.body)) as Record<string, unknown>
+      } else if (request.body._tag === "FormData") {
+        form = request.body.formData
+      }
+      const call: MockHttpCall = {
+        url: request.url,
+        method: request.method,
+        apiMethod: request.url.split("/").pop() ?? "",
+        json,
+        form
+      }
+      calls.push(call)
+      const reply = handler(call)
+      return HttpClientResponse.fromWeb(
+        request,
+        new Response(JSON.stringify(reply.body), { status: reply.status ?? 200, headers: { "content-type": "application/json" } })
+      )
+    })
+  )
+  const layer = Layer.effect(Telegram, makeTelegram(Redacted.make("test-token"))).pipe(
+    Layer.provide(Layer.succeed(HttpClient.HttpClient, http))
+  )
+  return { layer, calls }
+}
+
+export interface RecordedCall {
+  readonly method: string
+  readonly args: ReadonlyArray<unknown>
+}
+
+export interface RecordingOptions {
+  /** Return an error to make this call fail. */
+  readonly fail?: (call: RecordedCall) => TelegramError | undefined
+}
+
+/** In-memory `Telegram` that records every call. Message ids count up from 1. */
+export const recordingTelegram = (options: RecordingOptions = {}) => {
+  const calls: Array<RecordedCall> = []
+  let nextId = 1
+  const run = <A>(method: string, args: ReadonlyArray<unknown>, ok: () => A): Effect.Effect<A, TelegramError> =>
+    Effect.suspend(() => {
+      const call = { method, args }
+      calls.push(call)
+      const err = options.fail?.(call)
+      return err !== undefined ? Effect.fail(err) : Effect.succeed(ok())
+    })
+  const layer = Layer.succeed(
+    Telegram,
+    Telegram.of({
+      call: (method, params) => run(method, [params], () => (method === "sendRichMessage" ? { message_id: nextId++ } : true)),
+      sendMessage: (...args) => run("sendMessage", args, () => ({ messageId: nextId++ })),
+      editMessageText: (...args) => run("editMessageText", args, () => undefined),
+      sendMessageDraft: (...args) => run("sendMessageDraft", args, () => undefined),
+      sendDocument: (...args) => run("sendDocument", args, () => ({ messageId: nextId++ })),
+      sendChatAction: (...args) => run("sendChatAction", args, () => undefined),
+      createForumTopic: (...args) => run("createForumTopic", args, () => ({ threadId: 100 as ThreadId })),
+      answerCallbackQuery: (...args) => run("answerCallbackQuery", args, () => undefined),
+      setMyCommands: (...args) => run("setMyCommands", args, () => undefined)
+    })
+  )
+  return { layer, calls }
+}
+
+export type { ChatId }

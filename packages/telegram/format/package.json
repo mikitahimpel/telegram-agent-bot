@@ -1,0 +1,21 @@
+{
+  "name": "@bot/telegram-format",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./format": "./src/format.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

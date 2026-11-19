@@ -1,0 +1,24 @@
+{
+  "name": "@bot/telegram-streaming",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./streaming": "./src/streaming.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "@bot/core-contracts": "workspace:*",
+    "@bot/telegram-format": "workspace:*"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@bot/telegram-client": "workspace:*"
+  }
+}

@@ -2,7 +2,7 @@ import { Context, type Effect } from "effect"
 import type { BotError, StorageError } from "./errors.ts"
 import type { TgId } from "./ids.ts"
 
-export interface ScheduledJob {
+export type ScheduledJob = {
   readonly id: string
   readonly kind: string
   readonly at: number
@@ -19,12 +19,12 @@ export class Scheduler extends Context.Service<
   }
 >()("@bot/Scheduler") {}
 
-export interface JobContext {
+export type JobContext = {
   readonly tgId: TgId
   readonly now: number
 }
 
-export interface JobHandler<R = never> {
+export type JobHandler<R = never> = {
   readonly kind: string
   readonly run: (job: ScheduledJob, ctx: JobContext) => Effect.Effect<void, BotError, R>
 }

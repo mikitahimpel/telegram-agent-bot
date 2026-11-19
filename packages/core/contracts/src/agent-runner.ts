@@ -4,7 +4,7 @@ import type { ApiCreditsExhausted, ContainerDown, SubscriptionLimitReached } fro
 import type { ClaudeSessionId, SessionKey, TgId } from "./ids.ts"
 import type { Lang } from "./lang.ts"
 
-export interface Attachment {
+export type Attachment = {
   readonly fileName: string
   readonly mimeType: string
   readonly bytes: Uint8Array

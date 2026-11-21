@@ -32,6 +32,8 @@ export default Alchemy.Stack(
 
     const adminTgId = yield* Config.Int("ADMIN_TG_ID")
     const dailyRunLimit = yield* Config.Int("DAILY_RUN_LIMIT").pipe(Config.withDefault(50))
+    const claudeModel = yield* Config.String("CLAUDE_MODEL").pipe(Config.withDefault("claude-sonnet-5-5"))
+    const thinkingTokens = yield* Config.Int("AGENT_THINKING_TOKENS").pipe(Config.withDefault(0))
     const instanceType = yield* Config.String("CONTAINER_INSTANCE_TYPE").pipe(Config.withDefault("basic"))
     const carWebUrl = yield* Config.String("CAR_WEB_URL").pipe(Config.withDefault(""))
     const tokenIssuedAt = yield* Config.String("CLAUDE_TOKEN_ISSUED_AT").pipe(Config.withDefault(""))
@@ -71,6 +73,8 @@ export default Alchemy.Stack(
         MCP_TOKEN_SECRET: mcpTokenSecret,
         ADMIN_TG_ID: String(adminTgId),
         DAILY_RUN_LIMIT: String(dailyRunLimit),
+        CLAUDE_MODEL: claudeModel,
+        AGENT_THINKING_TOKENS: String(thinkingTokens),
         CAR_WEB_URL: carWebUrl,
         CONTAINER_INSTANCE_TYPE: instanceType,
         CLAUDE_TOKEN_ISSUED_AT: claudeAuthMode === "api_key" ? "" : tokenIssuedAt

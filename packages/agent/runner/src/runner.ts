@@ -55,10 +55,15 @@ export const systemPrompt = (lang: Lang): string =>
     'Anything the user should receive as a file (documents, tables, charts, exports) must be saved in /workspace/out/ with a human-friendly name in the user\'s language, such as "Отчёт за октябрь.pdf" or "Shopping list.docx"; files anywhere else are not delivered. Mention the file naturally, for example "I attached the report".'
   ].join(" ")
 
-export const appendedPrompt = (input: Pick<RunInput, "lang" | "memory">): string =>
-  input.memory === undefined || input.memory === ""
-    ? systemPrompt(input.lang)
-    : `${systemPrompt(input.lang)}\n\n${input.memory}`
+const todayLine = (now: Date): string =>
+  `Today is ${new Intl.DateTimeFormat("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(now)} (UTC). For news and anything time-sensitive, search the web using this date and the latest sources; if you find nothing from today, give the most recent items with their dates instead of refusing.`
+
+export const appendedPrompt = (input: Pick<RunInput, "lang" | "memory">, now: Date = new Date()): string =>
+  [
+    systemPrompt(input.lang),
+    ...(input.memory === undefined || input.memory === "" ? [] : [input.memory]),
+    todayLine(now)
+  ].join("\n\n")
 
 export const safeFileName = (name: string): string => {
   const base = name.split(/[\\/]/).pop() ?? ""
@@ -108,6 +113,7 @@ export type RunnerConfig = {
   readonly model: Option.Option<string>
   readonly instanceType: InstanceType
   readonly maxTurns: number
+  readonly thinkingTokens: number
   readonly inactivityTimeout: Duration.Duration
 }
 
@@ -135,8 +141,9 @@ export const RunnerConfig = Config.all({
     Config.withDefault("basic" as InstanceType)
   ),
   maxTurns: Config.Int("AGENT_MAX_TURNS").pipe(Config.withDefault(30)),
+  thinkingTokens: Config.Int("AGENT_THINKING_TOKENS").pipe(Config.withDefault(0)),
   inactivityTimeout: Config.String("AGENT_INACTIVITY_TIMEOUT").pipe(
-    Config.withDefault("10m"),
+    Config.withDefault("30m"),
     Config.flatMap((raw) =>
       Option.match(parseDuration(raw), {
         onSome: (d) => Config.succeed(d),
@@ -394,6 +401,7 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
                 env: {
                   HOME: home,
                   PATH: PATH_ENV,
+                  MAX_THINKING_TOKENS: String(cfg.thinkingTokens),
                   ...credentials,
                   ...(input.mcp === undefined ? {} : { BOT_MCP_TOKEN: input.mcp.token })
                 }

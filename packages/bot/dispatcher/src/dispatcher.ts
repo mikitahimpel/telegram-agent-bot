@@ -527,7 +527,8 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
       }
 
       const stored = yield* sessions.getLang.pipe(Effect.catch(() => Effect.succeed(undefined)))
-      const lang = stored ?? langFromTelegram(o.languageCode)
+      const typed = message?.text ?? message?.caption ?? ""
+      const lang = stored ?? (/[\u0400-\u04FF]/.test(typed) ? "ru" : langFromTelegram(o.languageCode))
 
       if (stopped !== undefined) {
         yield* control.stop(keyFor(role, o.threadId))

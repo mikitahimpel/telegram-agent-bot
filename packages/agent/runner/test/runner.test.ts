@@ -142,17 +142,17 @@ describe("AgentRunner", () => {
     expect(argv[2]).toBe(" -rf")
   })
 
-  it("appends the memory block after the stable system prompt and nothing after it", () => {
+  it("appends the memory block after the stable system prompt and puts today's date last", () => {
     const cfg = { maxTurns: 30, model: Option.none<string>() }
     const memory = "MEMORY [3/2000 tokens]\n[1] Name is Mikita"
     const withMemory = buildClaudeArgv(input({ memory, resume: undefined }), cfg)
     const without = buildClaudeArgv(input(), cfg)
-    const at = withMemory.indexOf("--append-system-prompt")
-    const stable = without[without.indexOf("--append-system-prompt") + 1]!
-    const appended = withMemory[at + 1]!
-    expect(appended.startsWith(stable)).toBe(true)
-    expect(appended).toBe(`${stable}\n\n${memory}`)
+    const appended = withMemory[withMemory.indexOf("--append-system-prompt") + 1]!
+    const plain = without[without.indexOf("--append-system-prompt") + 1]!
+    const stable = plain.slice(0, plain.indexOf("\n\nToday is"))
+    expect(appended.startsWith(`${stable}\n\n${memory}\n\nToday is`)).toBe(true)
     expect(appended.indexOf(memory)).toBeGreaterThan(appended.indexOf("/workspace/out/"))
+    expect(appended.lastIndexOf("Today is")).toBeGreaterThan(appended.indexOf(memory))
     expect(buildClaudeArgv(input({ memory: "" }), cfg)).toEqual(without)
   })
 
@@ -217,17 +217,17 @@ describe("AgentRunner", () => {
     }).pipe(Effect.provide(l))
   })
 
-  it.effect("inactivity timeout: default 10m, overridable", () => {
+  it.effect("inactivity timeout: default 30m, overridable", () => {
     const d = setup({ claudeLines: [init, result()] })
     const o = setup(
       { claudeLines: [init, result()] },
-      { AGENT_INACTIVITY_TIMEOUT: "30m", CONTAINER_INSTANCE_TYPE: "standard-1" }
+      { AGENT_INACTIVITY_TIMEOUT: "10m", CONTAINER_INSTANCE_TYPE: "standard-1" }
     )
     return Effect.gen(function* () {
       yield* collect(input()).pipe(Effect.provide(d.l))
-      expect(d.fake.events).toContain("timeout:600000")
+      expect(d.fake.events).toContain("timeout:1800000")
       yield* collect(input()).pipe(Effect.provide(o.l))
-      expect(o.fake.events).toContain("timeout:1800000")
+      expect(o.fake.events).toContain("timeout:600000")
     })
   })
 

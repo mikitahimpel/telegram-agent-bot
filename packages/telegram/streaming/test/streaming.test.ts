@@ -75,6 +75,18 @@ describe("presentRun", () => {
     }).pipe(Effect.provide(layer))
   })
 
+  it.effect("never shows the raw English error text of a failed run to the user", () => {
+    const { layer, calls } = recordingTelegram()
+    return Effect.gen(function* () {
+      yield* presentRun(Stream.make(completed("API Error: 529 overloaded_error", true)), target, {
+        lang: "ru",
+        draftId: 1
+      })
+      const sent = calls.filter((c) => c.method === "sendMessage").map((c) => c.args[1])
+      expect(sent).toEqual(["⚠️ Что-то пошло не так, попробуйте ещё раз чуть позже."])
+    }).pipe(Effect.provide(layer))
+  })
+
   it.effect("splits long final answers into chunks", () => {
     const { layer, calls } = recordingTelegram()
     const text = Array.from({ length: 150 }, (_, i) => `para ${i} ${"x".repeat(30)}`).join("\n\n")

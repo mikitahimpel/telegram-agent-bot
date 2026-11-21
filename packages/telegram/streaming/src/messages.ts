@@ -7,7 +7,7 @@ export const messages = defineMessages({
     longAnswer: "The answer is long, so I attached it as a file.",
     longAnswerNote: "📎 Full answer attached as a file below.",
     emptyAnswer: "(empty answer)",
-    errorAnswer: "⚠️ I could not answer that."
+    errorAnswer: "⚠️ Something went wrong, please try again in a moment."
   },
   ru: {
     thinking: "Думаю…",
@@ -15,7 +15,7 @@ export const messages = defineMessages({
     longAnswer: "Ответ длинный, поэтому прикладываю его файлом.",
     longAnswerNote: "📎 Полный ответ приложен файлом ниже.",
     emptyAnswer: "(пустой ответ)",
-    errorAnswer: "⚠️ Не получилось ответить."
+    errorAnswer: "⚠️ Что-то пошло не так, попробуйте ещё раз чуть позже."
   }
 })
 

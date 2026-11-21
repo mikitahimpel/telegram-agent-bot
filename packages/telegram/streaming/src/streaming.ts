@@ -131,7 +131,7 @@ export const presentRun = <E, R = never>(
     const done = completed
     if (done === undefined) return { completed: undefined, files }
 
-    const finalText = done.text.trim() !== "" ? done.text : currentText()
+    const finalText = done.isError ? "" : done.text.trim() !== "" ? done.text : currentText()
     const asDocument = finalText.length > DOCUMENT_THRESHOLD
 
     const sendFinal = Effect.gen(function* () {

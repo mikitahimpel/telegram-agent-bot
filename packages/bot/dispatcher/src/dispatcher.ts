@@ -353,6 +353,7 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
       const attempt = Effect.gen(function* () {
         const files = yield* Ref.make<ReadonlyArray<{ readonly path: string; readonly fileName: string }>>([])
         const completed = yield* Ref.make(false)
+        const notifier = yield* AdminNotifier
 
         const tap = (event: AgentEvent): Effect.Effect<void, BotError> => {
           switch (event._tag) {
@@ -362,6 +363,13 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
               return Ref.update(files, (xs) => [...xs, { path: event.path, fileName: event.fileName }])
             case "Completed":
               return Ref.set(completed, true).pipe(
+                Effect.andThen(
+                  event.isError
+                    ? notifier
+                        .notify(`Run failed for user ${origin.tgId}: ${event.text.slice(0, 500)}`)
+                        .pipe(Effect.ignore)
+                    : Effect.void
+                ),
                 Effect.andThen(sessions.setClaudeSessionId(sessionKey, event.sessionId)),
                 Effect.andThen(
                   sessions.recordRun({

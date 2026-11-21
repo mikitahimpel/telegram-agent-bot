@@ -124,6 +124,8 @@ export const presentRun = <E, R = never>(
       }
     }
 
+    yield* flush(true)
+    lastSent = Number.NEGATIVE_INFINITY
     yield* Stream.runForEach(stream, onEvent)
 
     const done = completed

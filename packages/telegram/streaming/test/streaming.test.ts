@@ -32,17 +32,17 @@ describe("presentRun", () => {
       yield* Effect.yieldNow
       yield* Queue.offer(queue, AgentEvent.TextDelta({ text: "lo" }))
       yield* Effect.yieldNow
-      expect(methods(calls)).toEqual(["sendMessageDraft"])
+      expect(methods(calls)).toEqual(["sendMessageDraft", "sendMessageDraft"])
       yield* TestClock.adjust("800 millis")
       yield* Queue.offer(queue, AgentEvent.TextDelta({ text: " **w**" }))
       yield* Effect.yieldNow
-      expect(methods(calls)).toEqual(["sendMessageDraft", "sendMessageDraft"])
-      expect(calls[1]!.args).toEqual([{ chatId: 1, draftId: 5 }, "Hello <b>w</b>"])
+      expect(methods(calls)).toEqual(["sendMessageDraft", "sendMessageDraft", "sendMessageDraft"])
+      expect(calls[2]!.args).toEqual([{ chatId: 1, draftId: 5 }, "Hello <b>w</b>"])
       yield* Queue.offer(queue, completed("Hello **w**"))
       yield* Queue.offer(queue, null)
       const r = yield* Fiber.join(fiber)
       expect(r.completed?._tag).toBe("Completed")
-      expect(calls[2]).toEqual({ method: "sendMessage", args: [target, "Hello <b>w</b>"] })
+      expect(calls[3]).toEqual({ method: "sendMessage", args: [target, "Hello <b>w</b>"] })
     }).pipe(Effect.provide(layer))
   })
 
@@ -53,7 +53,7 @@ describe("presentRun", () => {
         lang: "ru",
         draftId: 1
       })
-      expect(calls[0]!.args[1]).toBe("<i>🔧 Bash: ls &lt;x&gt;</i>")
+      expect(calls[1]!.args[1]).toBe("<i>🔧 Bash: ls &lt;x&gt;</i>")
       const r = yield* presentRun(
         Stream.make(AgentEvent.TextDelta({ text: "x" }), AgentEvent.ToolCall({ name: "Read", summary: "" })),
         target,
@@ -71,7 +71,7 @@ describe("presentRun", () => {
         draftId: 1,
         statusStyle: "human"
       })
-      expect(calls[0]!.args[1]).toBe("<i>Ищу в интернете…</i>")
+      expect(calls[1]!.args[1]).toBe("<i>Ищу в интернете…</i>")
     }).pipe(Effect.provide(layer))
   })
 
@@ -92,8 +92,8 @@ describe("presentRun", () => {
     const text = "a".repeat(12001)
     return Effect.gen(function* () {
       yield* presentRun(Stream.make(completed(text)), target, { lang: "en", draftId: 1 })
-      expect(methods(calls)).toEqual(["sendDocument"])
-      const file = calls[0]!.args[1] as { fileName: string; bytes: Uint8Array }
+      expect(methods(calls)).toEqual(["sendMessageDraft", "sendDocument"])
+      const file = calls[1]!.args[1] as { fileName: string; bytes: Uint8Array }
       expect(file.fileName).toBe("answer.md")
       expect(file.bytes.length).toBe(12001)
     }).pipe(Effect.provide(layer))
@@ -126,10 +126,11 @@ describe("presentRun", () => {
         "sendMessage",
         "editMessageText",
         "editMessageText",
+        "editMessageText",
         "editMessageText"
       ])
-      expect(calls[1]!.args[1]).toBe("one")
-      expect(calls[4]!.args[1]).toBe("one two three")
+      expect(calls[1]!.args[1]).toBe("Thinking…")
+      expect(calls[5]!.args[1]).toBe("one two three")
     }).pipe(Effect.provide(layer))
   })
 
@@ -171,7 +172,7 @@ describe("presentRun", () => {
     })
     return Effect.gen(function* () {
       yield* presentRun(Stream.make(completed("**hi**")), target, { lang: "en", draftId: 1 })
-      expect(calls.map((c) => c.args[1])).toEqual(["<b>hi</b>", "hi"])
+      expect(calls.map((c) => c.args[1])).toEqual(["Thinking…", "<b>hi</b>", "hi"])
     }).pipe(Effect.provide(layer))
   })
 })

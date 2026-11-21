@@ -8,11 +8,11 @@ import { presentRun } from "@bot/telegram-streaming/streaming"
 import type { PluginR } from "./plugins.ts"
 import { registry } from "./registry.ts"
 
-const present: PresentRun = ({ to, lang, role, stream }) =>
+const present: PresentRun = ({ to, lang, stream }) =>
   presentRun(stream, to, {
     lang,
     draftId: 1 + Math.floor(Math.random() * 2_000_000_000),
-    statusStyle: role === "admin" ? "technical" : "human"
+    statusStyle: "human"
   }).pipe(Effect.asVoid)
 
 const importCsvDocument: DocumentHook<CoreR | PluginR> = ({ document, tgId, chatId, threadId, lang }) =>

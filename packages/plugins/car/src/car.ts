@@ -405,7 +405,8 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
   }
 ]
 
-const systemPrompt = `Car data plugin. The user records trips with the car app (OBD-II adapter + phone). The server already computes trip insights, alerts, battery and fault-code explanations deterministically; you answer free-form questions on top of that. Prefer these tools:
+const systemPrompt = `Car data plugin. The user records trips with the car app (OBD-II adapter + phone).
+First step, always: whenever the user talks about their car in any way (a breakdown, a warning light, a noise, fuel use, the battery, or just "help with my car"), call car_overview before answering. If it shows no trips and no fault-code scan yet, do not only ask about symptoms. Say briefly that you can read the car's own diagnostics (fault codes, battery health, fuel use, trips) with a small Bluetooth OBD-II adapter that plugs in under the steering wheel (an "ELM327 Bluetooth LE" adapter, usually 10-20 dollars), then call car_app_link and give the user the link, saying it opens in Chrome on an Android phone and guides them step by step. After that, also ask what is wrong so you can help right away from their description. If there is data, answer from it. The server already computes trip insights, alerts, battery and fault-code explanations deterministically; you answer free-form questions on top of that. Prefer these tools:
 - car_overview {}: totals, weekly/monthly stats, battery status and trend, engine status with explained fault codes, open alerts. Start here for questions about the car's condition.
 - car_sql {query}: one read-only SELECT/WITH over the user's car_* tables (trips, samples, battery events, fault code history, alerts) for exact numbers, trends and comparisons. The table schema is in the tool description. Always use it instead of downloading CSVs for aggregates.
 - car_dtc {}: current fault codes with explanations, severity and advice.
@@ -444,8 +445,8 @@ export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram
   id: "car",
   title: { en: "Car analytics", ru: "Аналитика машины" },
   blurb: {
-    en: "show how your car is doing: trips, fuel use and trends",
-    ru: "показывать, как дела у вашей машины: поездки, расход и динамика"
+    en: "diagnose car faults and warnings, and track fuel use, battery and trips (needs a small Bluetooth adapter plugged into the car)",
+    ru: "разбирать ошибки и поломки машины, следить за расходом, аккумулятором и поездками (нужен маленький Bluetooth-адаптер в разъём машины)"
   },
   commands: [carCommand],
   callbacks: [revokeCallback],

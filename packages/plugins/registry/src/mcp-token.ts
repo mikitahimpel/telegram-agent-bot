@@ -1,11 +1,14 @@
 import { Clock, Config, Context, Data, Effect, Layer, Redacted, Schema } from "effect"
 import { TgId } from "@bot/core-contracts/ids"
+import { type Lang, Lang as LangSchema } from "@bot/core-contracts/lang"
 
 export class InvalidMcpToken extends Data.TaggedError("InvalidMcpToken")<{
   readonly reason: "malformed" | "signature" | "expired"
 }> {}
 
-const Payload = Schema.Struct({ tgId: TgId, exp: Schema.Number })
+const Payload = Schema.Struct({ tgId: TgId, exp: Schema.Number, lang: Schema.optional(LangSchema) })
+
+export type McpClaims = { readonly tgId: TgId; readonly lang: Lang | undefined }
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
@@ -32,8 +35,9 @@ const fromBase64Url = (text: string): Uint8Array | undefined => {
 export class McpToken extends Context.Service<
   McpToken,
   {
-    readonly sign: (tgId: TgId, ttlSeconds: number) => Effect.Effect<string>
+    readonly sign: (tgId: TgId, ttlSeconds: number, lang?: Lang) => Effect.Effect<string>
     readonly verify: (token: string) => Effect.Effect<TgId, InvalidMcpToken>
+    readonly verifyClaims: (token: string) => Effect.Effect<McpClaims, InvalidMcpToken>
   }
 >()("@bot/McpToken") {}
 
@@ -43,16 +47,20 @@ const make = (secret: string): McpToken["Service"] => {
     "verify"
   ])
 
-  const sign = (tgId: TgId, ttlSeconds: number) =>
+  const sign = (tgId: TgId, ttlSeconds: number, lang?: Lang) =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
-      const payload = toBase64Url(encoder.encode(JSON.stringify({ tgId, exp: Math.floor(now / 1000) + ttlSeconds })))
+      const payload = toBase64Url(
+        encoder.encode(
+          JSON.stringify({ tgId, exp: Math.floor(now / 1000) + ttlSeconds, ...(lang === undefined ? {} : { lang }) })
+        )
+      )
       const key = yield* Effect.promise(() => keyPromise)
       const sig = yield* Effect.promise(() => crypto.subtle.sign("HMAC", key, encoder.encode(payload)))
       return `${payload}.${toBase64Url(new Uint8Array(sig))}`
     })
 
-  const verify = (token: string) =>
+  const verifyClaims = (token: string): Effect.Effect<McpClaims, InvalidMcpToken> =>
     Effect.gen(function* () {
       const parts = token.split(".")
       const [payloadText, sigText] = parts
@@ -76,10 +84,12 @@ const make = (secret: string): McpToken["Service"] => {
       )
       const now = yield* Clock.currentTimeMillis
       if (payload.exp * 1000 <= now) return yield* new InvalidMcpToken({ reason: "expired" })
-      return payload.tgId
+      return { tgId: payload.tgId, lang: payload.lang }
     })
 
-  return { sign, verify }
+  const verify = (token: string) => verifyClaims(token).pipe(Effect.map((c) => c.tgId))
+
+  return { sign, verify, verifyClaims }
 }
 
 export const layerSecret = (secret: string): Layer.Layer<McpToken> => Layer.succeed(McpToken, make(secret))

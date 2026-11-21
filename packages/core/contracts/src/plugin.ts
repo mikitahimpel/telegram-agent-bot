@@ -2,11 +2,12 @@ import type { Effect, Layer, Schema } from "effect"
 import type { CallbackDef, CommandDef } from "./commands.ts"
 import type { StorageError } from "./errors.ts"
 import type { TgId } from "./ids.ts"
-import type { Localized } from "./lang.ts"
+import type { Lang, Localized } from "./lang.ts"
 import type { JobHandler } from "./scheduler.ts"
 
 export type ToolContext = {
   readonly tgId: TgId
+  readonly lang?: Lang
 }
 
 export type AgentTool<R = never> = {

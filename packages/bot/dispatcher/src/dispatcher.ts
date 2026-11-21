@@ -341,7 +341,7 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
         yield* sessions.reset(sessionKey)
         resume = undefined
       }
-      const mcp = yield* mcpAccess.issue(origin.tgId)
+      const mcp = yield* mcpAccess.issue(origin.tgId, lang)
       const memory = yield* (yield* UserMemory)
         .forUser(origin.tgId)
         .render.pipe(Effect.catch(() => Effect.succeed(undefined)))

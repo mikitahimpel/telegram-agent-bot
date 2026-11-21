@@ -128,14 +128,14 @@ const makeRuntime = (
       const tokens = yield* McpToken
       const flags = yield* PluginFlags
       return {
-        issue: (id: TgId) =>
+        issue: (id: TgId, lang) =>
           pluginRegistry.toolsFor(id).pipe(
             Effect.provideService(PluginFlags, flags),
             Effect.flatMap((tools) =>
               tools.length === 0 || origin() === ""
                 ? Effect.succeed(undefined)
                 : tokens
-                    .sign(id, MCP_TOKEN_TTL_SECONDS)
+                    .sign(id, MCP_TOKEN_TTL_SECONDS, lang)
                     .pipe(Effect.map((token) => ({ url: `${origin()}/mcp`, token })))
             ),
             Effect.catch(() => Effect.succeed(undefined))

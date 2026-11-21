@@ -113,4 +113,15 @@ describe("mcp", () => {
       expect(yield* registry.systemPromptFor(tg)).toBe("use fake")
     }).pipe(Effect.provide(env))
   )
+
+  it.effect("carries the user's language in the token claims", () =>
+    Effect.gen(function* () {
+      const withLang = yield* McpToken.use((t) => t.sign(tg, 60, "ru"))
+      const claims = yield* McpToken.use((t) => t.verifyClaims(withLang))
+      expect(claims).toEqual({ tgId: tg, lang: "ru" })
+      const plain = yield* McpToken.use((t) => t.sign(tg, 60))
+      expect((yield* McpToken.use((t) => t.verifyClaims(plain))).lang).toBeUndefined()
+      expect(yield* McpToken.use((t) => t.verify(withLang))).toBe(tg)
+    }).pipe(Effect.provide(layerSecret("test-secret")))
+  )
 })

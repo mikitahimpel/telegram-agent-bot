@@ -9,8 +9,9 @@ const SqlInput = Schema.Struct({
 })
 const Empty = Schema.Struct({})
 
-const langOf = (tgId: number) =>
+const langOf = (tgId: number, hint: Lang | undefined) =>
   Effect.gen(function* () {
+    if (hint !== undefined) return hint
     const backend = yield* CarBackend
     const stored = yield* backend.getMeta(tgId, "lang")
     return (stored === "ru" ? "ru" : "en") as Lang
@@ -38,7 +39,7 @@ export const insightTools: ReadonlyArray<AgentTool<CarBackend>> = [
     handler: (_raw, ctx) =>
       Effect.gen(function* () {
         const backend = yield* CarBackend
-        return yield* backend.overview(ctx.tgId, yield* langOf(ctx.tgId))
+        return yield* backend.overview(ctx.tgId, yield* langOf(ctx.tgId, ctx.lang))
       })
   },
   {
@@ -49,7 +50,7 @@ export const insightTools: ReadonlyArray<AgentTool<CarBackend>> = [
     handler: (_raw, ctx) =>
       Effect.gen(function* () {
         const backend = yield* CarBackend
-        return yield* backend.dtcCurrent(ctx.tgId, yield* langOf(ctx.tgId))
+        return yield* backend.dtcCurrent(ctx.tgId, yield* langOf(ctx.tgId, ctx.lang))
       })
   }
 ]

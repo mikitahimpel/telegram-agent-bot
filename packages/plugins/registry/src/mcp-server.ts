@@ -1,5 +1,6 @@
 import { Effect, Schema } from "effect"
 import type { TgId } from "@bot/core-contracts/ids"
+import type { Lang } from "@bot/core-contracts/lang"
 import type { AgentTool } from "@bot/core-contracts/plugin"
 import type { PluginFlags } from "./flags.ts"
 import { McpToken } from "./mcp-token.ts"
@@ -40,20 +41,20 @@ const errorText = (e: unknown): string => {
 
 const toolResult = (text: string, isError: boolean) => ({ content: [{ type: "text", text }], isError })
 
-const callTool = <R>(tools: ReadonlyArray<AgentTool<R>>, tgId: TgId, params: unknown) =>
+const callTool = <R>(tools: ReadonlyArray<AgentTool<R>>, tgId: TgId, lang: Lang | undefined, params: unknown) =>
   Effect.gen(function* () {
     const p = (typeof params === "object" && params !== null ? params : {}) as { name?: unknown; arguments?: unknown }
     const tool = tools.find((t) => t.name === p.name)
     if (tool === undefined) return undefined
     const decoded = yield* Schema.decodeUnknownEffect(tool.input)(p.arguments ?? {}).pipe(Effect.result)
     if (decoded._tag === "Failure") return toolResult(`Invalid arguments: ${String(decoded.failure.message)}`, true)
-    return yield* tool.handler(decoded.success, { tgId }).pipe(
+    return yield* tool.handler(decoded.success, { tgId, ...(lang === undefined ? {} : { lang }) }).pipe(
       Effect.map((value) => toolResult(JSON.stringify(value === undefined ? null : value), false)),
       Effect.catch((e) => Effect.succeed(toolResult(errorText(e), true)))
     )
   }).pipe(Effect.catchCause(() => Effect.succeed(toolResult("Internal tool error", true))))
 
-const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, msg: unknown) =>
+const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, lang: Lang | undefined, msg: unknown) =>
   Effect.gen(function* () {
     if (typeof msg !== "object" || msg === null || (msg as { jsonrpc?: unknown }).jsonrpc !== "2.0") {
       return rpcError(null, -32600, "Invalid Request")
@@ -81,7 +82,7 @@ const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, msg: unknown)
       }
       case "tools/call": {
         const tools = yield* registry.toolsFor(tgId)
-        const result = yield* callTool(tools, tgId, m.params)
+        const result = yield* callTool(tools, tgId, lang, m.params)
         return result === undefined ? rpcError(id, -32602, "Unknown tool") : rpcResult(id, result)
       }
       default:
@@ -97,11 +98,12 @@ export const handleMcpRequest =
       const auth = request.headers.get("authorization") ?? ""
       const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : ""
       const tokens = yield* McpToken
-      const verified = yield* tokens.verify(token).pipe(Effect.result)
+      const verified = yield* tokens.verifyClaims(token).pipe(Effect.result)
       if (verified._tag === "Failure") {
         return json({ error: "unauthorized" }, 401, { "www-authenticate": "Bearer" })
       }
-      const tgId = verified.success
+      const tgId = verified.success.tgId
+      const lang = verified.success.lang
       const body = yield* Effect.promise(() => request.text())
       let parsed: unknown
       try {
@@ -112,11 +114,11 @@ export const handleMcpRequest =
       if (Array.isArray(parsed)) {
         const out = []
         for (const item of parsed) {
-          const r = yield* handleMessage(registry, tgId, item)
+          const r = yield* handleMessage(registry, tgId, lang, item)
           if (r !== undefined) out.push(r)
         }
         return out.length === 0 ? new Response(null, { status: 202 }) : json(out)
       }
-      const response = yield* handleMessage(registry, tgId, parsed)
+      const response = yield* handleMessage(registry, tgId, lang, parsed)
       return response === undefined ? new Response(null, { status: 202 }) : json(response)
     })

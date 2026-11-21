@@ -382,7 +382,7 @@ const tools: ReadonlyArray<AgentTool<CarR>> = [
       Effect.gen(function* () {
         const webUrl = yield* CarWebUrl
         if (webUrl === "") return yield* fail("car_app_link", "CAR_WEB_URL is not configured")
-        const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: "en" })
+        const { code } = yield* startPair({ tgId: ctx.tgId, firstName: "", lang: ctx.lang ?? "en" })
         return {
           url: pairUrl(webUrl, code),
           expiresInMinutes: PAIR_TTL_SECONDS / 60,

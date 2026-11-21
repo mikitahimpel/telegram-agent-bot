@@ -17,6 +17,7 @@ import { type ApiCreditsExhausted, ContainerDown, type SubscriptionLimitReached 
 import type { TgId } from "@bot/core-contracts/ids"
 import type { Lang } from "@bot/core-contracts/lang"
 import { splitLines } from "@bot/agent-stream-json/split-lines"
+import { pickTier } from "./model-routing.ts"
 import { toAgentEvents } from "@bot/agent-stream-json/stream-json"
 import type {
   ContainerLike,
@@ -116,6 +117,8 @@ export const authEnv = (auth: ClaudeAuth): Record<string, string> =>
 export type RunnerConfig = {
   readonly auth: ClaudeAuth
   readonly model: Option.Option<string>
+  readonly deepModel: Option.Option<string>
+  readonly deepThinkingTokens: number
   readonly instanceType: InstanceType
   readonly maxTurns: number
   readonly thinkingTokens: number
@@ -142,6 +145,8 @@ const parseDuration = (raw: string): Option.Option<Duration.Duration> => {
 export const RunnerConfig = Config.all({
   auth: ClaudeAuthConfig,
   model: Config.option(Config.String("CLAUDE_MODEL")),
+  deepModel: Config.option(Config.String("CLAUDE_MODEL_DEEP")),
+  deepThinkingTokens: Config.Int("AGENT_THINKING_TOKENS_DEEP").pipe(Config.withDefault(4000)),
   instanceType: Config.Literals(INSTANCE_TYPES, "CONTAINER_INSTANCE_TYPE").pipe(
     Config.withDefault("basic" as InstanceType)
   ),
@@ -390,7 +395,15 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
           yield* ensureStarted(input.tgId)
           const before = yield* listOut
           const written = yield* writeAttachments(input.attachments ?? [])
-          const argv = buildClaudeArgv({ ...input, prompt: withAttachmentPaths(input.prompt, written) }, cfg)
+          const tier = pickTier(input.prompt, written.length)
+          const argv = buildClaudeArgv(
+            { ...input, prompt: withAttachmentPaths(input.prompt, written) },
+            {
+              maxTurns: cfg.maxTurns,
+              model: tier === "deep" && Option.isSome(cfg.deepModel) ? cfg.deepModel : cfg.model
+            }
+          )
+          const thinkingTokens = tier === "deep" ? cfg.deepThinkingTokens : cfg.thinkingTokens
           const ac = new AbortController()
           let finished = false
           let sawCompleted = false
@@ -406,7 +419,7 @@ export const make = (deps: RunnerDeps): Effect.Effect<AgentRunner["Service"], Co
                 env: {
                   HOME: home,
                   PATH: PATH_ENV,
-                  MAX_THINKING_TOKENS: String(cfg.thinkingTokens),
+                  MAX_THINKING_TOKENS: String(thinkingTokens),
                   ...credentials,
                   ...(input.mcp === undefined ? {} : { BOT_MCP_TOKEN: input.mcp.token })
                 }

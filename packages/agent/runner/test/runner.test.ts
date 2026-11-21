@@ -289,4 +289,27 @@ describe("attachments", () => {
       expect(claude[2]!.startsWith("look")).toBe(true)
     }).pipe(Effect.provide(l))
   })
+
+  it.effect("uses the fast model for chat and the deep model with thinking for heavy tasks", () => {
+    const env = {
+      CLAUDE_MODEL: "fast-model",
+      CLAUDE_MODEL_DEEP: "deep-model",
+      AGENT_THINKING_TOKENS: "0",
+      AGENT_THINKING_TOKENS_DEEP: "4000"
+    }
+    const f = setup({ claudeLines: [init, result()] }, env)
+    const d = setup({ claudeLines: [init, result()] }, env)
+    const claudeCall = (fake: ReturnType<typeof setup>["fake"]) =>
+      fake.execs.find((c) => c.cmd[0] === "claude" && c.cmd.includes("-p"))!
+    return Effect.gen(function* () {
+      yield* collect(input({ prompt: "Привет" })).pipe(Effect.provide(f.l))
+      yield* collect(input({ prompt: "Помоги с машиной" })).pipe(Effect.provide(d.l))
+      const fast = claudeCall(f.fake)
+      const deep = claudeCall(d.fake)
+      expect(fast.cmd[fast.cmd.indexOf("--model") + 1]).toBe("fast-model")
+      expect(fast.opts?.env?.MAX_THINKING_TOKENS).toBe("0")
+      expect(deep.cmd[deep.cmd.indexOf("--model") + 1]).toBe("deep-model")
+      expect(deep.opts?.env?.MAX_THINKING_TOKENS).toBe("4000")
+    })
+  })
 })

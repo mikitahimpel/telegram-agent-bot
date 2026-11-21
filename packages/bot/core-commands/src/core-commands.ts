@@ -8,6 +8,7 @@ import { Allowlist } from "@bot/core-contracts/allowlist"
 import { TelegramError } from "@bot/core-contracts/errors"
 import { sessionKeyOf, TgId, type ChatId, type ThreadId } from "@bot/core-contracts/ids"
 import { Lang } from "@bot/core-contracts/lang"
+import { PluginPrompts } from "@bot/core-contracts/plugin-prompts"
 import { RunControl } from "@bot/core-contracts/run-control"
 import { Sessions } from "@bot/core-contracts/sessions"
 import { Telegram, type InlineKeyboard, type SendTarget } from "@bot/core-contracts/telegram"
@@ -295,6 +296,27 @@ const restart: CommandDef<CoreR> = {
     })
 }
 
+const contextCmd: CommandDef<CoreR> = {
+  name: "context",
+  role: "admin",
+  hidden: true,
+  description: {
+    en: "Show what the agent is told about its abilities",
+    ru: "Показать, что агенту известно о его возможностях"
+  },
+  handler: (ctx) =>
+    Effect.gen(function* () {
+      const prompts = yield* Effect.serviceOption(PluginPrompts)
+      const text =
+        prompts._tag === "None"
+          ? "(PluginPrompts service is not available)"
+          : yield* prompts.value.forUser(ctx.tgId, ctx.lang)
+      const shown = text === "" ? "(empty: no plugin is enabled for you)" : text
+      const chunk = shown.length > 3500 ? `${shown.slice(0, 3500)}…` : shown
+      yield* reply(ctx, `<pre>${escapeHtml(chunk)}</pre>`)
+    })
+}
+
 export const coreCommands: ReadonlyArray<CommandDef<CoreR>> = [
   start,
   help,
@@ -307,7 +329,8 @@ export const coreCommands: ReadonlyArray<CommandDef<CoreR>> = [
   allow,
   revoke,
   kill,
-  restart
+  restart,
+  contextCmd
 ]
 
 type CallbackCtx = Parameters<CallbackDef<CoreR>["handler"]>[0]

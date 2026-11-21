@@ -25,7 +25,7 @@ const runCb = (w: ReturnType<typeof makeWorld>, data: string, role: "admin" | "u
 describe("role visibility", () => {
   it("admin commands are invisible to users", () => {
     const w = makeWorld()
-    for (const n of ["agents", "usage", "allow", "revoke", "kill", "restart"]) {
+    for (const n of ["agents", "usage", "allow", "revoke", "kill", "restart", "context"]) {
       expect(w.registry.find(n, "user")).toBeUndefined()
       expect(w.registry.find(n, "admin")).toBeDefined()
     }

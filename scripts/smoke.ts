@@ -9,7 +9,6 @@ const required = (name: string): string => {
 
 const base = required("SMOKE_BASE_URL").replace(/\/+$/, "")
 const secret = required("TELEGRAM_WEBHOOK_SECRET")
-const adminId = Number(required("ADMIN_TG_ID"))
 
 const failures: Array<string> = []
 const check = (name: string, ok: boolean, detail: string) => {
@@ -17,16 +16,7 @@ const check = (name: string, ok: boolean, detail: string) => {
   if (!ok) failures.push(name)
 }
 
-const pingUpdate = {
-  update_id: Math.floor(Date.now() / 1000),
-  message: {
-    message_id: 1,
-    date: Math.floor(Date.now() / 1000),
-    chat: { id: adminId, type: "private", first_name: "smoke" },
-    from: { id: adminId, is_bot: false, first_name: "smoke", language_code: "en" },
-    text: "ping"
-  }
-}
+const pingUpdate = { update_id: Math.floor(Date.now() / 1000) }
 
 const post = (headerSecret: string | undefined) =>
   fetch(`${base}/telegram/webhook`, {

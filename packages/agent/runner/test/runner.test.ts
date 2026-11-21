@@ -3,7 +3,7 @@ import { ConfigProvider, Deferred, Effect, Fiber, Layer, Option, Stream } from "
 import { AgentRunner, type RunInput } from "@bot/core-contracts/agent-runner"
 import { ClaudeSessionId, SessionKey, TgId } from "@bot/core-contracts/ids"
 import { ContainerDown, SubscriptionLimitReached } from "@bot/core-contracts/errors"
-import { layer, buildClaudeArgv, ClaudeAuthConfig } from "../src/runner.ts"
+import { appendedPrompt, layer, buildClaudeArgv, ClaudeAuthConfig } from "../src/runner.ts"
 import type { ContainerLike } from "../src/container-like.ts"
 import { makeFake, type FakeOptions } from "./fake-container.ts"
 
@@ -154,6 +154,17 @@ describe("AgentRunner", () => {
     expect(appended.indexOf(memory)).toBeGreaterThan(appended.indexOf("/workspace/out/"))
     expect(appended.lastIndexOf("Today is")).toBeGreaterThan(appended.indexOf(memory))
     expect(buildClaudeArgv(input({ memory: "" }), cfg)).toEqual(without)
+  })
+
+  it("puts plugin instructions between the base prompt and memory, and lists what the assistant can do", () => {
+    const text = appendedPrompt(
+      { lang: "ru", memory: "MEMORY [1/2000 tokens]", pluginPrompt: "Extra abilities: car" },
+      new Date("2026-11-21T10:00:00Z")
+    )
+    expect(text).toContain("What you can do for the user")
+    expect(text.indexOf("Extra abilities: car")).toBeGreaterThan(text.indexOf("/workspace/out/"))
+    expect(text.indexOf("MEMORY [1/2000")).toBeGreaterThan(text.indexOf("Extra abilities: car"))
+    expect(text).toContain("Saturday, November 21, 2026")
   })
 
   it.effect("interrupting the consumer kills the process and still snapshots", () => {

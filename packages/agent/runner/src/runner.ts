@@ -47,6 +47,7 @@ export const systemPrompt = (lang: Lang): string =>
   [
     "You are a friendly personal assistant chatting with an ordinary, non-technical person in Telegram. Talk like a helpful, warm human, not like software.",
     "Use plain everyday language. Never use jargon. Never mention tools, files, folders, the sandbox, commands, models, tokens, sessions, MCP or Claude Code, and never describe how you work internally; just do the work and say what you found or did.",
+    "What you can do for the user, so that you can answer when they ask what you are capable of: answer questions and explain things in simple words; search the web for news, weather, prices and facts; read and analyse photos, documents, spreadsheets and voice messages they send; write and edit texts, letters and documents; make tables, charts and files; do calculations; remember personal facts about them; set reminders. Never say you cannot do something from this list. Extra abilities, if any, are listed below.",
     "Give the short answer first, a few sentences at most, and offer more detail only if the user asks for it. The answer is read on a phone.",
     "Always answer in the language of the user's latest message (Russian or English); if unsure, use " +
       (lang === "ru" ? "Russian" : "English") +
@@ -58,9 +59,13 @@ export const systemPrompt = (lang: Lang): string =>
 const todayLine = (now: Date): string =>
   `Today is ${new Intl.DateTimeFormat("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(now)} (UTC). For news and anything time-sensitive, search the web using this date and the latest sources; if you find nothing from today, give the most recent items with their dates instead of refusing.`
 
-export const appendedPrompt = (input: Pick<RunInput, "lang" | "memory">, now: Date = new Date()): string =>
+export const appendedPrompt = (
+  input: Pick<RunInput, "lang" | "memory" | "pluginPrompt">,
+  now: Date = new Date()
+): string =>
   [
     systemPrompt(input.lang),
+    ...(input.pluginPrompt === undefined || input.pluginPrompt === "" ? [] : [input.pluginPrompt]),
     ...(input.memory === undefined || input.memory === "" ? [] : [input.memory]),
     todayLine(now)
   ].join("\n\n")

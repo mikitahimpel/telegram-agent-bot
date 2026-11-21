@@ -18,7 +18,8 @@
     "./run-control": "./src/run-control.ts",
     "./invites": "./src/invites.ts",
     "./scheduler": "./src/scheduler.ts",
-    "./user-prefs": "./src/user-prefs.ts"
+    "./user-prefs": "./src/user-prefs.ts",
+    "./plugin-prompts": "./src/plugin-prompts.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

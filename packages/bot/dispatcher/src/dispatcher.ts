@@ -22,6 +22,7 @@ import { Sessions } from "@bot/core-contracts/sessions"
 import { Telegram, type SendTarget } from "@bot/core-contracts/telegram"
 import { UserPrefs } from "@bot/core-contracts/user-prefs"
 import { UserMemory } from "@bot/bot-memory/user-memory"
+import { PluginPrompts } from "@bot/core-contracts/plugin-prompts"
 import { parseCommand } from "@bot/telegram-schema/command"
 import type { CallbackQuery, Document, Message, Update } from "@bot/telegram-schema/schema"
 import { messages } from "@bot/bot-commands/messages"
@@ -345,6 +346,10 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
         .forUser(origin.tgId)
         .render.pipe(Effect.catch(() => Effect.succeed(undefined)))
 
+      const promptsService = yield* Effect.serviceOption(PluginPrompts)
+      const pluginPrompt =
+        promptsService._tag === "Some" ? yield* promptsService.value.forUser(origin.tgId, lang) : undefined
+
       const attempt = Effect.gen(function* () {
         const files = yield* Ref.make<ReadonlyArray<{ readonly path: string; readonly fileName: string }>>([])
         const completed = yield* Ref.make(false)
@@ -387,6 +392,7 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
             ...(media !== undefined && media.attachments.length > 0 ? { attachments: media.attachments } : {}),
             lang,
             ...(memory === undefined ? {} : { memory }),
+            ...(pluginPrompt === undefined || pluginPrompt === "" ? {} : { pluginPrompt }),
             mcp
           })
           .pipe(Stream.tap(tap))

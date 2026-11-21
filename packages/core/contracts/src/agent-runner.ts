@@ -18,6 +18,7 @@ export type RunInput = {
   readonly attachments?: ReadonlyArray<Attachment>
   readonly lang: Lang
   readonly memory?: string
+  readonly pluginPrompt?: string
   readonly mcp: { readonly url: string; readonly token: string } | undefined
 }
 

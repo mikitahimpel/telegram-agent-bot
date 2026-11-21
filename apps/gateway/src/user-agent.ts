@@ -36,6 +36,7 @@ import { localUserPrefs, readStoredLang } from "./user-prefs.ts"
 import { pluginEnvironment } from "./layers.ts"
 import { pluginRegistry } from "./plugins.ts"
 import { helpRegistryLayer } from "./help-registry.ts"
+import { pluginPromptsLayer } from "./plugin-prompts.ts"
 import { daysLeft, healthMessages, parseIssuedAt, reminderStage } from "./token-expiry.ts"
 
 export const RUNNER_IMAGE = "Runner"
@@ -143,10 +144,13 @@ const makeRuntime = (
     })
   )
 
-  const derived = Layer.mergeAll(adminNotifierLayer(), agentDirectoryLayer(env), mcpAccess, helpRegistryLayer).pipe(
-    Layer.provideMerge(base),
-    Layer.provide(configLayer(env, origin()))
-  )
+  const derived = Layer.mergeAll(
+    adminNotifierLayer(),
+    agentDirectoryLayer(env),
+    mcpAccess,
+    helpRegistryLayer,
+    pluginPromptsLayer
+  ).pipe(Layer.provideMerge(base), Layer.provide(configLayer(env, origin())))
 
   return ManagedRuntime.make(derived)
 }

@@ -41,7 +41,7 @@ describe("role visibility", () => {
     expect(w.registry.find("stop", "user")).toBeDefined()
     expect(w.registry.findCallback("kill:5", "user")).toBeUndefined()
     expect(w.registry.findCallback("lang:ru", "user")).toBeDefined()
-    expect(coreCommands.length).toBe(12)
+    expect(coreCommands.length).toBe(13)
     expect(coreCallbacks.length).toBe(5)
   })
 })

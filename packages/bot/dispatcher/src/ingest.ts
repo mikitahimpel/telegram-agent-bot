@@ -109,7 +109,7 @@ export const ingest = (
         }
         if (media.kind === "audio") {
           const speech = yield* Speech
-          const result = yield* Effect.result(speech.transcribe(bytes))
+          const result = yield* Effect.result(speech.transcribe(bytes, lang))
           const text = result._tag === "Success" ? result.success.text : ""
           if (text === "") {
             yield* tg.sendMessage(to, m.notHeard)

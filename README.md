@@ -1,9 +1,11 @@
 # telegram-agent-bot
 
 A Telegram bot that gives every allowed Telegram account its own Claude Code agent (the `claude` CLI running in a
-Cloudflare container), with per-account memory and sessions (one forum topic = one session). Built with Effect 4 and
+Cloudflare container), with per-account memory. Regular users get one continuous conversation (with an automatic reset after a
+long pause); the admin also gets topics, one topic = one session. Built with Effect 4 and
 Alchemy v2 on Cloudflare Workers, Durable Objects, R2 and KV. Product spec: `docs/spec.md`; architecture and
-package rules: `docs/architecture.md`.
+package rules: `docs/architecture.md`; running it in production, debugging and known traps:
+`docs/operations.md`.
 
 ```
 Telegram -> Gateway Worker -> UserAgent Durable Object (1 per tgId, SQLite) -> container (claude CLI)

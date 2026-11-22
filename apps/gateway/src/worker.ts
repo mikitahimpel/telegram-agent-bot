@@ -15,27 +15,37 @@ export { DirectoryBackupGateway } from "@cloudflare/sandbox"
 export { UserAgent } from "./user-agent.ts"
 
 // oxlint-disable-next-line typescript/no-explicit-any
-const mcpRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
+const mcpRuntimes = new WeakMap<object, Map<string, ManagedRuntime.ManagedRuntime<any, any>>>()
 
-const mcpRuntime = (env: Env) => {
-  let rt = mcpRuntimes.get(env)
+const mcpRuntime = (env: Env, origin: string) => {
+  let byOrigin = mcpRuntimes.get(env)
+  if (byOrigin === undefined) {
+    byOrigin = new Map()
+    mcpRuntimes.set(env, byOrigin)
+  }
+  let rt = byOrigin.get(origin)
   if (rt === undefined) {
-    rt = ManagedRuntime.make(Layer.provide(pluginEnvironment(env), configLayer(env)))
-    mcpRuntimes.set(env, rt)
+    rt = ManagedRuntime.make(Layer.provide(pluginEnvironment(env), configLayer(env, origin)))
+    byOrigin.set(origin, rt)
   }
   return rt
 }
 
 // oxlint-disable-next-line typescript/no-explicit-any
-const carApiRuntimes = new WeakMap<object, ManagedRuntime.ManagedRuntime<any, any>>()
+const carApiRuntimes = new WeakMap<object, Map<string, ManagedRuntime.ManagedRuntime<any, any>>>()
 
-const carApiRuntime = (env: Env) => {
-  let rt = carApiRuntimes.get(env)
+const carApiRuntime = (env: Env, origin: string) => {
+  let byOrigin = carApiRuntimes.get(env)
+  if (byOrigin === undefined) {
+    byOrigin = new Map()
+    carApiRuntimes.set(env, byOrigin)
+  }
+  let rt = byOrigin.get(origin)
   if (rt === undefined) {
     rt = ManagedRuntime.make(
-      Layer.provide(Layer.mergeAll(pluginEnvironment(env), allowlistLayer(env.KV)), configLayer(env))
+      Layer.provide(Layer.mergeAll(pluginEnvironment(env), allowlistLayer(env.KV)), configLayer(env, origin))
     )
-    carApiRuntimes.set(env, rt)
+    byOrigin.set(origin, rt)
   }
   return rt
 }
@@ -104,14 +114,16 @@ const webhook = async (request: Request, env: Env, ctx: ExecutionContext): Promi
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const { pathname } = new URL(request.url)
+    const { pathname, origin } = new URL(request.url)
     if (pathname === "/health" && request.method === "GET") return Response.json({ ok: true })
     if (pathname === "/telegram/webhook" && request.method === "POST") return webhook(request, env, ctx)
     if (pathname === "/mcp") {
-      return mcpRuntime(env).runPromise(handleMcpRequest(pluginRegistry)(request).pipe(Effect.withSpan("gateway.mcp")))
+      return mcpRuntime(env, origin).runPromise(
+        handleMcpRequest(pluginRegistry)(request).pipe(Effect.withSpan("gateway.mcp"))
+      )
     }
     if (pathname.startsWith("/car/api/")) {
-      return carApiRuntime(env).runPromise(handleCarApi(request).pipe(Effect.withSpan("gateway.car-api")))
+      return carApiRuntime(env, origin).runPromise(handleCarApi(request).pipe(Effect.withSpan("gateway.car-api")))
     }
     return text("not found", 404)
   },

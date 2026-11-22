@@ -12,3 +12,13 @@ describe("system prompt", () => {
     expect(systemPrompt("en")).toContain("use English")
   })
 })
+
+describe("choice buttons instruction", () => {
+  it("is part of the system prompt with its limits", async () => {
+    const { choiceButtonsPrompt } = await import("../src/runner.ts")
+    expect(systemPrompt("en")).toContain(choiceButtonsPrompt)
+    expect(choiceButtonsPrompt).toContain("[[buttons: Option 1 | Option 2 | Option 3]]")
+    expect(choiceButtonsPrompt).toContain("2 to 4 options")
+    expect(choiceButtonsPrompt).toContain("24 characters")
+  })
+})

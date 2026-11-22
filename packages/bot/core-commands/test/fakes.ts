@@ -52,6 +52,7 @@ export const makeWorld = (
       sent.push({ kind: "edit", threadId: to.threadId, html, keyboard: options?.keyboard })
       return Effect.void
     },
+    editMessageReplyMarkup: never,
     sendMessageDraft: never,
     sendDocument: never,
     sendChatAction: never,
@@ -120,7 +121,11 @@ export const makeWorld = (
   })
 
   const registry = makeRegistry(coreCommands, coreCallbacks)
-  const help = Layer.succeed(HelpRegistry, { ...registry, blurbsFor: () => Effect.succeed(["track your car trips"]) })
+  const help = Layer.succeed(HelpRegistry, {
+    ...registry,
+    pluginEnabled: (pluginId) => Effect.succeed(pluginId === "car"),
+    blurbsFor: () => Effect.succeed(["track your car trips"])
+  })
 
   return {
     sent,

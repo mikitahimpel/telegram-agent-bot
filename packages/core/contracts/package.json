@@ -19,7 +19,8 @@
     "./invites": "./src/invites.ts",
     "./scheduler": "./src/scheduler.ts",
     "./user-prefs": "./src/user-prefs.ts",
-    "./plugin-prompts": "./src/plugin-prompts.ts"
+    "./plugin-prompts": "./src/plugin-prompts.ts",
+    "./choices": "./src/choices.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

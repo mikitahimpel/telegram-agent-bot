@@ -1,5 +1,6 @@
 import { defineMessages, type Lang } from "@bot/core-contracts/lang"
 import type { BotError } from "@bot/core-contracts/errors"
+import { interactionMessages } from "./interaction.ts"
 
 const pad = (n: number) => String(n).padStart(2, "0")
 
@@ -130,4 +131,6 @@ export const isNewTopicText = (text: string): boolean => {
   return t === messages.en.newTopicButton || t === messages.ru.newTopicButton
 }
 
-export const newTopicKeyboard = (lang: Lang) => ({ rows: [[messages[lang].newTopicButton]] })
+export const newTopicKeyboard = (lang: Lang) => ({
+  rows: [[messages[lang].newTopicButton, interactionMessages[lang].menuButton]]
+})

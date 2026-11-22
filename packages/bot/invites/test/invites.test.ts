@@ -53,6 +53,7 @@ const world = (invitesLayer: Layer.Layer<Invites>, now?: { t: number }) => {
       return Effect.succeed({ messageId: 1 })
     },
     editMessageText: (_to, html) => Effect.sync(() => void edits.push(html)),
+    editMessageReplyMarkup: never,
     sendMessageDraft: never,
     sendDocument: never,
     sendChatAction: never,
@@ -72,7 +73,11 @@ const world = (invitesLayer: Layer.Layer<Invites>, now?: { t: number }) => {
     allowlistMemory(admin),
     flagsMemory(plugins),
     invitesLayer,
-    Layer.succeed(HelpRegistry, { ...registry, blurbsFor: () => Effect.succeed([]) })
+    Layer.succeed(HelpRegistry, {
+      ...registry,
+      pluginEnabled: () => Effect.succeed(false),
+      blurbsFor: () => Effect.succeed([])
+    })
   )
   return { sent, answers, edits, layer, registry, invite }
 }

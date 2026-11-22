@@ -61,6 +61,10 @@ export class Telegram extends Context.Service<
       html: string,
       options?: SendOptions
     ) => Effect.Effect<void, TelegramError>
+    readonly editMessageReplyMarkup: (
+      to: SendTarget & { readonly messageId: number },
+      keyboard?: InlineKeyboard
+    ) => Effect.Effect<void, TelegramError>
     readonly sendMessageDraft: (
       to: SendTarget & { readonly draftId: number },
       html: string

@@ -56,3 +56,13 @@ Telegram → apps/gateway (Worker) → UserAgent DO (1 per tgId, SQLite) → San
 - Telegram output is HTML parse_mode; escape all dynamic text.
 - Each package: `package.json`, `tsconfig.json` (`extends ../../../tsconfig.base.json`), `src/`, `test/` with vitest tests using mock Layers. `vp run --filter <name> typecheck` and `test` must pass; `vp check` must be clean.
 - The Claude OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`) is only passed as env to the `claude` CLI inside the sandbox. Never call Anthropic API with it.
+
+## Interaction model (buttons instead of typing)
+
+All callback data is namespaced and under 64 bytes; `parseInteraction` in `@bot/bot-commands/interaction` is the single parser and the dispatcher handles these prefixes before the command registry.
+
+- `qa:<action>` quick actions under the latest final answer (not errors, not answers under 40 chars, not documents). Text answers: again / shorter / more detail / translate; answers produced from a file, photo or voice: brief / dates and amounts / translate / ask a question. A press answers the callback with a toast, removes the buttons, then runs a fixed follow-up prompt in the user's language through the normal run path (queue, limits, memory). "Again" re-asks the last typed prompt.
+- `ch:<n>` agent-offered choices. The system prompt (`choiceButtonsPrompt` in the runner) asks the agent to end with `[[buttons: A | B | C]]` (2 to 4 options, at most 24 characters each). `splitChoices` / `hideChoiceMarker` in `@bot/core-contracts/choices` strip the line from the visible text, also while streaming; malformed markers are left as plain text. Choice buttons replace the quick-action row; a press echoes `➡️ <text>` and runs it as if typed.
+- `stop:` the working message is a real message with a stop button (the streaming layer uses edit mode instead of drafts when a stop keyboard is given, because drafts cannot carry inline buttons). A press calls `RunControl.stop`, clears the prompt queue and edits the message to "Stopped". The button is removed when the answer arrives or the run fails.
+- `menu:<item>` example actions, opened by the persistent "☰ Menu" reply button and shown after `/start`. Items that need user input reply with a one-line hint; the car item exists only when the car plugin is enabled for the user.
+- Only the latest answer keeps buttons: the dispatcher remembers the message id, kind and choices per session and calls `editMessageReplyMarkup` on the previous one. A press on any message that is not the remembered one (or after a restart) gets the toast "this button is outdated" and does nothing.

@@ -12,10 +12,10 @@ import { Sessions } from "@bot/core-contracts/sessions"
 import { Scheduler, type ScheduledJob } from "@bot/core-contracts/scheduler"
 import { ApiCreditsExhausted, ContainerDown, StorageError, SubscriptionLimitReached } from "@bot/core-contracts/errors"
 import type { RunInput } from "@bot/core-contracts/agent-runner"
-import { Telegram } from "@bot/core-contracts/telegram"
+import { Telegram, type InlineKeyboard } from "@bot/core-contracts/telegram"
 import type { Update } from "@bot/telegram-schema/schema"
 import { AdminNotifier } from "../src/admin-notifier.ts"
-import { makeDispatcher } from "../src/dispatcher.ts"
+import { makeDispatcher, type PresentRun } from "../src/dispatcher.ts"
 import { McpAccess } from "../src/mcp-access.ts"
 import { UserPrefs } from "@bot/core-contracts/user-prefs"
 import { UserMemory } from "@bot/bot-memory/user-memory"
@@ -73,6 +73,8 @@ const setup = (
     gate?: Deferred.Deferred<void>
     timeZone?: string
     memory?: Effect.Effect<string, StorageError>
+    present?: PresentRun
+    car?: boolean
     run?: (
       input: RunInput,
       call: number
@@ -88,6 +90,10 @@ const setup = (
   const docs: Array<string> = []
   const notified: Array<string> = []
   const presented: Array<string> = []
+  const sentKeyboards: Array<InlineKeyboard | undefined> = []
+  const answers: Array<{ id: string; text: string | undefined }> = []
+  const markups: Array<number> = []
+  const edits: Array<{ messageId: number; html: string }> = []
   const commands: ReadonlyArray<CommandDef> = [
     {
       name: "ping",
@@ -100,12 +106,15 @@ const setup = (
   const { dispatch, jobs: handlers } = makeDispatcher({
     registry,
     retryDelay: "0 millis",
-    present: ({ stream, role }) =>
-      Effect.gen(function* () {
-        roles.push(role)
-        if (opts.gate) yield* Deferred.await(opts.gate)
-        yield* Stream.runForEach(stream, (e) => Effect.sync(() => void presented.push(e._tag)))
-      })
+    pluginEnabled: (id) => Effect.succeed(opts.car === true && id === "car"),
+    present:
+      opts.present ??
+      (({ stream, role }) =>
+        Effect.gen(function* () {
+          roles.push(role)
+          if (opts.gate) yield* Deferred.await(opts.gate)
+          yield* Stream.runForEach(stream, (e) => Effect.sync(() => void presented.push(e._tag)))
+        }))
   })
   const events = opts.events ?? [
     AgentEvent.SessionStarted({ sessionId: ClaudeSessionId.make("s1"), model: "m" }),
@@ -122,10 +131,14 @@ const setup = (
     })
   ]
   const telegram = Telegram.of({
-    sendMessage: (_to: unknown, html: string) => Effect.sync(() => (sent.push(html), { messageId: 1 })),
+    sendMessage: (_to: unknown, html: string, o?: { keyboard?: InlineKeyboard }) =>
+      Effect.sync(() => (sent.push(html), sentKeyboards.push(o?.keyboard), { messageId: 1 })),
+    editMessageReplyMarkup: (to: { messageId: number }) => Effect.sync(() => void markups.push(to.messageId)),
+    editMessageText: (to: { messageId: number }, html: string) =>
+      Effect.sync(() => void edits.push({ messageId: to.messageId, html })),
     sendDocument: (_to: unknown, f: { fileName: string }) =>
       Effect.sync(() => (docs.push(f.fileName), { messageId: 2 })),
-    answerCallbackQuery: () => Effect.void,
+    answerCallbackQuery: (id: string, text?: string) => Effect.sync(() => void answers.push({ id, text })),
     setMessageReaction: (_to: unknown, emoji: string) => Effect.sync(() => void reactions.push(emoji))
   } as unknown as Telegram["Service"])
   const env = Layer.mergeAll(
@@ -163,8 +176,54 @@ const setup = (
     sessionsLayer(sql).pipe(Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({}))))
   )
   const run = <A, E>(e: Effect.Effect<A, E, any>) => e.pipe(Effect.provide(env)) as Effect.Effect<A, E>
-  return { dispatch, handlers, run, sent, docs, notified, presented, inputs, reactions, roles, jobs, sql }
+  return {
+    dispatch,
+    handlers,
+    run,
+    sentKeyboards,
+    answers,
+    markups,
+    edits,
+    sent,
+    docs,
+    notified,
+    presented,
+    inputs,
+    reactions,
+    roles,
+    jobs,
+    sql
+  }
 }
+
+const callbackUpdate = (from: number, data: string, messageId: number): Update =>
+  ({
+    update_id: 3,
+    callback_query: {
+      id: `cb-${data}`,
+      from: { id: from, is_bot: false, first_name: "x", language_code: "en" },
+      chat_instance: "ci",
+      data,
+      message: { message_id: messageId, date: 0, chat: { id: from, type: "private" } }
+    }
+  }) as Update
+
+const answerPresent =
+  (
+    messageId: number,
+    text: string,
+    choices: ReadonlyArray<string> = [],
+    seen?: Array<InlineKeyboard | undefined>
+  ): PresentRun =>
+  ({ stream, finalKeyboard }) =>
+    Effect.gen(function* () {
+      yield* Stream.runDrain(stream)
+      const kb = finalKeyboard({ text, choices })
+      seen?.push(kb)
+      return { messageId, choices, keyboard: kb !== undefined }
+    })
+
+const LONG = "This is a reasonably long answer that deserves buttons."
 
 describe("dispatcher", () => {
   it("ignores unknown senders silently", async () => {
@@ -394,5 +453,124 @@ describe("dispatcher", () => {
         })
       )
     )
+  })
+
+  describe("interaction", () => {
+    const dataOf = (kb: InlineKeyboard | undefined) => kb?.flat().map((b) => b.callbackData)
+
+    it("offers quick actions only for long enough answers and runs follow-ups on the same conversation", async () => {
+      const seen: Array<InlineKeyboard | undefined> = []
+      const t = setup({ present: answerPresent(50, LONG, [], seen) })
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "explain tides"))))
+      expect(dataOf(seen[0])).toEqual(["qa:retry", "qa:short", "qa:more", "qa:translate"])
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "qa:short", 50))))
+      expect(t.answers.at(-1)?.text).toBe("On it…")
+      expect(t.markups).toContain(50)
+      expect(t.inputs).toHaveLength(2)
+      expect(t.inputs[1]?.prompt).toContain("briefly")
+      expect(t.inputs[1]?.resume).toBe("s1")
+    })
+
+    it("builds no keyboard for short answers", async () => {
+      const seen: Array<InlineKeyboard | undefined> = []
+      const t = setup({ present: answerPresent(50, "ok", [], seen) })
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "hi"))))
+      expect(seen[0]).toBeUndefined()
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "qa:short", 50))))
+      expect(t.answers.at(-1)?.text).toBe("This button is outdated.")
+      expect(t.inputs).toHaveLength(1)
+    })
+
+    it("retry re-asks the last user prompt and translate asks for the other language", async () => {
+      const t = setup({ present: answerPresent(50, LONG) })
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "explain tides"))))
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "qa:retry", 50))))
+      expect(t.inputs[1]?.prompt).toBe("explain tides")
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "qa:translate", 50))))
+      expect(t.inputs[2]?.prompt).toContain("Russian")
+    })
+
+    it("treats buttons of an older message as stale", async () => {
+      const t = setup({ present: answerPresent(50, LONG) })
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "hi"))))
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "qa:more", 49))))
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "qa:bogus", 50))))
+      expect(t.answers.map((a) => a.text)).toEqual(["This button is outdated.", undefined])
+      expect(t.inputs).toHaveLength(1)
+    })
+
+    it("removes the keyboard of the previous answer when a new one arrives", async () => {
+      let next = 50
+      const t = setup({
+        present: (args) => answerPresent(next++, LONG)(args)
+      })
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "one"))))
+      expect(t.markups).toEqual([])
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "two"))))
+      expect(t.markups).toEqual([50])
+    })
+
+    it("agent choices replace quick actions and pressing one acts as typed text", async () => {
+      const seen: Array<InlineKeyboard | undefined> = []
+      const t = setup({ present: answerPresent(60, "Shall I continue?", ["Yes", "No thanks"], seen) })
+      await Effect.runPromise(t.run(t.dispatch(textUpdate(USER, "start"))))
+      expect(dataOf(seen[0])).toEqual(["ch:0", "ch:1"])
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "ch:1", 60))))
+      expect(t.sent).toContain("➡️ No thanks")
+      expect(t.inputs[1]?.prompt).toBe("No thanks")
+      expect(t.markups).toContain(60)
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "ch:7", 60))))
+      expect(t.answers.at(-1)?.text).toBe("This button is outdated.")
+    })
+
+    it("stop interrupts the run, edits the placeholder and clears the queue", async () => {
+      const gate = Effect.runSync(Deferred.make<void>())
+      const t = setup({ gate })
+      await Effect.runPromise(
+        t.run(
+          Effect.gen(function* () {
+            const first = yield* Effect.forkChild(t.dispatch(textUpdate(USER, "one")))
+            yield* Effect.sleep("20 millis")
+            yield* t.dispatch(textUpdate(USER, "queued"))
+            yield* t.dispatch(callbackUpdate(USER, "stop:", 77))
+            yield* Fiber.await(first)
+            expect((yield* (yield* RunControl).running).length).toBe(0)
+          })
+        )
+      )
+      expect(t.answers.at(-1)?.text).toBe("Stopped")
+      expect(t.edits).toEqual([{ messageId: 77, html: "Stopped" }])
+      expect(t.presented).toEqual([])
+    })
+
+    it("a stop button with nothing running is stale", async () => {
+      const t = setup()
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "stop:", 77))))
+      expect(t.answers.at(-1)?.text).toBe("This button is outdated.")
+      expect(t.markups).toEqual([77])
+    })
+
+    it("the menu button shows examples, the car one only when the plugin is enabled", async () => {
+      const off = setup()
+      await Effect.runPromise(off.run(off.dispatch(textUpdate(USER, "☰ Menu"))))
+      expect(dataOf(off.sentKeyboards[0])).not.toContain("menu:car")
+      expect(dataOf(off.sentKeyboards[0])).toContain("menu:news")
+      expect(off.inputs).toHaveLength(0)
+      const on = setup({ car: true })
+      await Effect.runPromise(on.run(on.dispatch(textUpdate(USER, "☰ Menu"))))
+      expect(dataOf(on.sentKeyboards[0])).toContain("menu:car")
+      await Effect.runPromise(off.run(off.dispatch(callbackUpdate(USER, "menu:car", 5))))
+      expect(off.answers.at(-1)?.text).toBe("This button is outdated.")
+    })
+
+    it("menu examples either run a ready prompt or give a hint", async () => {
+      const t = setup()
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "menu:news", 5))))
+      expect(t.inputs).toHaveLength(1)
+      expect(t.inputs[0]?.prompt).toContain("news")
+      await Effect.runPromise(t.run(t.dispatch(callbackUpdate(USER, "menu:remind", 5))))
+      expect(t.inputs).toHaveLength(1)
+      expect(t.sent.at(-1)).toContain("Remind me")
+    })
   })
 })

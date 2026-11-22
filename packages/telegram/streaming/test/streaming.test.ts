@@ -187,4 +187,85 @@ describe("presentRun", () => {
       expect(calls.map((c) => c.args[1])).toEqual(["Thinking…", "<b>hi</b>", "hi"])
     }).pipe(Effect.provide(layer))
   })
+
+  it.effect("hides the choice marker while streaming and turns it into the final keyboard", () => {
+    const { layer, calls } = recordingTelegram()
+    return Effect.gen(function* () {
+      const seen: Array<{ text: string; choices: ReadonlyArray<string> }> = []
+      const r = yield* presentRun(
+        Stream.make(
+          AgentEvent.TextDelta({ text: "Shall we?\n[[butt" }),
+          AgentEvent.TextDelta({ text: "ons: Yes | No]]" }),
+          completed("Shall we?\n[[buttons: Yes | No]]")
+        ),
+        target,
+        {
+          lang: "en",
+          draftId: 1,
+          throttleMs: 0,
+          finalKeyboard: (answer) => {
+            seen.push(answer)
+            return [[{ text: "Yes", callbackData: "ch:0" }]]
+          }
+        }
+      )
+      for (const c of calls.filter((x) => x.method === "sendMessageDraft")) {
+        expect(String(c.args[1])).not.toContain("[")
+      }
+      expect(seen).toEqual([{ text: "Shall we?", choices: ["Yes", "No"] }])
+      const final = calls.at(-1)!
+      expect(final.method).toBe("sendMessage")
+      expect(final.args[1]).toBe("Shall we?")
+      expect(final.args[2]).toEqual({ keyboard: [[{ text: "Yes", callbackData: "ch:0" }]] })
+      expect(r.choices).toEqual(["Yes", "No"])
+      expect(r.keyboard).toBe(true)
+      expect(r.messageId).toBeDefined()
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("leaves a malformed marker in the text and attaches no choices", () => {
+    const { layer, calls } = recordingTelegram()
+    return Effect.gen(function* () {
+      const r = yield* presentRun(Stream.make(completed("Pick\n[[buttons: Only]]")), target, {
+        lang: "en",
+        draftId: 1,
+        finalKeyboard: (answer) => (answer.choices.length > 0 ? [[]] : undefined)
+      })
+      expect(calls.at(-1)?.args[1]).toContain("[[buttons: Only]]")
+      expect(r.keyboard).toBe(false)
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("shows a stop button on the working message and drops it with the answer", () => {
+    const { layer, calls } = recordingTelegram()
+    const stop = [[{ text: "Stop", callbackData: "stop:" }]]
+    return Effect.gen(function* () {
+      yield* presentRun(Stream.make(AgentEvent.TextDelta({ text: "Hi" }), completed("Hi there")), target, {
+        lang: "en",
+        draftId: 1,
+        throttleMs: 0,
+        stopKeyboard: stop
+      })
+      expect(methods(calls)).toEqual(["sendMessage", "editMessageText", "editMessageText"])
+      expect(calls[0]!.args[2]).toEqual({ keyboard: stop })
+      expect(calls[1]!.args[2]).toEqual({ keyboard: stop })
+      expect(calls[2]!.args).toEqual([{ chatId: 1, messageId: 1 }, "Hi there"])
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("clears the stop button when the run fails before an answer", () => {
+    const { layer, calls } = recordingTelegram()
+    return Effect.gen(function* () {
+      const failed = yield* Effect.result(
+        presentRun(Stream.concat(Stream.make(AgentEvent.TextDelta({ text: "Hi" })), Stream.fail("boom")), target, {
+          lang: "en",
+          draftId: 1,
+          throttleMs: 0,
+          stopKeyboard: [[{ text: "Stop", callbackData: "stop:" }]]
+        })
+      )
+      expect(failed._tag).toBe("Failure")
+      expect(calls.at(-1)).toEqual({ method: "editMessageReplyMarkup", args: [{ chatId: 1, messageId: 1 }] })
+    }).pipe(Effect.provide(layer))
+  })
 })

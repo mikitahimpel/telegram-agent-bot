@@ -148,6 +148,19 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
         )
       )
 
+    const editMessageReplyMarkup = (to: SendTarget & { readonly messageId: number }, keyboard?: InlineKeyboard) =>
+      call("editMessageReplyMarkup", {
+        chat_id: to.chatId,
+        message_id: to.messageId,
+        reply_markup: keyboard === undefined ? { inline_keyboard: [] } : inlineKeyboardToMarkup(keyboard)
+      }).pipe(
+        Effect.asVoid,
+        Effect.catchIf(
+          (e) => e.errorCode === 400 && e.description.includes("message is not modified"),
+          () => Effect.void
+        )
+      )
+
     const sendMessageDraft = (to: SendTarget & { readonly draftId: number }, html: string) =>
       call("sendMessageDraft", {
         ...targetParams(to),
@@ -236,6 +249,7 @@ export const makeTelegram = (token: Redacted.Redacted<string>, apiBase: string =
       call,
       sendMessage,
       editMessageText,
+      editMessageReplyMarkup,
       sendMessageDraft,
       sendDocument,
       sendChatAction,

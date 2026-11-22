@@ -79,6 +79,7 @@ export const recordingTelegram = (options: RecordingOptions = {}) => {
         run(method, [params], () => (method === "sendRichMessage" ? { message_id: nextId++ } : true)),
       sendMessage: (...args) => run("sendMessage", args, () => ({ messageId: nextId++ })),
       editMessageText: (...args) => run("editMessageText", args, () => undefined),
+      editMessageReplyMarkup: (...args) => run("editMessageReplyMarkup", args, () => undefined),
       sendMessageDraft: (...args) => run("sendMessageDraft", args, () => undefined),
       sendDocument: (...args) => run("sendDocument", args, () => ({ messageId: nextId++ })),
       sendChatAction: (...args) => run("sendChatAction", args, () => undefined),

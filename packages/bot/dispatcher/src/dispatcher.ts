@@ -1,4 +1,19 @@
 import { Cause, Clock, Duration, Effect, Ref, Stream } from "effect"
+import {
+  choicesKeyboard,
+  followUpPrompt,
+  interactionMessages,
+  isMenuText,
+  menuEntry,
+  menuKeyboard,
+  MIN_QUICK_ACTION_LENGTH,
+  parseInteraction,
+  quickActionsKeyboard,
+  STOP_DATA,
+  type AnswerKind,
+  type QuickAction,
+  type Interaction
+} from "@bot/bot-commands/interaction"
 import { errorMessage, formatClock, isNewTopicText, newTopicKeyboard } from "@bot/bot-commands/messages"
 import type { Registry } from "@bot/bot-commands/registry"
 import { Allowlist } from "@bot/core-contracts/allowlist"
@@ -19,7 +34,8 @@ import { langFromTelegram, type Lang } from "@bot/core-contracts/lang"
 import { RunControl } from "@bot/core-contracts/run-control"
 import { Scheduler, type JobHandler } from "@bot/core-contracts/scheduler"
 import { Sessions } from "@bot/core-contracts/sessions"
-import { Telegram, type SendTarget } from "@bot/core-contracts/telegram"
+import { Telegram, type InlineKeyboard, type SendTarget } from "@bot/core-contracts/telegram"
+import { escapeHtml } from "@bot/bot-commands/html"
 import { UserPrefs } from "@bot/core-contracts/user-prefs"
 import { UserMemory } from "@bot/bot-memory/user-memory"
 import { PluginPrompts } from "@bot/core-contracts/plugin-prompts"
@@ -42,12 +58,25 @@ import {
 import { makePromptQueue, mergePrompts, type PromptMedia } from "./prompt-queue.ts"
 import { RunSlots } from "./run-control.ts"
 
+export type PresentOutcome = {
+  readonly messageId: number | undefined
+  readonly choices: ReadonlyArray<string>
+  readonly keyboard: boolean
+}
+
+export type FinalAnswer = {
+  readonly text: string
+  readonly choices: ReadonlyArray<string>
+}
+
 export type PresentRun = (args: {
   readonly to: SendTarget
   readonly lang: Lang
   readonly role: Role
   readonly stream: Stream.Stream<AgentEvent, BotError>
-}) => Effect.Effect<void, BotError, Telegram>
+  readonly stopKeyboard: InlineKeyboard
+  readonly finalKeyboard: (answer: FinalAnswer) => InlineKeyboard | undefined
+}) => Effect.Effect<PresentOutcome | void, BotError, Telegram>
 
 export type DocumentHook<R> = (args: {
   readonly document: Document
@@ -61,6 +90,7 @@ export type DispatcherOptions<R> = {
   readonly registry: Registry<R>
   readonly present: PresentRun
   readonly onDocument?: DocumentHook<R>
+  readonly pluginEnabled?: (pluginId: string, tgId: TgId) => Effect.Effect<boolean, BotError, R>
   readonly botUsername?: string
   readonly albumWindow?: Duration.Input
   readonly retryDelay?: Duration.Input
@@ -101,6 +131,18 @@ type Origin = {
   readonly languageCode: string | undefined
 }
 
+const FILE_ACTIONS: ReadonlyArray<QuickAction> = ["fshort", "fdates", "translate", "fask"]
+const TEXT_ACTIONS: ReadonlyArray<QuickAction> = ["retry", "short", "more", "translate"]
+
+const offeredFor = (kind: AnswerKind, action: QuickAction): boolean =>
+  (kind === "file" ? FILE_ACTIONS : TEXT_ACTIONS).includes(action)
+
+type LatestAnswer = {
+  readonly messageId: number
+  readonly kind: AnswerKind
+  readonly choices: ReadonlyArray<string>
+}
+
 export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
   const { registry, present } = options
   const profiles = new Map<number, string>()
@@ -108,6 +150,8 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
   const albumWindow = options.albumWindow ?? Duration.millis(1500)
   const queue = makePromptQueue()
   const retryDelay = options.retryDelay ?? "2 seconds"
+  const lastPrompts = new Map<SessionKey, string>()
+  const latest = new Map<SessionKey, LatestAnswer>()
   const keyFor = (role: Role, threadId: ThreadId | undefined): SessionKey =>
     sessionKeyOf(role === "admin" ? threadId : undefined)
 
@@ -167,12 +211,14 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
         const input = yield* ingest(parts, lang, to)
         if (input === undefined) return
         yield* sessions.ensure(sessionKey, threadId)
+        lastPrompts.delete(sessionKey)
         yield* runPrompt(origin, sessionKey, lang, role, input.prompt, { media: input, messageId: message.message_id })
         return
       }
       const text = message.text ?? message.caption
       if (text === undefined || text.trim() === "") return
       if (isNewTopicText(text)) return yield* resetConversation(origin, sessionKey, lang)
+      if (isMenuText(text)) return yield* showMenu(origin, lang)
       const parsed = parseCommand(message, options.botUsername)
       if (parsed !== undefined) {
         const def = registry.find(parsed.name, role)
@@ -194,6 +240,7 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
         return
       }
       yield* sessions.ensure(sessionKey, threadId)
+      lastPrompts.set(sessionKey, text)
       yield* runPrompt(origin, sessionKey, lang, role, text, { messageId: message.message_id })
     })
 
@@ -209,7 +256,11 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
     | UserPrefs
     | UserMemory
 
-  type PromptOptions = { readonly media?: PromptMedia | undefined; readonly messageId?: number | undefined }
+  type PromptOptions = {
+    readonly media?: PromptMedia | undefined
+    readonly messageId?: number | undefined
+    readonly kind?: AnswerKind | undefined
+  }
 
   const resetConversation = (origin: Origin, sessionKey: SessionKey, lang: Lang) =>
     Effect.gen(function* () {
@@ -281,12 +332,13 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
     opts: PromptOptions = {}
   ): Effect.Effect<void, BotError, RunReq> =>
     Effect.gen(function* () {
-      const result = yield* runOnce(origin, sessionKey, lang, role, prompt, opts.media).pipe(Effect.result)
+      const kind = opts.kind ?? (opts.media === undefined ? "text" : "file")
+      const result = yield* runOnce(origin, sessionKey, lang, role, prompt, opts.media, kind).pipe(Effect.result)
       if (result._tag === "Success") {
         const more = queue.drain(sessionKey)
         if (more.length === 0) return
         const merged = mergePrompts(more)
-        return yield* runPrompt(origin, sessionKey, lang, role, merged.prompt, { media: merged.media })
+        return yield* runPrompt(origin, sessionKey, lang, role, merged.prompt, { media: merged.media, kind })
       }
       const err = result.failure
       const tg = yield* Telegram
@@ -322,7 +374,8 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
     lang: Lang,
     role: Role,
     prompt: string,
-    media: PromptMedia | undefined
+    media: PromptMedia | undefined,
+    kind: AnswerKind
   ) =>
     Effect.gen(function* () {
       const sessions = yield* Sessions
@@ -409,7 +462,14 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
             ? run
             : Stream.concat(Stream.make(AgentEvent.AssistantText({ text: quote })), run.pipe(Stream.map(withQuote)))
 
-        const execute = present({ to, lang, role, stream }).pipe(
+        const finalKeyboard = (answer: FinalAnswer): InlineKeyboard | undefined => {
+          if (answer.choices.length > 0) return choicesKeyboard(answer.choices)
+          return answer.text.trim().length < MIN_QUICK_ACTION_LENGTH ? undefined : quickActionsKeyboard(lang, kind)
+        }
+        const stopKeyboard: InlineKeyboard = [[{ text: interactionMessages[lang].stopButton, callbackData: STOP_DATA }]]
+
+        const execute = present({ to, lang, role, stream, stopKeyboard, finalKeyboard }).pipe(
+          Effect.tap((outcome) => rememberAnswer(origin, sessionKey, kind, outcome)),
           Effect.onExit(() =>
             Effect.gen(function* () {
               if (yield* Ref.get(completed)) return
@@ -459,9 +519,122 @@ export const makeDispatcher = <R>(options: DispatcherOptions<R>) => {
     }
   }
 
+  const rememberAnswer = (origin: Origin, sessionKey: SessionKey, kind: AnswerKind, outcome: PresentOutcome | void) =>
+    Effect.gen(function* () {
+      if (outcome === undefined || outcome.messageId === undefined) return
+      const tg = yield* Telegram
+      const previous = latest.get(sessionKey)
+      if (outcome.keyboard) latest.set(sessionKey, { messageId: outcome.messageId, kind, choices: outcome.choices })
+      else latest.delete(sessionKey)
+      if (previous !== undefined) {
+        yield* tg
+          .editMessageReplyMarkup({ ...targetOf(origin.chatId, origin.threadId), messageId: previous.messageId })
+          .pipe(Effect.ignore)
+      }
+    })
+
+  const showMenu = (origin: Origin, lang: Lang) =>
+    Effect.gen(function* () {
+      const tg = yield* Telegram
+      const car = yield* enabled("car", origin.tgId)
+      const m = interactionMessages[lang]
+      yield* tg.sendMessage(
+        targetOf(origin.chatId, origin.threadId),
+        `${escapeHtml(m.menuIntro)}\n\n${escapeHtml(m.menuTry)}`,
+        {
+          keyboard: menuKeyboard(lang, { car })
+        }
+      )
+    })
+
+  const enabled = (pluginId: string, tgId: TgId) =>
+    options.pluginEnabled === undefined
+      ? Effect.succeed(false)
+      : options.pluginEnabled(pluginId, tgId).pipe(Effect.catch(() => Effect.succeed(false)))
+
+  const handleInteraction = (
+    interaction: Interaction,
+    query: CallbackQuery,
+    role: Role,
+    lang: Lang,
+    origin: Origin
+  ): Effect.Effect<void, BotError, R | RunReq | RunControl> =>
+    Effect.gen(function* () {
+      const tg = yield* Telegram
+      const control = yield* RunControl
+      const m = interactionMessages[lang]
+      const to = targetOf(origin.chatId, origin.threadId)
+      const sessionKey = keyFor(role, origin.threadId)
+      const messageId = query.message?.message_id
+      const stale = tg.answerCallbackQuery(query.id, m.stale).pipe(Effect.ignore)
+      const clearButtons = (id: number | undefined) =>
+        id === undefined ? Effect.void : tg.editMessageReplyMarkup({ ...to, messageId: id }).pipe(Effect.ignore)
+      const answered = latest.get(sessionKey)
+      const current = answered !== undefined && answered.messageId === messageId ? answered : undefined
+
+      switch (interaction.kind) {
+        case "stop": {
+          const had = yield* control.stop(sessionKey)
+          queue.clear(sessionKey)
+          if (!had) {
+            yield* stale
+            yield* clearButtons(messageId)
+            return
+          }
+          yield* tg.answerCallbackQuery(query.id, m.stopped).pipe(Effect.ignore)
+          if (messageId !== undefined) {
+            yield* tg.editMessageText({ ...to, messageId }, escapeHtml(m.stopped)).pipe(Effect.ignore)
+          }
+          return
+        }
+        case "choice": {
+          const text = current?.choices[interaction.index]
+          if (current === undefined || text === undefined) return yield* stale
+          yield* tg.answerCallbackQuery(query.id).pipe(Effect.ignore)
+          latest.delete(sessionKey)
+          yield* clearButtons(messageId)
+          yield* tg.sendMessage(to, `➡️ ${escapeHtml(text)}`).pipe(Effect.ignore)
+          yield* (yield* Sessions).ensure(sessionKey, origin.threadId)
+          lastPrompts.set(sessionKey, text)
+          return yield* runPrompt(origin, sessionKey, lang, role, text)
+        }
+        case "quick": {
+          const { action } = interaction
+          if (current === undefined || !offeredFor(current.kind, action)) return yield* stale
+          if (action === "fask") {
+            yield* tg.answerCallbackQuery(query.id).pipe(Effect.ignore)
+            yield* tg.sendMessage(to, escapeHtml(m.fileQuestion))
+            return
+          }
+          const prompt = action === "retry" ? lastPrompts.get(sessionKey) : followUpPrompt(action, lang)
+          if (prompt === undefined) return yield* stale
+          yield* tg.answerCallbackQuery(query.id, m.working).pipe(Effect.ignore)
+          latest.delete(sessionKey)
+          yield* clearButtons(messageId)
+          yield* (yield* Sessions).ensure(sessionKey, origin.threadId)
+          return yield* runPrompt(origin, sessionKey, lang, role, prompt, { kind: current.kind })
+        }
+        case "menu": {
+          if (interaction.item === "car" && !(yield* enabled("car", origin.tgId))) return yield* stale
+          const entry = menuEntry(interaction.item, lang)
+          yield* tg.answerCallbackQuery(query.id, entry.kind === "prompt" ? m.working : undefined).pipe(Effect.ignore)
+          if (entry.kind === "hint") {
+            yield* tg.sendMessage(to, escapeHtml(entry.text))
+            return
+          }
+          yield* tg.sendMessage(to, `➡️ ${escapeHtml(entry.label)}`).pipe(Effect.ignore)
+          yield* (yield* Sessions).ensure(sessionKey, origin.threadId)
+          lastPrompts.set(sessionKey, entry.text)
+          return yield* runPrompt(origin, sessionKey, lang, role, entry.text)
+        }
+      }
+    })
+
   const handleCallback = (query: CallbackQuery, role: Role, lang: Lang, origin: Origin) =>
     Effect.gen(function* () {
       const tg = yield* Telegram
+      const interaction = query.data === undefined ? undefined : parseInteraction(query.data)
+      if (interaction !== undefined) return yield* handleInteraction(interaction, query, role, lang, origin)
       const found = query.data === undefined ? undefined : registry.findCallback(query.data, role)
       if (found === undefined) {
         yield* tg.answerCallbackQuery(query.id).pipe(Effect.ignore)

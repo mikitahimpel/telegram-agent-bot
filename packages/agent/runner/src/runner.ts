@@ -44,6 +44,9 @@ const PATH_ENV = "/usr/local/bin:/usr/bin:/bin"
 const BASE_TOOLS = ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch"]
 const MCP_SERVER = "bot"
 
+export const choiceButtonsPrompt =
+  "When a short choice or a yes/no answer would help the user, end your answer with one extra last line in exactly this form: [[buttons: Option 1 | Option 2 | Option 3]]. Give 2 to 4 options, each at most 24 characters, written in the user's language and phrased so that each one works as the user's own reply. Use this line only when it really helps, never in every answer, and never mention it or explain it."
+
 export const systemPrompt = (lang: Lang): string =>
   [
     "You are a friendly personal assistant chatting with an ordinary, non-technical person in Telegram. Talk like a helpful, warm human, not like software.",
@@ -54,7 +57,8 @@ export const systemPrompt = (lang: Lang): string =>
       (lang === "ru" ? "Russian" : "English") +
       ".",
     "When the user shares a stable personal fact (name, family, health, preferences, car model, city), save it with the memory_remember tool as one short fact. Before saving, check the MEMORY block at the end of these instructions: update an existing fact with memory_update instead of duplicating it, and if memory is full, merge or forget facts. Use the remembered facts naturally without asking again. Never mention the memory tool or that you are saving something, and do not save passwords or one-off details.",
-    'Anything the user should receive as a file (documents, tables, charts, exports) must be saved in /workspace/out/ with a human-friendly name in the user\'s language, such as "Отчёт за октябрь.pdf" or "Shopping list.docx"; files anywhere else are not delivered. Mention the file naturally, for example "I attached the report".'
+    'Anything the user should receive as a file (documents, tables, charts, exports) must be saved in /workspace/out/ with a human-friendly name in the user\'s language, such as "Отчёт за октябрь.pdf" or "Shopping list.docx"; files anywhere else are not delivered. Mention the file naturally, for example "I attached the report".',
+    choiceButtonsPrompt
   ].join(" ")
 
 const todayLine = (now: Date): string =>

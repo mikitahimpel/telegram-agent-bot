@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { escapeHtml } from "@bot/bot-commands/html"
 import { renderHelp } from "@bot/bot-commands/help"
+import { interactionMessages, menuKeyboard } from "@bot/bot-commands/interaction"
 import { newTopicKeyboard } from "@bot/bot-commands/messages"
 import type { CallbackDef, CommandContext, CommandDef } from "@bot/core-contracts/commands"
 import { AgentDirectory, type AgentInfo } from "@bot/core-contracts/agent-directory"
@@ -72,6 +73,11 @@ const start: CommandDef<CoreR> = {
       const blurbs = yield* registry.blurbsFor(ctx.tgId, ctx.lang)
       yield* tg.sendMessage(target(ctx), renderWelcome(undefined, ctx.lang, blurbs, ctx.role === "admin"), {
         replyKeyboard: newTopicKeyboard(ctx.lang)
+      })
+      const car = yield* registry.pluginEnabled("car", ctx.tgId)
+      const m = interactionMessages[ctx.lang]
+      yield* tg.sendMessage(target(ctx), `${escapeHtml(m.menuIntro)}\n\n${escapeHtml(m.menuTry)}`, {
+        keyboard: menuKeyboard(ctx.lang, { car })
       })
     })
 }

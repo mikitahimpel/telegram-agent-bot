@@ -10,6 +10,8 @@ export const helpRegistryLayer: Layer.Layer<HelpRegistry, never, PluginFlags> = 
     const flags = yield* PluginFlags
     return {
       ...registry,
+      pluginEnabled: (pluginId, tgId) =>
+        flags.isEnabled(pluginId, tgId).pipe(Effect.catch(() => Effect.succeed(false))),
       blurbsFor: (tgId, lang) =>
         Effect.gen(function* () {
           const lines: Array<string> = []

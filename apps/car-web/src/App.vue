@@ -24,6 +24,7 @@ import { isTelegramWebview } from "./services/env.ts"
 
 const props = defineProps<{ retryPairing?: () => void }>()
 const { backend, route, go, back, canGoBack, t, lang, localMode, hashRouted } = useApp()
+const isTabRoot = computed(() => ["overview", "trips", "home", "settings"].includes(route.value.name))
 
 const unsupported = computed(
   () =>
@@ -104,7 +105,7 @@ watch(recording, (on) => on && route.value.name !== "recording" && go({ name: "r
   <div v-else class="shell">
     <header class="top">
       <button
-        v-if="canGoBack"
+        v-if="canGoBack && !isTabRoot"
         class="icon-btn"
         type="button"
         :aria-label="t('common.back')"

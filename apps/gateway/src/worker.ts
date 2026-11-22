@@ -25,7 +25,7 @@ const mcpRuntime = (env: Env, origin: string) => {
   }
   let rt = byOrigin.get(origin)
   if (rt === undefined) {
-    rt = ManagedRuntime.make(Layer.provide(pluginEnvironment(env), configLayer(env, origin)))
+    rt = ManagedRuntime.make(Layer.provide(pluginEnvironment(env, origin), configLayer(env, origin)))
     byOrigin.set(origin, rt)
   }
   return rt
@@ -43,7 +43,7 @@ const carApiRuntime = (env: Env, origin: string) => {
   let rt = byOrigin.get(origin)
   if (rt === undefined) {
     rt = ManagedRuntime.make(
-      Layer.provide(Layer.mergeAll(pluginEnvironment(env), allowlistLayer(env.KV)), configLayer(env, origin))
+      Layer.provide(Layer.mergeAll(pluginEnvironment(env, origin), allowlistLayer(env.KV)), configLayer(env, origin))
     )
     byOrigin.set(origin, rt)
   }

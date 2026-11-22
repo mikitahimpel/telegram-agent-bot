@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Schema } from "effect"
 import type { TgId } from "@bot/core-contracts/ids"
 import type { Lang } from "@bot/core-contracts/lang"
 import type { AgentTool } from "@bot/core-contracts/plugin"
@@ -50,9 +50,19 @@ const callTool = <R>(tools: ReadonlyArray<AgentTool<R>>, tgId: TgId, lang: Lang 
     if (decoded._tag === "Failure") return toolResult(`Invalid arguments: ${String(decoded.failure.message)}`, true)
     return yield* tool.handler(decoded.success, { tgId, ...(lang === undefined ? {} : { lang }) }).pipe(
       Effect.map((value) => toolResult(JSON.stringify(value === undefined ? null : value), false)),
-      Effect.catch((e) => Effect.succeed(toolResult(errorText(e), true)))
+      Effect.catch((e) =>
+        Effect.logError(`mcp tool failed: ${String(p.name)}: ${errorText(e)}`).pipe(
+          Effect.as(toolResult(errorText(e), true))
+        )
+      )
     )
-  }).pipe(Effect.catchCause(() => Effect.succeed(toolResult("Internal tool error", true))))
+  }).pipe(
+    Effect.catchCause((cause) =>
+      Effect.logError(
+        `mcp tool defect: ${String((params as { name?: unknown } | null)?.name)}: ${Cause.pretty(cause)}`
+      ).pipe(Effect.as(toolResult("Internal tool error", true)))
+    )
+  )
 
 const handleMessage = <R>(registry: PluginRegistry<R>, tgId: TgId, lang: Lang | undefined, msg: unknown) =>
   Effect.gen(function* () {

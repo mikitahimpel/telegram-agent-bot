@@ -207,8 +207,11 @@ describe("commands", () => {
       const first = w.sent[0]!
       expect(first.html).toMatch(/https:\/\/t\.me\/testbot\?start=inv_[A-Za-z0-9]{24}/)
       expect(first.html).toContain("Маша &lt;b&gt;")
-      expect(first.keyboard?.[0]?.[0]).toMatchObject({ style: "danger" })
-      const data = first.keyboard![0]![0]!.callbackData!
+      expect(first.html).not.toContain("<code>https://")
+      const share = first.keyboard![0]![0]!
+      expect(share.url).toMatch(/^https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Ft\.me%2Ftestbot%3Fstart%3Dinv_/)
+      expect(first.keyboard?.[1]?.[0]).toMatchObject({ style: "danger" })
+      const data = first.keyboard![1]![0]!.callbackData!
       expect(data.startsWith("invrev:")).toBe(true)
 
       yield* w.registry.find("invites", "admin")!.handler(ctxOf("admin"))

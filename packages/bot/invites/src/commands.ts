@@ -93,16 +93,21 @@ export const makeInviteCommands = (
           plugins: options.plugins,
           note: options.note
         })
+        const link = inviteLink(username, created.code)
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(m.shareText)}`
         yield* reply(
           ctx,
           m.created(
-            inviteLink(username, created.code),
+            link,
             created.usesTotal,
             formatDateTime(created.expiresAt, ctx.lang),
             created.plugins.join(", "),
             created.note
           ),
-          [[revokeButton(m.btnRevokeInvite, created.code)]]
+          [
+            [{ text: m.btnShareInvite, url: shareUrl, style: "primary" as const }],
+            [revokeButton(m.btnRevokeInvite, created.code)]
+          ]
         )
       })
   }

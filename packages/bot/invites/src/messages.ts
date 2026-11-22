@@ -14,12 +14,14 @@ export const messages = defineMessages({
     created: (link: string, uses: number, expires: string, plugins: string, note: string | undefined) =>
       [
         "Invite created. Send this link:",
-        `<code>${e(link)}</code>`,
+        e(link),
         `Uses: ${uses}, valid until ${expires}`,
         `Plugins: ${plugins === "" ? "default" : e(plugins)}`,
         ...(note === undefined ? [] : [`Note: ${e(note)}`])
       ].join("\n"),
     btnRevokeInvite: "Revoke",
+    btnShareInvite: "Share",
+    shareText: "Join my assistant:",
     invitesNone: "No active invites.",
     invitesHeader: "<b>Active invites</b>",
     inviteLine: (
@@ -60,12 +62,14 @@ export const messages = defineMessages({
     created: (link: string, uses: number, expires: string, plugins: string, note: string | undefined) =>
       [
         "Приглашение создано. Отправьте эту ссылку:",
-        `<code>${e(link)}</code>`,
+        e(link),
         `Использований: ${uses}, действует до ${expires}`,
         `Плагины: ${plugins === "" ? "по умолчанию" : e(plugins)}`,
         ...(note === undefined ? [] : [`Заметка: ${e(note)}`])
       ].join("\n"),
     btnRevokeInvite: "Отозвать",
+    btnShareInvite: "Поделиться",
+    shareText: "Присоединяйся к моему помощнику:",
     invitesNone: "Активных приглашений нет.",
     invitesHeader: "<b>Активные приглашения</b>",
     inviteLine: (

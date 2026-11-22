@@ -49,7 +49,13 @@ const estimate = computed(() => backend.fuelSource.value === "maf_estimate")
     <StatusCard :view="recView" big />
 
     <div class="gauges" data-testid="gauges">
-      <div v-for="s in sensors" :key="s.key" class="gauge" :class="{ off: unsupported(s.key) }" :data-sensor="s.key">
+      <div
+        v-for="s in sensors"
+        :key="s.key"
+        class="gauge"
+        :class="{ off: unsupported(s.key), lead: s.key === 'speedKmh' }"
+        :data-sensor="s.key"
+      >
         <span class="gauge-label">{{ t(`recording.sensor.${s.label}`) }}</span>
         <template v-if="unsupported(s.key)">
           <b class="gauge-na">{{ t("recording.unsupported") }}</b>
@@ -66,6 +72,7 @@ const estimate = computed(() => backend.fuelSource.value === "maf_estimate")
             >{{ t("estimate") }}. {{ t("recording.fuel.estimate") }}</small
           >
         </template>
+        <i v-if="s.key === 'speedKmh'" class="gauge-scale" aria-hidden="true" />
       </div>
     </div>
 

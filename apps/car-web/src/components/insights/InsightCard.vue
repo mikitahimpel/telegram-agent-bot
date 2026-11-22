@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import Icon, { type IconName } from "../Icon.vue"
+
 export type CardTone = "ok" | "watch" | "soon" | "urgent" | "muted"
 
-defineProps<{ title: string; tone?: CardTone; testid?: string; wide?: boolean }>()
+defineProps<{ title: string; tone?: CardTone; testid?: string; wide?: boolean; icon?: IconName }>()
 defineEmits<{ open: [] }>()
 </script>
 
@@ -14,8 +16,11 @@ defineEmits<{ open: [] }>()
     @click="$emit('open')"
   >
     <span class="icard-head">
-      <span class="icard-title"><slot name="icon" />{{ title }}</span>
-      <span class="icard-chev" aria-hidden="true">›</span>
+      <span class="icard-title"
+        ><Icon v-if="icon" :name="icon" class="icard-icon" :size="20" /><slot name="icon" />{{ title }}</span
+      >
+      <span class="icard-pip" aria-hidden="true" />
+      <Icon name="chevron-right" class="icard-chev" :size="20" />
     </span>
     <slot />
   </button>

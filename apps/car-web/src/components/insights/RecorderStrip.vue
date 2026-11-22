@@ -3,6 +3,7 @@ import { computed } from "vue"
 import { useApp } from "../../app-context.ts"
 import { describeAuto, type AutoActionId } from "../../model/describe-auto.ts"
 import { describeHome } from "../../model/home.ts"
+import ToneMark from "../ToneMark.vue"
 
 const { backend, lang, now, perform, go, t } = useApp()
 const auto = computed(() => {
@@ -44,7 +45,7 @@ const action = computed(() => (auto.value ? auto.value.action : home.value.actio
     data-testid="recorder-strip"
     :data-auto="backend.auto.value._tag"
   >
-    <span class="strip-icon" aria-hidden="true">{{ view.icon }}</span>
+    <ToneMark :tone="view.tone" class="strip-icon" />
     <div class="strip-body">
       <b>{{ view.title }}</b>
       <span>{{ view.text }}</span>

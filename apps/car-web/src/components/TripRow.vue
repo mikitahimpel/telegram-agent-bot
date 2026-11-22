@@ -4,6 +4,7 @@ import { useApp } from "../app-context.ts"
 import { fmtClock, fmtDateTime, fmtNumber } from "../i18n/format.ts"
 import { describeStatus } from "../model/describe-status.ts"
 import type { TripVm } from "../model/types.ts"
+import Icon from "./Icon.vue"
 
 const props = defineProps<{ trip: TripVm }>()
 const { t, lang, now, go, backend } = useApp()
@@ -26,8 +27,10 @@ const duration = computed(() => (props.trip.endedAt ? fmtClock(props.trip.endedA
     @click="go({ name: 'trip', tripId: trip.tripId })"
   >
     <div class="trip-row-head">
-      <strong>{{ fmtDateTime(lang, trip.startedAt) }}</strong>
-      <span class="badge" :class="`tone-${view.tone}`">{{ view.icon }} {{ view.title.split(":")[0] }}</span>
+      <strong class="trip-date">{{ fmtDateTime(lang, trip.startedAt) }}</strong>
+      <span class="badge" :class="`tone-${view.tone}`"
+        ><i class="badge-dot" aria-hidden="true" />{{ view.title.split(":")[0] }}</span
+      >
     </div>
     <div class="muted">
       <template v-if="duration">{{ duration }} · </template
@@ -40,5 +43,6 @@ const duration = computed(() => (props.trip.endedAt ? fmtClock(props.trip.endedA
       {{ t("trips.points", { n: trip.points }) }}
     </div>
     <div class="trip-summary">{{ view.summary ?? view.text }}</div>
+    <Icon name="chevron-right" class="trip-chev" :size="20" />
   </button>
 </template>

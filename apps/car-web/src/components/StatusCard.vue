@@ -2,6 +2,7 @@
 import { ref } from "vue"
 import { useApp } from "../app-context.ts"
 import type { StatusView } from "../model/describe-status.ts"
+import ToneMark from "./ToneMark.vue"
 
 const props = defineProps<{ view: StatusView; big?: boolean; tripId?: string }>()
 const emit = defineEmits<{ action: [id: string] }>()
@@ -24,7 +25,7 @@ const run = () => {
     data-testid="status-card"
   >
     <div class="status-head">
-      <span class="status-icon" aria-hidden="true">{{ view.icon }}</span>
+      <ToneMark :tone="view.tone" class="status-icon" />
       <h2 class="status-title">{{ view.title }}</h2>
     </div>
     <p class="status-text">{{ view.text }}</p>
@@ -32,7 +33,7 @@ const run = () => {
       {{ view.action.label }}
     </button>
     <button v-if="view.details" class="link" type="button" :aria-expanded="open" @click="open = !open">
-      {{ t("common.details") }} {{ open ? "▴" : "▾" }}
+      {{ t("common.details") }} <span class="caret" :class="{ open }" aria-hidden="true">▾</span>
     </button>
     <pre v-if="open && view.details" class="details">{{ view.details }}</pre>
   </section>

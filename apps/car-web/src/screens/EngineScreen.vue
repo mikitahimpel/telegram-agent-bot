@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { useApp } from "../app-context.ts"
 import AsyncState from "../components/insights/AsyncState.vue"
 import DemoChip from "../components/insights/DemoChip.vue"
+import HeroGauge from "../components/insights/HeroGauge.vue"
 import SeverityBadge from "../components/insights/SeverityBadge.vue"
 import { useLoad } from "../composables/use-load.ts"
 import { fmtDateTime } from "../i18n/format.ts"
@@ -41,11 +42,15 @@ const scan = async () => {
     <AsyncState :loading="load.loading.value" :error="load.error.value" :has-data="!!o" @retry="load.reload">
       <template v-if="o">
         <section v-if="codes.length === 0" class="hero tone-ok" data-testid="engine-clear">
-          <h2 class="hero-title">{{ t("engine.clear.title") }}</h2>
+          <div class="hero-copy"><h2 class="hero-title">{{ t("engine.clear.title") }}</h2></div>
+          <HeroGauge tone="ok" />
           <p class="hero-text">{{ t("engine.clear.text") }}</p>
         </section>
         <section v-else class="hero" :class="`tone-${codes[0]!.severity}`" data-testid="engine-issues">
-          <h2 class="hero-title">{{ t("engine.issues.title", { n: codes.length }) }}</h2>
+          <div class="hero-copy">
+            <h2 class="hero-title">{{ t("engine.issues.title", { n: codes.length }) }}</h2>
+          </div>
+          <HeroGauge :tone="codes[0]!.severity" />
           <p class="hero-text">{{ o.engine.milOn ? t("engine.lampOn") : t("engine.lampOff") }}</p>
         </section>
 

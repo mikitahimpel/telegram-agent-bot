@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 import { useApp } from "../app-context.ts"
 import AsyncState from "../components/insights/AsyncState.vue"
 import DemoChip from "../components/insights/DemoChip.vue"
+import HeroGauge from "../components/insights/HeroGauge.vue"
 import TimeChart, { type ChartBand } from "../components/insights/TimeChart.vue"
 import { useFmt } from "../composables/use-fmt.ts"
 import { useLoad } from "../composables/use-load.ts"
@@ -47,7 +48,10 @@ const v0 = (n: number) => String(Math.round(n * 10) / 10)
     <AsyncState :loading="load.loading.value" :error="load.error.value" :has-data="!!o" @retry="load.reload">
       <template v-if="o">
         <section class="hero" :class="`tone-${batteryTone(o.battery.status)}`" data-testid="battery-status">
-          <h2 class="hero-title">{{ t(`battery.status.${o.battery.status}`) }}</h2>
+          <div class="hero-copy">
+            <h2 class="hero-title">{{ t(`battery.status.${o.battery.status}`) }}</h2>
+          </div>
+          <HeroGauge :tone="batteryTone(o.battery.status)" />
           <p class="hero-text">{{ t(`battery.status.${o.battery.status}.text`) }}</p>
         </section>
         <div class="pair">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 import { useApp } from "../app-context.ts"
+import Icon from "../components/Icon.vue"
 import StatusCard from "../components/StatusCard.vue"
 import { describeStatus } from "../model/describe-status.ts"
 import type { SimScenario, TransportKind } from "../model/types.ts"
@@ -27,20 +28,19 @@ const scenarios: SimScenario[] = [
   "no_fuel_pid"
 ]
 const transports = computed(() => [
-  { id: "ble" as const, ok: backend.caps.ble },
-  { id: "serial" as const, ok: backend.caps.serial },
-  { id: "simulator" as const, ok: true }
+  { id: "ble" as const, ok: backend.caps.ble, icon: "bluetooth" as const },
+  { id: "serial" as const, ok: backend.caps.serial, icon: "cable" as const },
+  { id: "simulator" as const, ok: true, icon: "wave" as const }
 ])
 const steps = computed(() => wizardSteps(backend.conn.value, backend.caps, transport.value, lang.value))
 const view = computed(() => describeStatus({ kind: "connection", state: backend.conn.value }, lang.value, now.value))
 const idle = computed(() => backend.conn.value._tag === "Idle" || backend.conn.value._tag === "Failed")
 const busy = computed(() => !idle.value && backend.conn.value._tag !== "Ready")
-const mark = { done: "✓", active: "…", failed: "!", pending: "" } as const
 </script>
 
 <template>
   <div class="screen">
-    <h2 data-testid="connect-title" @click="tapTitle">{{ t("connect.title") }}</h2>
+    <h2 class="screen-title" data-testid="connect-title" @click="tapTitle">{{ t("connect.title") }}</h2>
 
     <h3 class="section">{{ t("connect.transport") }}</h3>
     <div class="transports" role="radiogroup">
@@ -56,6 +56,7 @@ const mark = { done: "✓", active: "…", failed: "!", pending: "" } as const
         :data-testid="`transport-${x.id}`"
         @click="transport = x.id"
       >
+        <Icon :name="x.icon" class="transport-icon" />
         <strong>{{ t(`connect.transport.${x.id}`) }}</strong>
         <small>{{ x.ok ? t(`connect.transport.${x.id}.hint`) : t("connect.unavailable") }}</small>
       </button>
@@ -73,8 +74,18 @@ const mark = { done: "✓", active: "…", failed: "!", pending: "" } as const
 
     <h3 class="section">{{ t("connect.steps") }}</h3>
     <ol class="steps-list" data-testid="wizard">
-      <li v-for="s in steps" :key="s.id" :class="`step-${s.status}`" :data-step="s.id" :data-status="s.status">
-        <span class="step-mark" aria-hidden="true">{{ mark[s.status] }}</span>
+      <li
+        v-for="(s, n) in steps"
+        :key="s.id"
+        :class="`step-${s.status}`"
+        :data-step="s.id"
+        :data-status="s.status"
+      >
+        <span class="step-mark" aria-hidden="true">
+          <Icon v-if="s.status === 'done'" name="check" :size="16" />
+          <template v-else-if="s.status === 'failed'">!</template>
+          <template v-else>{{ n + 1 }}</template>
+        </span>
         <div>
           <div class="step-label">{{ s.note ?? s.label }}</div>
           <div v-if="s.problem" class="step-problem">

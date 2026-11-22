@@ -454,5 +454,5 @@ export const carPlugin: BotPlugin<CarR, Config.ConfigError, CarBucket | Telegram
   jobs: [weeklyJob],
   layer,
   systemPrompt,
-  enabledByDefault: false
+  enabledByDefault: true
 }

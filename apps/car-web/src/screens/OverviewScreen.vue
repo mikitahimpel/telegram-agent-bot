@@ -3,6 +3,8 @@ import { computed } from "vue"
 import { useApp } from "../app-context.ts"
 import AsyncState from "../components/insights/AsyncState.vue"
 import DemoChip from "../components/insights/DemoChip.vue"
+import HeroGauge from "../components/insights/HeroGauge.vue"
+import Icon from "../components/Icon.vue"
 import InsightCard from "../components/insights/InsightCard.vue"
 import RecorderStrip from "../components/insights/RecorderStrip.vue"
 import SeverityBadge from "../components/insights/SeverityBadge.vue"
@@ -47,8 +49,11 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
           data-testid="verdict"
           :data-verdict="verdict"
         >
-          <p class="hero-kicker">{{ t("overview.kicker") }}</p>
-          <h2 class="hero-title">{{ t(`overview.verdict.${verdict}`) }}</h2>
+          <div class="hero-copy">
+            <p class="hero-kicker">{{ t("overview.kicker") }}</p>
+            <h2 class="hero-title">{{ t(`overview.verdict.${verdict}`) }}</h2>
+          </div>
+          <HeroGauge :tone="verdict" />
           <p class="hero-text">{{ t(`overview.verdict.${verdict}.text`) }}</p>
         </section>
 
@@ -56,6 +61,7 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
           <InsightCard
             :title="t('overview.engine')"
             :tone="engineTone(o)"
+            icon="engine"
             testid="card-engine"
             @open="go({ name: 'engine' })"
           >
@@ -77,6 +83,7 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
           <InsightCard
             :title="t('overview.battery')"
             :tone="batteryTone(o.battery.status)"
+            icon="battery"
             testid="card-battery"
             @open="go({ name: 'battery' })"
           >
@@ -84,7 +91,14 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
             <span class="icard-sub">{{ t("overview.battery.rest") }} {{ f.volts(o.battery.lastRestingV) }}</span>
             <span class="icard-sub">{{ t("overview.battery.crank") }} {{ f.volts(o.battery.lastCrankMinV) }}</span>
           </InsightCard>
-          <InsightCard :title="t('overview.fuel')" tone="muted" testid="card-fuel" wide @open="go({ name: 'stats' })">
+          <InsightCard
+            :title="t('overview.fuel')"
+            tone="muted"
+            icon="fuel"
+            testid="card-fuel"
+            wide
+            @open="go({ name: 'stats' })"
+          >
             <template v-if="fuel">
               <b class="icard-value">{{ f.l100(fuel.recent) }}</b>
               <span class="icard-sub">
@@ -102,6 +116,7 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
             v-if="lastTripId"
             :title="t('overview.lastTrip')"
             tone="muted"
+            icon="route"
             testid="card-trip"
             wide
             @open="go({ name: 'trip', tripId: lastTripId })"
@@ -129,7 +144,7 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
           >
             <SeverityBadge :severity="a.severity" />
             <span class="alert-title">{{ a.title }}</span>
-            <span class="icard-chev" aria-hidden="true">›</span>
+            <Icon name="chevron-right" class="icard-chev" :size="20" />
           </button>
           <button v-if="alerts.length > 3" class="link" type="button" @click="go({ name: 'alerts' })">
             {{ t("overview.alerts.all", { n: alerts.length }) }}
@@ -137,8 +152,10 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
         </section>
         <p v-else class="calm" data-testid="no-alerts">{{ t("overview.alerts.none") }}</p>
 
-        <button class="btn" type="button" data-testid="open-stats" @click="go({ name: 'stats' })">
-          {{ t("overview.stats") }}
+        <button class="btn btn-row" type="button" data-testid="open-stats" @click="go({ name: 'stats' })">
+          <Icon name="stats" :size="20" />
+          <span>{{ t("overview.stats") }}</span>
+          <Icon name="chevron-right" class="btn-chev" :size="20" />
         </button>
       </template>
     </AsyncState>

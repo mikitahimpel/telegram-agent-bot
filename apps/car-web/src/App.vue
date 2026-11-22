@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, watch } from "vue"
 import { useApp } from "./app-context.ts"
 import BannerStack from "./components/BannerStack.vue"
+import Icon from "./components/Icon.vue"
 import PrimaryBar from "./components/PrimaryBar.vue"
 import { describeStatus } from "./model/describe-status.ts"
 import ConnectScreen from "./screens/ConnectScreen.vue"
@@ -110,9 +111,9 @@ watch(recording, (on) => on && route.value.name !== "recording" && go({ name: "r
         data-testid="back"
         @click="back"
       >
-        ‹
+        <Icon name="chevron-left" :size="26" />
       </button>
-      <h1>{{ t(titleKey) }}</h1>
+      <h1 :key="titleKey" class="top-title">{{ t(titleKey) }}</h1>
     </header>
     <main>
       <BannerStack />
@@ -137,24 +138,28 @@ watch(recording, (on) => on && route.value.name !== "recording" && go({ name: "r
         data-testid="tab-overview"
         @click="go({ name: 'overview' })"
       >
-        {{ t("nav.overview") }}
+        <span class="tab-icon"><Icon name="gauge" /></span>
+        <span class="tab-label">{{ t("nav.overview") }}</span>
       </button>
       <button
         type="button"
         :class="{ on: route.name === 'trips' || route.name === 'trip' }"
         @click="go({ name: 'trips' })"
       >
-        {{ t("nav.trips") }}
+        <span class="tab-icon"><Icon name="route" /></span>
+        <span class="tab-label">{{ t("nav.trips") }}</span>
       </button>
       <button
         type="button"
         :class="{ on: route.name === 'home' || route.name === 'connect' || route.name === 'recording' }"
         @click="go({ name: 'home' })"
       >
-        {{ t("nav.home") }}
+        <span class="tab-icon"><Icon name="record" /></span>
+        <span class="tab-label">{{ t("nav.home") }}</span>
       </button>
       <button type="button" :class="{ on: route.name === 'settings' }" @click="go({ name: 'settings' })">
-        {{ t("nav.settings") }}
+        <span class="tab-icon"><Icon name="settings" /></span>
+        <span class="tab-label">{{ t("nav.settings") }}</span>
       </button>
     </nav>
     <InterruptedDialog />

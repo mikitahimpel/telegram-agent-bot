@@ -3,6 +3,7 @@ import { computed } from "vue"
 import { useApp } from "../app-context.ts"
 import AsyncState from "../components/insights/AsyncState.vue"
 import DemoChip from "../components/insights/DemoChip.vue"
+import HeroGauge from "../components/insights/HeroGauge.vue"
 import SeverityBadge from "../components/insights/SeverityBadge.vue"
 import { useLoad } from "../composables/use-load.ts"
 import { fmtDateTime } from "../i18n/format.ts"
@@ -27,7 +28,8 @@ const resolved = computed(() => (load.data.value ?? []).filter((a) => a.resolved
       @retry="load.reload"
     >
       <section v-if="active.length === 0" class="hero tone-ok" data-testid="alerts-empty">
-        <h2 class="hero-title">{{ t("alerts.empty.title") }}</h2>
+        <div class="hero-copy"><h2 class="hero-title">{{ t("alerts.empty.title") }}</h2></div>
+        <HeroGauge tone="ok" />
         <p class="hero-text">{{ t("alerts.empty.text") }}</p>
       </section>
       <article

@@ -214,6 +214,10 @@ const aria = computed(() =>
         @keydown="onKey"
       >
         <defs>
+          <linearGradient :id="`fill-${testid}`" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" class="fill-top" />
+            <stop offset="1" class="fill-bottom" />
+          </linearGradient>
           <pattern
             :id="`gap-${testid}`"
             width="6"
@@ -252,7 +256,12 @@ const aria = computed(() =>
           data-testid="chart-gap"
         />
         <template v-for="(s, i) in segments" :key="`s${i}`">
-          <path v-if="area && s.points.length > 1 && !dots" :d="areaPath(s)" class="area" />
+          <path
+            v-if="area && s.points.length > 1 && !dots"
+            :d="areaPath(s)"
+            :fill="`url(#fill-${testid})`"
+            class="area"
+          />
           <path v-if="s.points.length > 1" :d="line(s)" class="stroke" />
           <template v-if="s.points.length === 1 || dots">
             <circle v-for="(p, j) in s.points" :key="j" :cx="p.x" :cy="p.y" r="3.5" class="dot" />
@@ -260,7 +269,8 @@ const aria = computed(() =>
         </template>
         <g v-if="hoverState" class="cross">
           <line :x1="hoverState.x" :x2="hoverState.x" :y1="PAD.top" :y2="PAD.top + plotH" />
-          <circle v-if="hoverState.y !== null" :cx="hoverState.x" :cy="hoverState.y" r="5" />
+          <circle v-if="hoverState.y !== null" :cx="hoverState.x" :cy="hoverState.y" r="10" class="cross-halo" />
+          <circle v-if="hoverState.y !== null" :cx="hoverState.x" :cy="hoverState.y" r="4.5" class="cross-dot" />
         </g>
         <g class="xaxis">
           <text v-for="(tk, i) in xTicks" :key="i" :x="tk.x" :y="height - 6" :text-anchor="tk.anchor">

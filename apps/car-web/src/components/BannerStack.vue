@@ -2,6 +2,7 @@
 import { computed } from "vue"
 import { useApp } from "../app-context.ts"
 import { describeStatus, type StatusView } from "../model/describe-status.ts"
+import Icon from "./Icon.vue"
 import StatusCard from "./StatusCard.vue"
 
 const { backend, lang, now, t, go, dismissed } = useApp()
@@ -51,13 +52,17 @@ const dismiss = (k: string) => dismissed.value.push(k)
 <template>
   <div v-if="banners.length || showUnpaired || showPersist" class="banners" data-testid="banners">
     <div v-if="showUnpaired" class="banner-line" data-testid="banner-unpaired">
+      <Icon name="info" class="banner-icon" :size="18" />
       <span>{{ t("banner.unpaired") }}</span>
       <button class="link" type="button" @click="go({ name: 'pair' })">{{ t("banner.connectLink") }}</button>
     </div>
     <div v-if="showPersist" class="banner-line" data-testid="banner-persist">
+      <Icon name="alert" class="banner-icon" :size="18" />
       <span>{{ t("banner.persist") }}</span>
       <button class="link" type="button" @click="backend.requestPersistence()">{{ t("banner.persistAction") }}</button>
-      <button class="dismiss" type="button" :aria-label="t('banner.dismiss')" @click="dismiss('persist')">×</button>
+      <button class="dismiss" type="button" :aria-label="t('banner.dismiss')" @click="dismiss('persist')">
+        <Icon name="close" :size="18" />
+      </button>
     </div>
     <StatusCard v-for="b in banners" :key="b.key" :view="b.view" class="banner" />
   </div>

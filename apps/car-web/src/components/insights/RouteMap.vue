@@ -65,6 +65,13 @@ const marker = computed(() => {
 <template>
   <figure v-if="geo" class="route" data-testid="route">
     <svg :viewBox="`0 0 ${W} ${H}`" role="img" :aria-label="t('trip.route')" class="route-svg">
+      <defs>
+        <pattern id="route-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M20 0H0V20" class="route-grid-line" />
+        </pattern>
+      </defs>
+      <rect :width="W" :height="H" fill="url(#route-grid)" />
+      <path v-for="(p, i) in geo.paths" :key="`g${i}`" :d="d(p)" class="route-glow" />
       <path v-for="(p, i) in geo.paths" :key="i" :d="d(p)" class="route-line" />
       <circle :cx="geo.out[0]!.x" :cy="geo.out[0]!.y" r="6" class="route-start" />
       <circle :cx="geo.out[geo.out.length - 1]!.x" :cy="geo.out[geo.out.length - 1]!.y" r="6" class="route-end" />

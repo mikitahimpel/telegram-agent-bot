@@ -5,8 +5,24 @@ export type GaugeTone = "ok" | "nodata" | "info" | "watch" | "soon" | "urgent" |
 
 const props = defineProps<{ tone: GaugeTone }>()
 
-const LEVEL: Record<GaugeTone, number> = { ok: 1, info: 0.9, watch: 0.64, soon: 0.38, urgent: 0.16, nodata: 0, muted: 0 }
-const GLYPH: Record<GaugeTone, string> = { ok: "", info: "i", watch: "!", soon: "!", urgent: "!!", nodata: "–", muted: "–" }
+const LEVEL: Record<GaugeTone, number> = {
+  ok: 1,
+  info: 0.9,
+  watch: 0.64,
+  soon: 0.38,
+  urgent: 0.16,
+  nodata: 0,
+  muted: 0
+}
+const GLYPH: Record<GaugeTone, string> = {
+  ok: "",
+  info: "i",
+  watch: "!",
+  soon: "!",
+  urgent: "!!",
+  nodata: "–",
+  muted: "–"
+}
 
 const C = 60
 const R = 46

@@ -219,11 +219,77 @@ test("unpaired: onboarding is reachable and explains the adapter", async ({ page
 })
 
 test("dark theme renders overview", async ({ browser }) => {
-  const ctx = await browser.newContext({ colorScheme: "dark", viewport: { width: 360, height: 780 }, locale: "ru-RU" })
+  const ctx = await browser.newContext({
+    colorScheme: "dark",
+    viewport: { width: 360, height: 780 },
+    locale: "ru-RU",
+    reducedMotion: "reduce"
+  })
   const page = await ctx.newPage()
   await openDemo(page)
   await page.getByTestId("tab-overview").click()
   await expect(page.getByTestId("verdict")).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/17-overview-dark.png`, fullPage: true })
+  await ctx.close()
+})
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`wide desktop viewport renders a centred column (${scheme})`, async ({ browser }) => {
+    const ctx = await browser.newContext({
+      colorScheme: scheme,
+      viewport: { width: 1440, height: 900 },
+      locale: "ru-RU",
+      reducedMotion: "reduce"
+    })
+    const page = await ctx.newPage()
+    const errors = trackErrors(page)
+    await page.goto("/car/")
+    await expect(page.getByTestId("pair-screen")).toBeVisible()
+    await page.screenshot({ path: `${SHOTS}/20-wide-pair-${scheme}.png` })
+    await page.getByTestId("pair-demo").click()
+    await expect(page.getByTestId("connect-title")).toBeVisible()
+    await page.screenshot({ path: `${SHOTS}/21-wide-connect-${scheme}.png` })
+    await page.getByTestId("tab-overview").click()
+    await expect(page.getByTestId("verdict")).toBeVisible()
+    const width = await page.getByTestId("overview").evaluate((n) => n.getBoundingClientRect().width)
+    expect(width).toBeLessThanOrEqual(600)
+    await page.screenshot({ path: `${SHOTS}/22-wide-overview-${scheme}.png` })
+    await page.getByTestId("card-trip").click()
+    await expect(page.getByTestId("trip-numbers")).toBeVisible()
+    const speed = page.getByTestId("chart-speed")
+    await speed.scrollIntoViewIfNeeded()
+    const box = (await speed.locator("svg").boundingBox())!
+    await page.mouse.move(box.x + box.width * 0.4, box.y + box.height / 2)
+    await page.screenshot({ path: `${SHOTS}/23-wide-trip-${scheme}.png` })
+    await ctx.close()
+    expect(errors).toEqual([])
+  })
+}
+
+test("dark theme: trip charts, engine, recording", async ({ browser }) => {
+  const ctx = await browser.newContext({
+    colorScheme: "dark",
+    viewport: { width: 390, height: 844 },
+    locale: "ru-RU",
+    reducedMotion: "reduce"
+  })
+  const page = await ctx.newPage()
+  await openDemo(page)
+  await page.getByTestId("tab-overview").click()
+  await page.getByTestId("card-trip").click()
+  await expect(page.getByTestId("trip-numbers")).toBeVisible()
+  await page.screenshot({ path: `${SHOTS}/24-trip-dark.png`, fullPage: true })
+  await page.getByTestId("tab-overview").click()
+  await page.getByTestId("card-engine").click()
+  await expect(page.getByTestId("dtc")).toHaveCount(2)
+  await page.screenshot({ path: `${SHOTS}/25-engine-dark.png`, fullPage: true })
+  await page.getByRole("button", { name: "Запись", exact: true }).click()
+  await page.getByTestId("primary").click()
+  await page.getByTestId("transport-simulator").click()
+  await page.getByTestId("connect-go").click()
+  await expect(page.locator('[data-step="sensors"]')).toHaveAttribute("data-status", "done", { timeout: 20_000 })
+  await page.getByTestId("connect-start").click()
+  await expect.poll(() => gaugeText(page, "speedKmh"), { timeout: 15_000 }).toMatch(/\d/)
+  await page.screenshot({ path: `${SHOTS}/26-recording-dark.png` })
   await ctx.close()
 })

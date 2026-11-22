@@ -17,7 +17,6 @@
     "@bot/car-obd": "workspace:*",
     "@bot/car-recorder": "workspace:*",
     "@fontsource-variable/manrope": "^5.3.0",
-    "@fontsource-variable/sofia-sans-condensed": "^5.3.0",
     "effect": "catalog:",
     "vue": "3.5.45"
   },

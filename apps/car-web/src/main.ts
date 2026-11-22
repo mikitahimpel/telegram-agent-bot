@@ -5,6 +5,7 @@ import { initialLang } from "./services/env.ts"
 import { runPairing } from "./services/pairing-flow.ts"
 import { API_BASE, createBackend } from "./services/runtime.ts"
 import "@fontsource-variable/manrope/index.css"
+import "./assets/fonts/sofia-sans-condensed.css"
 import "./styles.css"
 
 const LANG_KEY = "car-lang"

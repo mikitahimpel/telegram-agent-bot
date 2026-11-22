@@ -65,11 +65,7 @@ const SHAPES: Record<IconName, Shape> = {
   "chevron-left": { strokes: ["M14.5 5.5L8 12l6.5 6.5"] },
   check: { strokes: ["M5 12.5l4.5 4.5L19 7.5"] },
   alert: {
-    strokes: [
-      "M10.3 4.6a2 2 0 0 1 3.4 0l7.2 12.6a2 2 0 0 1-1.7 3H4.8a2 2 0 0 1-1.7-3z",
-      "M12 9.5v4.2",
-      "M12 16.8v.1"
-    ]
+    strokes: ["M10.3 4.6a2 2 0 0 1 3.4 0l7.2 12.6a2 2 0 0 1-1.7 3H4.8a2 2 0 0 1-1.7-3z", "M12 9.5v4.2", "M12 16.8v.1"]
   },
   stop: { strokes: ["M8.4 3.5h7.2l4.9 4.9v7.2l-4.9 4.9H8.4l-4.9-4.9V8.4z", "M9.5 9.5l5 5M14.5 9.5l-5 5"] },
   info: { strokes: [circle(12, 12, 8.5), "M12 11v5.2", "M12 7.8v.1"] },

@@ -124,10 +124,12 @@
 * {
   box-sizing: border-box;
 }
+html {
+  background: var(--bg);
+}
 html,
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
   font: 16px/1.5 var(--font);
   font-feature-settings:
@@ -252,7 +254,9 @@ main {
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 16px;
-  box-shadow: inset 0 1px 0 var(--hi), var(--shadow);
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    var(--shadow);
 }
 .card h2,
 .card h3 {
@@ -746,7 +750,11 @@ small {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: repeating-linear-gradient(-45deg, var(--c-failed) 0 4px, color-mix(in srgb, var(--c-failed) 60%, transparent) 4px 8px);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--c-failed) 0 4px,
+    color-mix(in srgb, var(--c-failed) 60%, transparent) 4px 8px
+  );
   border-radius: 6px;
 }
 .gap-list {
@@ -763,7 +771,9 @@ small {
   border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--card);
-  box-shadow: inset 0 1px 0 var(--hi), var(--shadow);
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    var(--shadow);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -898,7 +908,9 @@ small {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  box-shadow: inset 0 1px 0 var(--hi), var(--shadow);
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    var(--shadow);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -921,7 +933,8 @@ small {
 }
 .gauge-value {
   font-family: var(--font-display);
-  font-size: 40px;
+  white-space: nowrap;
+  font-size: 36px;
   font-weight: 700;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
@@ -1010,7 +1023,9 @@ small {
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   backdrop-filter: blur(16px) saturate(1.3);
   border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 var(--hi), var(--shadow-float);
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    var(--shadow-float);
   z-index: 5;
 }
 .tabs button {
@@ -1130,10 +1145,27 @@ label {
   }
   body::before {
     background:
-      radial-gradient(48% 50% at 50% -8%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 72%),
-      radial-gradient(30% 50% at 0% 100%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
-      radial-gradient(30% 50% at 100% 60%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%),
+      radial-gradient(640px 420px at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 75%),
+      radial-gradient(900px 700px at 50% 55%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%),
+      radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1.6px) 0 0 /
+        24px 24px,
       linear-gradient(180deg, var(--bg), var(--bg-deep));
+  }
+  .shell::before,
+  .shell::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent, var(--line-strong) 30%, var(--line-strong) 70%, transparent);
+  }
+  .shell::before {
+    left: calc(50% - 312px);
+  }
+  .shell::after {
+    left: calc(50% + 312px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1142,6 +1174,7 @@ label {
   *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.001ms !important;
   }
 }

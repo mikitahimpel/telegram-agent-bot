@@ -19,7 +19,6 @@ defineEmits<{ open: [] }>()
       <span class="icard-title"
         ><Icon v-if="icon" :name="icon" class="icard-icon" :size="20" /><slot name="icon" />{{ title }}</span
       >
-      <span class="icard-pip" aria-hidden="true" />
       <Icon name="chevron-right" class="icard-chev" :size="20" />
     </span>
     <slot />

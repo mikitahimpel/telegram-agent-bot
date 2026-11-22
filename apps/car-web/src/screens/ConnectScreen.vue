@@ -74,13 +74,7 @@ const busy = computed(() => !idle.value && backend.conn.value._tag !== "Ready")
 
     <h3 class="section">{{ t("connect.steps") }}</h3>
     <ol class="steps-list" data-testid="wizard">
-      <li
-        v-for="(s, n) in steps"
-        :key="s.id"
-        :class="`step-${s.status}`"
-        :data-step="s.id"
-        :data-status="s.status"
-      >
+      <li v-for="(s, n) in steps" :key="s.id" :class="`step-${s.status}`" :data-step="s.id" :data-status="s.status">
         <span class="step-mark" aria-hidden="true">
           <Icon v-if="s.status === 'done'" name="check" :size="16" />
           <template v-else-if="s.status === 'failed'">!</template>

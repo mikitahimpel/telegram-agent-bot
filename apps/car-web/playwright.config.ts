@@ -12,6 +12,7 @@ export default defineConfig({
     headless: true,
     viewport: { width: 390, height: 844 },
     locale: "ru-RU",
+    reducedMotion: "reduce",
     userAgent:
       "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
   },

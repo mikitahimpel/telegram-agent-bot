@@ -37,6 +37,9 @@ export const ruInsights = {
   "insights.error.not_paired.text": "Подключите телефон к боту.",
   "overview.title": "Обзор",
   "overview.kicker": "Состояние машины",
+  "overview.verdict.nodata": "Данных пока нет",
+  "overview.verdict.nodata.text":
+    "Вставьте адаптер в машину и проедьтесь: тогда здесь появятся двигатель, аккумулятор и расход.",
   "overview.verdict.ok": "Всё в порядке",
   "overview.verdict.ok.text": "Ошибок двигателя нет, аккумулятор в норме. Ничего делать не нужно.",
   "overview.verdict.info": "Всё в порядке",
@@ -48,6 +51,8 @@ export const ruInsights = {
   "overview.verdict.urgent": "Нужна проверка сейчас",
   "overview.verdict.urgent.text": "Лучше не ехать далеко. Прочитайте, что делать.",
   "overview.engine": "Двигатель",
+  "overview.engine.unchecked": "Ещё не проверяли",
+  "overview.engine.uncheckedSub": "Подключите машину, чтобы проверить ошибки",
   "overview.engine.none": "Ошибок нет",
   "overview.engine.codes": "{n#ошибка|ошибки|ошибок}",
   "overview.engine.lampOn": "Лампа «Check Engine» горит",

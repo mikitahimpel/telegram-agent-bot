@@ -1,7 +1,7 @@
 import type { Alert, CarOverview, DtcExplanation, PeriodStats, Severity } from "@bot/car-format/insights"
 import type { Lang } from "../i18n/format.ts"
 
-export type Verdict = "ok" | Severity
+export type Verdict = "ok" | "nodata" | Severity
 
 const RANK: Record<Severity, number> = { info: 0, watch: 1, soon: 2, urgent: 3 }
 
@@ -14,7 +14,11 @@ export const bySeverityDesc = <A extends { severity: Severity }>(items: Readonly
 export const activeAlerts = (alerts: ReadonlyArray<Alert>): Alert[] =>
   bySeverityDesc(alerts.filter((a) => a.resolvedAt === null))
 
+export const hasNoInsights = (o: CarOverview): boolean =>
+  o.engine.lastScanAt === null && o.battery.status === "unknown" && o.totals.trips === 0
+
 export const verdictOf = (o: CarOverview): Verdict => {
+  if (hasNoInsights(o)) return "nodata"
   const sev = worstSeverity([...o.engine.activeCodes, ...activeAlerts(o.alerts)])
   const battery: Severity | null = o.battery.status === "weak" ? "soon" : o.battery.status === "watch" ? "watch" : null
   const all = [sev, battery].filter((s): s is Severity => s !== null)
@@ -25,6 +29,7 @@ export const verdictOf = (o: CarOverview): Verdict => {
 export type CardTone = "ok" | "watch" | "soon" | "urgent" | "muted"
 
 export const engineTone = (o: CarOverview): CardTone => {
+  if (o.engine.lastScanAt === null) return "muted"
   const w = worstSeverity(o.engine.activeCodes)
   return w === null ? "ok" : w === "info" ? "watch" : w
 }

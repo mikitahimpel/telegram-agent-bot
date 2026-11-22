@@ -68,6 +68,14 @@ describe("fixtures", () => {
   it("verdict reflects the worst severity; healthy is ok; fuel compares with usual", () => {
     expect(verdictOf(buildOverviewFixture("issues", "en", NOW))).toBe("soon")
     expect(verdictOf(buildOverviewFixture("healthy", "en", NOW))).toBe("ok")
+    const empty = {
+      ...buildOverviewFixture("healthy", "en", NOW),
+      totals: { ...buildOverviewFixture("healthy", "en", NOW).totals, trips: 0 },
+      battery: { ...buildOverviewFixture("healthy", "en", NOW).battery, status: "unknown" as const },
+      engine: { ...buildOverviewFixture("healthy", "en", NOW).engine, lastScanAt: null, activeCodes: [], milOn: false },
+      alerts: []
+    }
+    expect(verdictOf(empty)).toBe("nodata")
     const f = fuelSummary(buildOverviewFixture("issues", "en", NOW).byWeek)
     expect(f?.usual).toBeGreaterThan(7)
     expect(f?.deltaPct).toBeGreaterThan(5)

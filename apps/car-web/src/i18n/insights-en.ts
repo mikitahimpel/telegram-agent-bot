@@ -37,6 +37,9 @@ export const enInsights = {
   "insights.error.not_paired.text": "Connect this phone to the bot.",
   "overview.title": "Overview",
   "overview.kicker": "Car health",
+  "overview.verdict.nodata": "No data yet",
+  "overview.verdict.nodata.text":
+    "Plug the adapter into the car and drive once: then you will see the engine, battery and fuel use here.",
   "overview.verdict.ok": "Everything is fine",
   "overview.verdict.ok.text": "No engine trouble codes and the battery is healthy. Nothing to do.",
   "overview.verdict.info": "Everything is fine",
@@ -48,6 +51,8 @@ export const enInsights = {
   "overview.verdict.urgent": "Needs a check now",
   "overview.verdict.urgent.text": "Better not to drive far. Read what to do.",
   "overview.engine": "Engine",
+  "overview.engine.unchecked": "Not checked yet",
+  "overview.engine.uncheckedSub": "Connect the car to check for faults",
   "overview.engine.none": "No codes",
   "overview.engine.codes": "{n#trouble code|trouble codes}",
   "overview.engine.lampOn": "Check Engine lamp is on",

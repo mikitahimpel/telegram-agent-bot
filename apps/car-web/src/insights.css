@@ -75,6 +75,9 @@ h4 {
 .hero.tone-soon {
   --hero: var(--sev-soon);
 }
+.hero.tone-nodata {
+  --hero: var(--muted);
+}
 .hero.tone-urgent {
   --hero: var(--sev-urgent);
 }

@@ -60,10 +60,18 @@ const codes = computed(() => o.value?.engine.activeCodes ?? [])
             @open="go({ name: 'engine' })"
           >
             <b class="icard-value" data-testid="engine-value">{{
-              codes.length === 0 ? t("overview.engine.none") : t("overview.engine.codes", { n: codes.length })
+              o.engine.lastScanAt === null
+                ? t("overview.engine.unchecked")
+                : codes.length === 0
+                  ? t("overview.engine.none")
+                  : t("overview.engine.codes", { n: codes.length })
             }}</b>
             <span class="icard-sub">{{
-              o.engine.milOn ? t("overview.engine.lampOn") : t("overview.engine.lampOff")
+              o.engine.lastScanAt === null
+                ? t("overview.engine.uncheckedSub")
+                : o.engine.milOn
+                  ? t("overview.engine.lampOn")
+                  : t("overview.engine.lampOff")
             }}</span>
           </InsightCard>
           <InsightCard

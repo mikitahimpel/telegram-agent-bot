@@ -296,6 +296,29 @@ const restart: CommandDef<CoreR> = {
     })
 }
 
+const limitCmd: CommandDef<CoreR> = {
+  name: "limit",
+  role: "admin",
+  description: { en: "Set a user's daily request limit", ru: "Задать дневной лимит запросов пользователю" },
+  usage: { en: "<tgId> <number|default>", ru: "<tgId> <число|default>" },
+  handler: (ctx) =>
+    Effect.gen(function* () {
+      const directory = yield* AgentDirectory
+      const m = messages[ctx.lang]
+      const [rawId = "", rawValue = ""] = ctx.args.trim().split(/\s+/)
+      const id = parseTgId(rawId)
+      if (id === undefined) return yield* reply(ctx, m.limitUsage)
+      if (rawValue.toLowerCase() === "default") {
+        yield* directory.setLimit(id, undefined)
+        return yield* reply(ctx, m.limitReset(id))
+      }
+      const n = /^\d{1,6}$/.test(rawValue) ? Number(rawValue) : undefined
+      if (n === undefined) return yield* reply(ctx, m.limitUsage)
+      yield* directory.setLimit(id, n)
+      yield* reply(ctx, m.limitSet(id, n))
+    })
+}
+
 const contextCmd: CommandDef<CoreR> = {
   name: "context",
   role: "admin",
@@ -330,6 +353,7 @@ export const coreCommands: ReadonlyArray<CommandDef<CoreR>> = [
   revoke,
   kill,
   restart,
+  limitCmd,
   contextCmd
 ]
 

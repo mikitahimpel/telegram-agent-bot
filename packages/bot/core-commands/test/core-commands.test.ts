@@ -25,7 +25,7 @@ const runCb = (w: ReturnType<typeof makeWorld>, data: string, role: "admin" | "u
 describe("role visibility", () => {
   it("admin commands are invisible to users", () => {
     const w = makeWorld()
-    for (const n of ["agents", "usage", "allow", "revoke", "kill", "restart", "context"]) {
+    for (const n of ["agents", "usage", "allow", "revoke", "kill", "restart", "limit", "context"]) {
       expect(w.registry.find(n, "user")).toBeUndefined()
       expect(w.registry.find(n, "admin")).toBeDefined()
     }
@@ -41,7 +41,7 @@ describe("role visibility", () => {
     expect(w.registry.find("stop", "user")).toBeDefined()
     expect(w.registry.findCallback("kill:5", "user")).toBeUndefined()
     expect(w.registry.findCallback("lang:ru", "user")).toBeDefined()
-    expect(coreCommands.length).toBe(13)
+    expect(coreCommands.length).toBe(14)
     expect(coreCallbacks.length).toBe(5)
   })
 })
@@ -198,6 +198,22 @@ describe("admin flows", () => {
       yield* runCmd(w, "restart", "admin", "5")
       expect(w.state.restarted).toEqual([5])
       yield* runCmd(w, "kill", "admin", "-1")
+      expect(w.sent.at(-1)?.html).toContain("Usage")
+    })
+  })
+
+  it.effect("/limit sets, resets and validates a per-user daily limit", () => {
+    const w = makeWorld()
+    return Effect.gen(function* () {
+      yield* runCmd(w, "limit", "admin", "5 200")
+      yield* runCmd(w, "limit", "admin", "5 default")
+      yield* runCmd(w, "limit", "admin", "5 abc")
+      yield* runCmd(w, "limit", "admin", "nope")
+      expect(w.state.limits).toEqual([
+        [5, 200],
+        [5, undefined]
+      ])
+      expect(w.sent[0]?.html).toContain("200")
       expect(w.sent.at(-1)?.html).toContain("Usage")
     })
   })

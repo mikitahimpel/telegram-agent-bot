@@ -47,7 +47,8 @@ export const agentDirectoryLayer = (env: Env): Layer.Layer<AgentDirectory, never
           })
         }),
         kill: (tgId) => viaStub("kill", () => stub(tgId).kill(tgId)),
-        restart: (tgId) => viaStub("restart", () => stub(tgId).restart(tgId))
+        restart: (tgId) => viaStub("restart", () => stub(tgId).restart(tgId)),
+        setLimit: (tgId, limit) => viaStub("setLimit", () => stub(tgId).setLimit(tgId, limit ?? null))
       }
     })
   )

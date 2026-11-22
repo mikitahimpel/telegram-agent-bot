@@ -34,6 +34,7 @@ export const makeWorld = (
     stopResult: false,
     killed: [] as Array<number>,
     restarted: [] as Array<number>,
+    limits: [] as Array<readonly [number, number | undefined]>,
     stopKeys: [] as Array<string>
   }
   const never = () => Effect.die("unused")
@@ -89,7 +90,8 @@ export const makeWorld = (
     recordRun: () => Effect.void,
     usage: never(),
     getLang: Effect.sync(() => state.lang),
-    setLang: (l) => Effect.sync(() => void (state.lang = l))
+    setLang: (l) => Effect.sync(() => void (state.lang = l)),
+    setDailyLimit: () => Effect.void
   })
 
   const allowlist = Layer.succeed(Allowlist, {
@@ -107,7 +109,8 @@ export const makeWorld = (
     list: Effect.succeed(agentList),
     info: (id) => Effect.succeed(agentList.find((a) => a.tgId === id) ?? agentList[0]!),
     kill: (id) => Effect.sync(() => void state.killed.push(id)),
-    restart: (id) => Effect.sync(() => void state.restarted.push(id))
+    restart: (id) => Effect.sync(() => void state.restarted.push(id)),
+    setLimit: (id, limit) => Effect.sync(() => void state.limits.push([id, limit]))
   })
 
   const runControl = Layer.succeed(RunControl, {

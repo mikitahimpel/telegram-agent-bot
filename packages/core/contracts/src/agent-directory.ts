@@ -19,5 +19,6 @@ export class AgentDirectory extends Context.Service<
     readonly info: (tgId: TgId) => Effect.Effect<AgentInfo, StorageError | ContainerDown>
     readonly kill: (tgId: TgId) => Effect.Effect<void, StorageError | ContainerDown>
     readonly restart: (tgId: TgId) => Effect.Effect<void, StorageError | ContainerDown>
+    readonly setLimit: (tgId: TgId, limit: number | undefined) => Effect.Effect<void, StorageError | ContainerDown>
   }
 >()("@bot/AgentDirectory") {}

@@ -90,6 +90,13 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
       Effect.map((r) => (r[0] === undefined ? undefined : String(r[0].value)))
     )
 
+  const effectiveLimit = getSetting("daily_limit").pipe(
+    Effect.map((v) => {
+      const n = v === undefined ? Number.NaN : Number(v)
+      return Number.isInteger(n) && n >= 0 ? n : dailyLimit
+    })
+  )
+
   const countToday = Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis
     const r = yield* rows("runs.countToday", "SELECT COUNT(*) AS n FROM runs WHERE day = ?", utcDay(now))
@@ -110,7 +117,8 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
     ),
     checkDailyLimit: Effect.gen(function* () {
       const n = yield* countToday
-      if (n >= dailyLimit) return yield* new DailyLimitReached({ limit: dailyLimit })
+      const limit = yield* effectiveLimit
+      if (n >= limit) return yield* new DailyLimitReached({ limit })
     }),
     recordRun: (usage) =>
       Effect.gen(function* () {
@@ -136,6 +144,7 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
       }),
     usage: Effect.gen(function* () {
       const runsToday = yield* countToday
+      const limit = yield* effectiveLimit
       const r = yield* rows(
         "runs.usage",
         `SELECT COUNT(*) AS n, COALESCE(SUM(cost_usd), 0) AS cost, COALESCE(SUM(input_tokens), 0) AS inp,
@@ -144,7 +153,7 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
       const row = r[0] ?? {}
       return {
         runsToday,
-        dailyLimit,
+        dailyLimit: limit,
         runsTotal: Number(row.n ?? 0),
         costUsdTotal: Number(row.cost ?? 0),
         inputTokensTotal: Number(row.inp ?? 0),
@@ -164,6 +173,15 @@ export const make = (sql: SqlStorageLike, dailyLimit: number): Sessions["Service
         "settings.setLang",
         "INSERT INTO settings (key, value) VALUES ('lang', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         lang
+      ).pipe(Effect.asVoid),
+    setDailyLimit: (limit) =>
+      (limit === undefined
+        ? rows("settings.clearDailyLimit", "DELETE FROM settings WHERE key = 'daily_limit'")
+        : rows(
+            "settings.setDailyLimit",
+            "INSERT INTO settings (key, value) VALUES ('daily_limit', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            String(limit)
+          )
       ).pipe(Effect.asVoid)
   }
 }

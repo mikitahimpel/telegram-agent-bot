@@ -89,6 +89,29 @@ describe("Sessions over SQL", () => {
     expect(JSON.stringify(exit)).toContain("DailyLimitReached")
   })
 
+  it("a per-user override replaces the default limit and can be cleared", async () => {
+    const key = SessionKey.make("main")
+    const out = await Effect.runPromise(
+      provide(
+        fakeSql(),
+        1,
+        Effect.gen(function* () {
+          const s = yield* Sessions
+          yield* s.ensure(key, undefined)
+          yield* s.recordRun(usage(key))
+          const blocked = yield* Effect.exit(s.checkDailyLimit)
+          yield* s.setDailyLimit(5)
+          const raised = yield* Effect.exit(s.checkDailyLimit)
+          const shown = (yield* s.usage).dailyLimit
+          yield* s.setDailyLimit(undefined)
+          const back = (yield* s.usage).dailyLimit
+          return { blocked: Exit.isFailure(blocked), raised: Exit.isSuccess(raised), shown, back }
+        })
+      )
+    )
+    expect(out).toEqual({ blocked: true, raised: true, shown: 5, back: 1 })
+  })
+
   it("defaults the limit to 50, stores lang, schema is idempotent", async () => {
     const sql = fakeSql()
     await Effect.runPromise(migrate(sql))

@@ -337,6 +337,14 @@ export class UserAgent extends DurableObject<Env> {
     )
   }
 
+  async setLimit(tgId: number, limit: number | null): Promise<void> {
+    await this.#runtime(tgId).runPromise(
+      Effect.gen(function* () {
+        yield* (yield* Sessions).setDailyLimit(limit === null ? undefined : limit)
+      })
+    )
+  }
+
   async restart(tgId: number): Promise<void> {
     await this.#runtime(tgId).runPromise(
       Effect.gen(function* () {

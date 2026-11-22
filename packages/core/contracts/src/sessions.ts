@@ -49,5 +49,6 @@ export class Sessions extends Context.Service<
     readonly usage: Effect.Effect<UsageSummary, StorageError>
     readonly getLang: Effect.Effect<Lang | undefined, StorageError>
     readonly setLang: (lang: Lang) => Effect.Effect<void, StorageError>
+    readonly setDailyLimit: (limit: number | undefined) => Effect.Effect<void, StorageError>
   }
 >()("@bot/Sessions") {}
